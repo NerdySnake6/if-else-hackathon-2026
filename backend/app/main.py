@@ -1,4 +1,7 @@
+# backend/app/main.py
 from fastapi import FastAPI
+
+from app.database import init_db
 
 app = FastAPI(
     title="Трамплин",
@@ -6,9 +9,16 @@ app = FastAPI(
     version="0.1.0"
 )
 
+# Создаём таблицы при старте
+@app.on_event("startup")
+def on_startup():
+    init_db()
+
+
 @app.get("/")
 def root():
     return {"message": "Трамплин API работает!"}
+
 
 @app.get("/health")
 def health_check():
