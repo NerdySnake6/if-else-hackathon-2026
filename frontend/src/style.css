@@ -1,0 +1,44 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+#map {
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.opportunity-item {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.opportunity-item:hover {
+    background-color: #e9ecef;
+}
+
+/* Стили для попапа на карте */
+.leaflet-popup-content {
+    min-width: 200px;
+}
+
+.opportunity-popup h6 {
+    margin-bottom: 4px;
+    color: #0d6efd;
+}
+
+.opportunity-popup .company {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.opportunity-popup .salary {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.opportunity-popup .tags {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
