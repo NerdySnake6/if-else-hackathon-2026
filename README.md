@@ -1,5 +1,5 @@
 # Запуск проекта (текущая версия)
-1. Бэкенд (FastAPI)
+# 1. Бэкенд (FastAPI)
 bash
 cd backend
 python3 -m venv venv                 # создать виртуальное окружение
