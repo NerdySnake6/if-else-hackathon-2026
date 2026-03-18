@@ -6,8 +6,43 @@ from sqlalchemy.orm import Session, joinedload
 from app import models, schemas
 from app.database import get_db
 from app.dependencies import require_roles, get_current_active_user
+from app.geocoder import GeocodingError, geocode_address, geocoder_is_configured
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
+
+
+def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
+    if not location:
+        return False
+    if work_format == "remote":
+        return False
+    return "удален" not in location.lower()
+
+
+def resolve_coordinates(
+    location: Optional[str],
+    work_format: Optional[str],
+    lat: Optional[float],
+    lng: Optional[float],
+) -> tuple[Optional[float], Optional[float]]:
+    if lat is not None and lng is not None:
+        return lat, lng
+
+    if not should_geocode(location, work_format):
+        return None, None
+
+    if not geocoder_is_configured():
+        return lat, lng
+
+    try:
+        result = geocode_address(location)
+    except GeocodingError:
+        return lat, lng
+
+    if not result:
+        return lat, lng
+
+    return result["lat"], result["lng"]
 
 @router.post("/", response_model=schemas.OpportunityOut)
 def create_opportunity(
@@ -17,9 +52,19 @@ def create_opportunity(
 ):
     if current_user.role == "employer" and not current_user.is_verified:
         raise HTTPException(status_code=403, detail="Employer not verified")
-    
+
+    lat, lng = resolve_coordinates(
+        opp_data.location,
+        opp_data.work_format,
+        opp_data.lat,
+        opp_data.lng,
+    )
+    opp_payload = opp_data.model_dump(exclude={"tag_ids"})
+    opp_payload["lat"] = lat
+    opp_payload["lng"] = lng
+
     db_opp = models.Opportunity(
-        **opp_data.model_dump(exclude={"tag_ids"}),
+        **opp_payload,
         employer_id=current_user.id
     )
     db.add(db_opp)
@@ -88,8 +133,23 @@ def update_opportunity(
     
     if current_user.role not in ["curator", "admin"] and opp.employer_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    
+
     update_data = opp_data.model_dump(exclude_unset=True, exclude={"tag_ids"})
+
+    location = update_data.get("location", opp.location)
+    work_format = update_data.get("work_format", opp.work_format)
+    lat = update_data.get("lat", opp.lat)
+    lng = update_data.get("lng", opp.lng)
+
+    if (
+        "location" in update_data
+        or "work_format" in update_data
+        or ("lat" in update_data and "lng" in update_data)
+    ):
+        lat, lng = resolve_coordinates(location, work_format, lat, lng)
+        update_data["lat"] = lat
+        update_data["lng"] = lng
+
     for field, value in update_data.items():
         setattr(opp, field, value)
     

@@ -153,6 +153,13 @@ class OpportunityOut(OpportunityBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class GeocodeResult(BaseModel):
+    lat: float
+    lng: float
+    formatted_address: str
+    precision: Optional[str] = None
+
+
 # ---------- Response (отклик) ----------
 class ResponseBase(BaseModel):
     cover_letter: Optional[str] = None
