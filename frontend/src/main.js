@@ -10,6 +10,7 @@ const state = {
     selectedOpportunityId: null,
     pendingApplyId: null,
     responses: [],
+    employerResponses: [],
     profile: null,
 };
 
@@ -280,6 +281,7 @@ function renderSelectedOpportunity() {
 function statusLabel(status) {
     if (status === 'accepted') return 'Принят';
     if (status === 'rejected') return 'Отклонен';
+    if (status === 'reserve') return 'В резерве';
     return 'На рассмотрении';
 }
 
@@ -317,6 +319,86 @@ function renderResponses() {
             item.appendChild(createEl('div', 'small mt-2', response.cover_letter));
         }
 
+        container.appendChild(item);
+    });
+}
+
+async function updateEmployerResponseStatus(responseId, status) {
+    const response = await apiFetch(`/responses/${responseId}/status`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось обновить статус.' }));
+        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось обновить статус.');
+        return;
+    }
+
+    await loadEmployerResponses();
+}
+
+function renderEmployerResponses() {
+    const container = el('employer-responses-list');
+    const refreshBtn = el('refreshEmployerResponsesBtn');
+    container.innerHTML = '';
+
+    if (!state.currentUser || state.currentUser.role !== 'employer') {
+        refreshBtn.classList.add('d-none');
+        container.appendChild(createEl('p', 'text-muted mb-0', 'Войди как работодатель, чтобы видеть входящие отклики.'));
+        return;
+    }
+
+    refreshBtn.classList.remove('d-none');
+
+    if (!state.employerResponses.length) {
+        container.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет входящих откликов.'));
+        return;
+    }
+
+    state.employerResponses.forEach((response) => {
+        const item = createEl('div', 'response-item py-2');
+        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
+        top.appendChild(createEl('div', 'fw-semibold', response.opportunity_title));
+        top.appendChild(createEl('span', `status-pill ${response.status}`, statusLabel(response.status)));
+
+        item.appendChild(top);
+        item.appendChild(createEl('div', 'small text-muted mt-1', `${response.applicant_name} (${response.applicant_email})`));
+        item.appendChild(createEl('div', 'small text-muted', `Отклик: ${formatDate(response.created_at)}`));
+
+        if (response.cover_letter) {
+            item.appendChild(createEl('div', 'small mt-2', response.cover_letter));
+        }
+
+        const actions = createEl('div', 'response-actions');
+        const statuses = [
+            { value: 'pending', label: 'На рассмотрение', style: 'outline-secondary' },
+            { value: 'accepted', label: 'Принять', style: 'outline-success' },
+            { value: 'rejected', label: 'Отклонить', style: 'outline-danger' },
+            { value: 'reserve', label: 'Резерв', style: 'outline-warning' },
+        ];
+
+        statuses.forEach(({ value, label, style }) => {
+            const button = createEl(
+                'button',
+                `btn btn-sm ${response.status === value ? 'btn-' + style.replace('outline-', '') : 'btn-' + style}`,
+                label
+            );
+            button.type = 'button';
+            if (response.status === value) {
+                button.disabled = true;
+            } else {
+                button.addEventListener('click', () => {
+                    void updateEmployerResponseStatus(response.id, value);
+                });
+            }
+            actions.appendChild(button);
+        });
+
+        item.appendChild(actions);
         container.appendChild(item);
     });
 }
@@ -470,9 +552,11 @@ async function loadCurrentUser() {
     if (!token) {
         state.currentUser = null;
         state.responses = [];
+        state.employerResponses = [];
         state.profile = null;
         renderAuthUI();
         renderResponses();
+        renderEmployerResponses();
         renderProfileSection();
         renderSelectedOpportunity();
         return;
@@ -483,9 +567,11 @@ async function loadCurrentUser() {
         clearToken();
         state.currentUser = null;
         state.responses = [];
+        state.employerResponses = [];
         state.profile = null;
         renderAuthUI();
         renderResponses();
+        renderEmployerResponses();
         renderProfileSection();
         renderSelectedOpportunity();
         return;
@@ -495,6 +581,7 @@ async function loadCurrentUser() {
     renderAuthUI();
     await loadProfile();
     await loadResponses();
+    await loadEmployerResponses();
     renderSelectedOpportunity();
 }
 
@@ -529,6 +616,24 @@ async function loadResponses() {
 
     state.responses = await response.json();
     renderResponses();
+}
+
+async function loadEmployerResponses() {
+    if (!state.currentUser || state.currentUser.role !== 'employer') {
+        state.employerResponses = [];
+        renderEmployerResponses();
+        return;
+    }
+
+    const response = await apiFetch('/responses/employer');
+    if (!response.ok) {
+        state.employerResponses = [];
+        renderEmployerResponses();
+        return;
+    }
+
+    state.employerResponses = await response.json();
+    renderEmployerResponses();
 }
 
 async function handleLoginSubmit(event) {
@@ -659,9 +764,11 @@ function handleLogout(event) {
     clearToken();
     state.currentUser = null;
     state.responses = [];
+    state.employerResponses = [];
     state.profile = null;
     renderAuthUI();
     renderResponses();
+    renderEmployerResponses();
     renderProfileSection();
     renderSelectedOpportunity();
 }
@@ -691,6 +798,9 @@ function bindEvents() {
     el('refreshResponsesBtn').addEventListener('click', () => {
         void loadResponses();
     });
+    el('refreshEmployerResponsesBtn').addEventListener('click', () => {
+        void loadEmployerResponses();
+    });
 }
 
 async function bootstrap() {
@@ -698,6 +808,7 @@ async function bootstrap() {
     bindEvents();
     renderAuthUI();
     renderResponses();
+    renderEmployerResponses();
     renderProfileSection();
     renderSelectedOpportunity();
 

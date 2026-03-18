@@ -173,6 +173,23 @@ class ResponseOut(ResponseBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class EmployerResponseOut(BaseModel):
+    id: int
+    opportunity_id: int
+    opportunity_title: str
+    applicant_id: int
+    applicant_name: str
+    applicant_email: EmailStr
+    status: str
+    cover_letter: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ResponseStatusUpdate(BaseModel):
+    status: Literal["pending", "accepted", "rejected", "reserve"]
+
+
 # ---------- Contact (нетворкинг) ----------
 class ContactBase(BaseModel):
     pass
