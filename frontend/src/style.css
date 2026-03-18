@@ -3,6 +3,10 @@ body {
     background-color: #f8f9fa;
 }
 
+#app {
+    min-height: 100vh;
+}
+
 #map {
     width: 100%;
     border-radius: 8px;
@@ -14,13 +18,43 @@ body {
     transition: background-color 0.2s;
 }
 
-.opportunity-item:hover {
+.opportunity-item:hover,
+.opportunity-item.active {
     background-color: #e9ecef;
 }
 
-/* Стили для попапа на карте */
-.leaflet-popup-content {
-    min-width: 200px;
+.responses-list {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.response-item + .response-item {
+    border-top: 1px solid #e9ecef;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.status-pill.pending {
+    color: #8a6d1d;
+    background: #fff3cd;
+}
+
+.status-pill.accepted {
+    color: #0f5132;
+    background: #d1e7dd;
+}
+
+.status-pill.rejected {
+    color: #842029;
+    background: #f8d7da;
 }
 
 .opportunity-popup h6 {
@@ -40,5 +74,14 @@ body {
 
 .opportunity-popup .tags {
     font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.detail-meta {
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+
+.empty-state {
     color: #6c757d;
 }
