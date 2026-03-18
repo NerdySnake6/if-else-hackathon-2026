@@ -15,6 +15,36 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Глобальный массив всех возможностей (понадобится для фильтрации)
 let allOpportunities = [];
 
+function createEl(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) {
+        el.className = className;
+    }
+    if (text !== undefined) {
+        el.textContent = text;
+    }
+    return el;
+}
+
+function hasCoords(opp) {
+    return Number.isFinite(opp.lat) && Number.isFinite(opp.lng);
+}
+
+function buildOpportunityPopup(opp) {
+    const popup = createEl('div', 'opportunity-popup');
+    popup.appendChild(createEl('h6', '', opp.title));
+    popup.appendChild(createEl('div', 'company', 'Компания'));
+
+    if (opp.salary_range) {
+        popup.appendChild(createEl('div', 'salary', `💰 ${opp.salary_range}`));
+    }
+
+    const tags = Array.isArray(opp.tags) ? opp.tags.map((t) => `#${t.name}`).join(' ') : '';
+    popup.appendChild(createEl('div', 'tags', tags));
+    popup.appendChild(createEl('small', '', `${opp.location} | ${opp.work_format}`));
+    return popup;
+}
+
 // Загрузка данных с бэкенда
 async function loadOpportunities() {
     try {
@@ -45,27 +75,32 @@ function renderList(opportunities) {
         const item = document.createElement('a');
         item.href = '#';
         item.className = 'list-group-item list-group-item-action opportunity-item';
-        // Краткое описание (обрезаем до 100 символов)
-        const shortDesc = opp.description.length > 100 
-            ? opp.description.substring(0, 100) + '…' 
+        const shortDesc = opp.description.length > 100
+            ? opp.description.substring(0, 100) + '…'
             : opp.description;
-        
-        item.innerHTML = `
-            <div class="d-flex w-100 justify-content-between">
-                <h6 class="mb-1">${opp.title}</h6>
-                <small class="badge bg-secondary">${opp.type}</small>
-            </div>
-            <p class="mb-1">${shortDesc}</p>
-            <small>
-                <i class="bi bi-geo-alt"></i> ${opp.location} | ${opp.work_format}
-                ${opp.salary_range ? ` | 💰 ${opp.salary_range}` : ''}
-            </small>
-        `;
+
+        const header = createEl('div', 'd-flex w-100 justify-content-between');
+        header.appendChild(createEl('h6', 'mb-1', opp.title));
+        header.appendChild(createEl('small', 'badge bg-secondary', opp.type));
+
+        const desc = createEl('p', 'mb-1', shortDesc);
+
+        const meta = createEl('small');
+        const icon = createEl('i', 'bi bi-geo-alt');
+        meta.appendChild(icon);
+        meta.append(` ${opp.location} | ${opp.work_format}`);
+        if (opp.salary_range) {
+            meta.append(` | 💰 ${opp.salary_range}`);
+        }
+
+        item.appendChild(header);
+        item.appendChild(desc);
+        item.appendChild(meta);
 
         // При клике на элемент списка перемещаем карту к маркеру (если есть координаты)
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            if (opp.lat && opp.lng) {
+            if (hasCoords(opp)) {
                 map.setView([opp.lat, opp.lng], 14);
             } else {
                 alert('Для этой возможности не указаны координаты');
@@ -86,24 +121,9 @@ function renderMap(opportunities) {
     });
 
     opportunities.forEach(opp => {
-        if (opp.lat && opp.lng) {
+        if (hasCoords(opp)) {
             const marker = L.marker([opp.lat, opp.lng]).addTo(map);
-            
-            // Формируем контент для попапа
-            const tags = opp.tags.map(t => `#${t.name}`).join(' ');
-            const companyName = opp.employer?.company_name || 'Компания';
-
-            const popupContent = `
-                <div class="opportunity-popup">
-                    <h6>${opp.title}</h6>
-                    <div class="company">${companyName}</div>
-                    ${opp.salary_range ? `<div class="salary">💰 ${opp.salary_range}</div>` : ''}
-                    <div class="tags">${tags}</div>
-                    <small>${opp.location} | ${opp.work_format}</small>
-                </div>
-            `;
-
-            marker.bindPopup(popupContent);
+            marker.bindPopup(buildOpportunityPopup(opp));
         }
     });
 }

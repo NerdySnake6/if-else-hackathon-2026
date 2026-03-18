@@ -1,11 +1,15 @@
 # backend/app/auth.py
+import os
+import secrets
+
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 
 # Конфигурация
-SECRET_KEY = "your-secret-key-change-in-production"  # В продакшене менять!
+# Для стабильных токенов между перезапусками укажи TRAMPLIN_SECRET_KEY в окружении.
+SECRET_KEY = os.getenv("TRAMPLIN_SECRET_KEY") or secrets.token_urlsafe(32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -30,4 +34,3 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
-

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
@@ -43,7 +44,16 @@ def list_opportunities(
     tag_ids: Optional[List[int]] = Query(None, description="Filter by tag IDs"),
     db: Session = Depends(get_db)
 ):
-    query = db.query(models.Opportunity).options(joinedload(models.Opportunity.tags))
+    now = datetime.utcnow()
+    query = (
+        db.query(models.Opportunity)
+        .options(joinedload(models.Opportunity.tags))
+        .filter(models.Opportunity.is_active.is_(True))
+        .filter(
+            (models.Opportunity.expires_at.is_(None))
+            | (models.Opportunity.expires_at >= now)
+        )
+    )
     
     if type:
         query = query.filter(models.Opportunity.type == type)
