@@ -52,6 +52,38 @@
                         <h4 class="mb-0">Список возможностей</h4>
                         <span class="badge text-bg-light" id="authStatusBadge">Гость</span>
                     </div>
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-body py-3">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <select class="form-select form-select-sm" id="filterType">
+                                        <option value="">Все типы</option>
+                                        <option value="internship">Стажировка</option>
+                                        <option value="job">Работа</option>
+                                        <option value="mentorship">Менторство</option>
+                                        <option value="event">Событие</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <select class="form-select form-select-sm" id="filterWorkFormat">
+                                        <option value="">Любой формат</option>
+                                        <option value="office">Офис</option>
+                                        <option value="hybrid">Гибрид</option>
+                                        <option value="remote">Удаленно</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control form-control-sm" id="filterLocation" placeholder="Город или локация">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="Поиск по тексту">
+                                </div>
+                                <div class="col-12 d-flex justify-content-end">
+                                    <button class="btn btn-sm btn-outline-secondary" id="filterResetBtn" type="button">Сбросить</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div id="opportunities-list" class="list-group" style="max-height: 500px; overflow-y: auto;"></div>
                     <div class="card shadow-sm border-0 mt-3">
                         <div class="card-body" id="opportunity-details">
@@ -75,6 +107,23 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h5 class="card-title mb-0">Кабинет работодателя</h5>
                                 <button class="btn btn-sm btn-outline-primary d-none" id="refreshEmployerResponsesBtn">Обновить</button>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="employerResponseStatusFilter">
+                                        <option value="">Все статусы</option>
+                                        <option value="pending">На рассмотрении</option>
+                                        <option value="accepted">Принят</option>
+                                        <option value="rejected">Отклонен</option>
+                                        <option value="reserve">В резерве</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" id="employerResponseSearch" placeholder="Поиск по вакансии, имени, email">
+                                        <button class="btn btn-outline-secondary" type="button" id="employerResponseClearBtn">Очистить</button>
+                                    </div>
+                                </div>
                             </div>
                             <div id="employer-responses-list" class="responses-list">
                                 <p class="text-muted mb-0">Войди как работодатель, чтобы видеть входящие отклики.</p>

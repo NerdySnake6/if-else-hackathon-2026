@@ -12,6 +12,16 @@ const state = {
     responses: [],
     employerResponses: [],
     profile: null,
+    opportunityFilters: {
+        type: '',
+        workFormat: '',
+        location: '',
+        search: '',
+    },
+    employerResponseFilters: {
+        status: '',
+        search: '',
+    },
 };
 
 let map;
@@ -69,6 +79,10 @@ function normalizeText(value) {
 function normalizeUrl(value) {
     const text = (value || '').trim();
     return text || null;
+}
+
+function includesText(haystack, needle) {
+    return (haystack || '').toLowerCase().includes((needle || '').toLowerCase());
 }
 
 function formatDate(dateString) {
@@ -160,8 +174,7 @@ function renderMap(opportunities) {
         placemark.events.add('click', () => {
             state.selectedOpportunityId = opportunity.id;
             renderSelectedOpportunity();
-            renderList(state.opportunities);
-            renderMap(state.opportunities);
+            renderOpportunitiesSection();
         });
 
         map.geoObjects.add(placemark);
@@ -216,13 +229,70 @@ function renderList(opportunities) {
             event.preventDefault();
             state.selectedOpportunityId = opportunity.id;
             renderSelectedOpportunity();
-            renderList(state.opportunities);
+            renderList(opportunities);
             centerOnOpportunity(opportunity);
-            renderMap(state.opportunities);
+            renderMap(opportunities);
         });
 
         list.appendChild(item);
     });
+}
+
+function getFilteredOpportunities() {
+    const filters = state.opportunityFilters;
+    return state.opportunities.filter((opportunity) => {
+        if (filters.type && opportunity.type !== filters.type) return false;
+        if (filters.workFormat && opportunity.work_format !== filters.workFormat) return false;
+        if (filters.location && !includesText(opportunity.location, filters.location)) return false;
+        if (filters.search) {
+            const tags = Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.name).join(' ') : '';
+            const text = [
+                opportunity.title,
+                opportunity.description,
+                opportunity.location,
+                opportunity.type,
+                opportunity.work_format,
+                tags,
+            ].join(' ');
+            if (!includesText(text, filters.search)) return false;
+        }
+        return true;
+    });
+}
+
+function syncSelectedOpportunity(filteredOpportunities) {
+    if (!filteredOpportunities.length) {
+        state.selectedOpportunityId = null;
+        return;
+    }
+    const selectedStillVisible = filteredOpportunities.some((item) => item.id === state.selectedOpportunityId);
+    if (!selectedStillVisible) {
+        state.selectedOpportunityId = filteredOpportunities[0].id;
+    }
+}
+
+function renderOpportunitiesSection() {
+    const filtered = getFilteredOpportunities();
+    syncSelectedOpportunity(filtered);
+    renderList(filtered);
+    renderSelectedOpportunity();
+    renderMap(filtered);
+}
+
+function applyOpportunityFilters() {
+    state.opportunityFilters.type = el('filterType').value;
+    state.opportunityFilters.workFormat = el('filterWorkFormat').value;
+    state.opportunityFilters.location = el('filterLocation').value.trim();
+    state.opportunityFilters.search = el('filterSearch').value.trim();
+    renderOpportunitiesSection();
+}
+
+function resetOpportunityFilters() {
+    el('filterType').value = '';
+    el('filterWorkFormat').value = '';
+    el('filterLocation').value = '';
+    el('filterSearch').value = '';
+    applyOpportunityFilters();
 }
 
 function renderSelectedOpportunity() {
@@ -354,12 +424,19 @@ function renderEmployerResponses() {
 
     refreshBtn.classList.remove('d-none');
 
+    const filteredResponses = getFilteredEmployerResponses();
+
     if (!state.employerResponses.length) {
         container.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет входящих откликов.'));
         return;
     }
 
-    state.employerResponses.forEach((response) => {
+    if (!filteredResponses.length) {
+        container.appendChild(createEl('p', 'text-muted mb-0', 'По текущим фильтрам откликов не найдено.'));
+        return;
+    }
+
+    filteredResponses.forEach((response) => {
         const item = createEl('div', 'response-item py-2');
         const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
         top.appendChild(createEl('div', 'fw-semibold', response.opportunity_title));
@@ -401,6 +478,30 @@ function renderEmployerResponses() {
         item.appendChild(actions);
         container.appendChild(item);
     });
+}
+
+function getFilteredEmployerResponses() {
+    const filters = state.employerResponseFilters;
+    return state.employerResponses.filter((response) => {
+        if (filters.status && response.status !== filters.status) return false;
+        if (filters.search) {
+            const combined = `${response.opportunity_title} ${response.applicant_name} ${response.applicant_email} ${response.cover_letter || ''}`;
+            if (!includesText(combined, filters.search)) return false;
+        }
+        return true;
+    });
+}
+
+function applyEmployerResponseFilters() {
+    state.employerResponseFilters.status = el('employerResponseStatusFilter').value;
+    state.employerResponseFilters.search = el('employerResponseSearch').value.trim();
+    renderEmployerResponses();
+}
+
+function resetEmployerResponseFilters() {
+    el('employerResponseStatusFilter').value = '';
+    el('employerResponseSearch').value = '';
+    applyEmployerResponseFilters();
 }
 
 function setEmployerRequired(enabled) {
@@ -595,9 +696,7 @@ async function loadOpportunities() {
     if (!state.selectedOpportunityId && state.opportunities.length) {
         state.selectedOpportunityId = state.opportunities[0].id;
     }
-    renderList(state.opportunities);
-    renderSelectedOpportunity();
-    renderMap(state.opportunities);
+    renderOpportunitiesSection();
 }
 
 async function loadResponses() {
@@ -801,6 +900,14 @@ function bindEvents() {
     el('refreshEmployerResponsesBtn').addEventListener('click', () => {
         void loadEmployerResponses();
     });
+    el('filterType').addEventListener('change', applyOpportunityFilters);
+    el('filterWorkFormat').addEventListener('change', applyOpportunityFilters);
+    el('filterLocation').addEventListener('input', applyOpportunityFilters);
+    el('filterSearch').addEventListener('input', applyOpportunityFilters);
+    el('filterResetBtn').addEventListener('click', resetOpportunityFilters);
+    el('employerResponseStatusFilter').addEventListener('change', applyEmployerResponseFilters);
+    el('employerResponseSearch').addEventListener('input', applyEmployerResponseFilters);
+    el('employerResponseClearBtn').addEventListener('click', resetEmployerResponseFilters);
 }
 
 async function bootstrap() {

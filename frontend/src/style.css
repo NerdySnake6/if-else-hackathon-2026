@@ -64,6 +64,11 @@ body {
     background: #f8d7da;
 }
 
+.status-pill.reserve {
+    color: #664d03;
+    background: #fff3cd;
+}
+
 .opportunity-popup h6 {
     margin-bottom: 4px;
     color: #0d6efd;
