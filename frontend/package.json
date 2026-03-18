@@ -12,7 +12,6 @@
     "vite": "^8.0.0"
   },
   "dependencies": {
-    "bootstrap": "^5.3.8",
-    "leaflet": "^1.9.4"
+    "bootstrap": "^5.3.8"
   }
 }

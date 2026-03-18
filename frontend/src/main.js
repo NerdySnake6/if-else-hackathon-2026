@@ -1,19 +1,14 @@
 import './style.css';
-import L from 'leaflet';
 
 // Базовый URL API (через прокси Vite)
 const API_BASE = '/api';
-
-// Инициализация карты с центром в Москве (можно изменить)
-const map = L.map('map').setView([55.7558, 37.6176], 10);
-
-// Добавляем тайлы OpenStreetMap
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-}).addTo(map);
+const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
 
 // Глобальный массив всех возможностей (понадобится для фильтрации)
 let allOpportunities = [];
+let map;
+let ymapsReadyPromise;
+let placemarks = [];
 
 function createEl(tag, className, text) {
     const el = document.createElement(tag);
@@ -43,6 +38,38 @@ function buildOpportunityPopup(opp) {
     popup.appendChild(createEl('div', 'tags', tags));
     popup.appendChild(createEl('small', '', `${opp.location} | ${opp.work_format}`));
     return popup;
+}
+
+function loadYandexMaps() {
+    if (!YANDEX_API_KEY) {
+        return Promise.reject(new Error('Не указан API-ключ Яндекс Карт'));
+    }
+    if (window.ymaps) {
+        return Promise.resolve(window.ymaps);
+    }
+
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = `https://api-maps.yandex.ru/2.1/?apikey=${YANDEX_API_KEY}&lang=ru_RU`;
+        script.async = true;
+        script.onerror = () => reject(new Error('Не удалось загрузить Яндекс Карты'));
+        script.onload = () => {
+            window.ymaps.ready(() => resolve(window.ymaps));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+async function initMap() {
+    if (!ymapsReadyPromise) {
+        ymapsReadyPromise = loadYandexMaps();
+    }
+    const ymaps = await ymapsReadyPromise;
+    map = new ymaps.Map('map', {
+        center: [55.7558, 37.6176],
+        zoom: 10,
+        controls: ['zoomControl']
+    });
 }
 
 // Загрузка данных с бэкенда
@@ -101,7 +128,7 @@ function renderList(opportunities) {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             if (hasCoords(opp)) {
-                map.setView([opp.lat, opp.lng], 14);
+                map.setCenter([opp.lat, opp.lng], 14, { duration: 300 });
             } else {
                 alert('Для этой возможности не указаны координаты');
             }
@@ -113,17 +140,27 @@ function renderList(opportunities) {
 
 // Отображение маркеров на карте
 function renderMap(opportunities) {
-    // Очищаем предыдущие маркеры (если нужна динамическая перерисовка, но проще удалить все и добавить заново)
-    map.eachLayer((layer) => {
-        if (layer instanceof L.Marker) {
-            map.removeLayer(layer);
-        }
-    });
+    if (!map || !window.ymaps) return;
+    const ymaps = window.ymaps;
+
+    placemarks.forEach((placemark) => map.geoObjects.remove(placemark));
+    placemarks = [];
 
     opportunities.forEach(opp => {
         if (hasCoords(opp)) {
-            const marker = L.marker([opp.lat, opp.lng]).addTo(map);
-            marker.bindPopup(buildOpportunityPopup(opp));
+            const popup = buildOpportunityPopup(opp);
+            const placemark = new ymaps.Placemark(
+                [opp.lat, opp.lng],
+                {
+                    balloonContentHeader: opp.title,
+                    balloonContentBody: popup.outerHTML
+                },
+                {
+                    preset: 'islands#blueCircleDotIcon'
+                }
+            );
+            map.geoObjects.add(placemark);
+            placemarks.push(placemark);
         }
     });
 }
@@ -132,7 +169,16 @@ function renderMap(opportunities) {
 // ...
 
 // Запуск при загрузке страницы
-loadOpportunities();
+(async function bootstrap() {
+    try {
+        await initMap();
+        await loadOpportunities();
+    } catch (error) {
+        console.error('Ошибка инициализации карты:', error);
+        const mapEl = document.getElementById('map');
+        mapEl.innerHTML = '<div class="alert alert-danger m-2">Не удалось загрузить карту</div>';
+    }
+})();
 
 // Обработчики для кнопок входа/регистрации (пока просто заглушки)
 document.getElementById('loginBtn').addEventListener('click', (e) => {

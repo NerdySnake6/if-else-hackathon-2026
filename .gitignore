@@ -4,4 +4,6 @@ backend/app/__pycache__/
 backend/app/routers/__pycache__/
 *.db
 .env
+.env.*
+!.env.example
 .DS_Store
