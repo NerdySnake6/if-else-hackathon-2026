@@ -85,3 +85,13 @@ body {
 .empty-state {
     color: #6c757d;
 }
+
+#profileForm .form-label {
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+}
+
+#profileForm .form-control,
+#profileForm .form-select {
+    font-size: 0.9rem;
+}

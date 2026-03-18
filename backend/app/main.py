@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 
 from app.database import init_db
-from app.routers import auth, opportunities, responses
+from app.routers import auth, opportunities, profiles, responses
 
 app = FastAPI(
     title="Трамплин",
@@ -16,6 +16,7 @@ def on_startup():
 
 app.include_router(auth.router)
 app.include_router(opportunities.router)
+app.include_router(profiles.router)
 app.include_router(responses.router)
 
 @app.get("/")

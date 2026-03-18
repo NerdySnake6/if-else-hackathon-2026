@@ -51,7 +51,7 @@ class ApplicantProfileOut(ApplicantProfileBase):
 
 # ---------- Employer Profile ----------
 class EmployerProfileBase(BaseModel):
-    company_name: str = Field(min_length=1, max_length=200)
+    company_name: Optional[str] = None
     description: Optional[str] = None
     industry: Optional[str] = None
     website: Optional[str] = None
@@ -61,7 +61,30 @@ class EmployerProfileBase(BaseModel):
 
 
 class EmployerProfileCreate(EmployerProfileBase):
-    pass
+    company_name: str = Field(min_length=1, max_length=200)
+
+
+class ApplicantProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    university: Optional[str] = None
+    course_or_year: Optional[str] = None
+    bio: Optional[str] = None
+    skills: Optional[str] = None
+    experience: Optional[str] = None
+    github_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    is_profile_public: Optional[bool] = None
+    show_responses: Optional[bool] = None
+
+
+class EmployerProfileUpdate(BaseModel):
+    company_name: Optional[str] = None
+    description: Optional[str] = None
+    industry: Optional[str] = None
+    website: Optional[str] = None
+    social_links: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
 
 
 class EmployerProfileOut(EmployerProfileBase):
@@ -179,6 +202,26 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
+
+
+class ProfileMeOut(BaseModel):
+    id: int
+    email: EmailStr
+    display_name: str
+    role: str
+    is_active: bool
+    is_verified: bool
+    created_at: datetime
+    applicant_profile: Optional[ApplicantProfileOut] = None
+    employer_profile: Optional[EmployerProfileOut] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProfileMeUpdate(BaseModel):
+    display_name: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    applicant_profile: Optional[ApplicantProfileUpdate] = None
+    employer_profile: Optional[EmployerProfileUpdate] = None
 
 
 # ---------- Login ----------

@@ -70,6 +70,97 @@
                             </div>
                         </div>
                     </div>
+                    <div class="card shadow-sm border-0 mt-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Профиль</h5>
+                                <span class="small text-muted" id="profileStatusText">Гость</span>
+                            </div>
+                            <form id="profileForm" class="d-none">
+                                <div class="mb-2">
+                                    <label for="profileDisplayName" class="form-label">Отображаемое имя</label>
+                                    <input type="text" class="form-control" id="profileDisplayName" minlength="2" required>
+                                </div>
+
+                                <div id="applicantProfileFields" class="d-none">
+                                    <div class="mb-2">
+                                        <label for="profileFullName" class="form-label">ФИО</label>
+                                        <input type="text" class="form-control" id="profileFullName">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileUniversity" class="form-label">Университет</label>
+                                        <input type="text" class="form-control" id="profileUniversity">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileCourse" class="form-label">Курс или год</label>
+                                        <input type="text" class="form-control" id="profileCourse">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileBio" class="form-label">О себе</label>
+                                        <textarea class="form-control" id="profileBio" rows="2"></textarea>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileSkills" class="form-label">Навыки</label>
+                                        <input type="text" class="form-control" id="profileSkills">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileExperience" class="form-label">Опыт</label>
+                                        <textarea class="form-control" id="profileExperience" rows="2"></textarea>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileGithub" class="form-label">GitHub</label>
+                                        <input type="url" class="form-control" id="profileGithub">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profilePortfolio" class="form-label">Портфолио</label>
+                                        <input type="url" class="form-control" id="profilePortfolio">
+                                    </div>
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input" type="checkbox" id="profilePublic">
+                                        <label class="form-check-label" for="profilePublic">Публичный профиль</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="profileShowResponses">
+                                        <label class="form-check-label" for="profileShowResponses">Показывать отклики</label>
+                                    </div>
+                                </div>
+
+                                <div id="employerProfileFields" class="d-none">
+                                    <div class="mb-2">
+                                        <label for="profileCompanyName" class="form-label">Название компании</label>
+                                        <input type="text" class="form-control" id="profileCompanyName">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileCompanyDescription" class="form-label">Описание</label>
+                                        <textarea class="form-control" id="profileCompanyDescription" rows="2"></textarea>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileIndustry" class="form-label">Индустрия</label>
+                                        <input type="text" class="form-control" id="profileIndustry">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileWebsite" class="form-label">Сайт</label>
+                                        <input type="url" class="form-control" id="profileWebsite">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileSocialLinks" class="form-label">Соцсети</label>
+                                        <input type="text" class="form-control" id="profileSocialLinks" placeholder="Ссылки через запятую">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileCity" class="form-label">Город</label>
+                                        <input type="text" class="form-control" id="profileCity">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label for="profileAddress" class="form-label">Адрес</label>
+                                        <input type="text" class="form-control" id="profileAddress">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-sm btn-primary mt-2">Сохранить профиль</button>
+                            </form>
+                            <p class="text-muted mb-0" id="profileGuestHint">Войди в систему, чтобы заполнить профиль.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
