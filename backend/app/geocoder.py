@@ -1,3 +1,5 @@
+"""Вспомогательные функции для серверного геокодирования через Яндекс."""
+
 import json
 import os
 from typing import Optional
@@ -10,14 +12,18 @@ YANDEX_GEOCODER_API_KEY_ENV = "YANDEX_GEOCODER_API_KEY"
 
 
 class GeocodingError(Exception):
+    """Ошибка при обращении к геокодеру или разборе его ответа."""
+
     pass
 
 
 def geocoder_is_configured() -> bool:
+    """Проверяет, доступен ли ключ Яндекс Геокодера в окружении."""
     return bool(os.getenv(YANDEX_GEOCODER_API_KEY_ENV))
 
 
 def geocode_address(address: str) -> Optional[dict]:
+    """Преобразует адрес в координаты через HTTP Геокодер Яндекса."""
     api_key = os.getenv(YANDEX_GEOCODER_API_KEY_ENV)
     if not api_key:
         raise GeocodingError(

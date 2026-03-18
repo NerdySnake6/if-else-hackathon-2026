@@ -1,3 +1,5 @@
+"""Маршруты, связанные с картой и серверным геокодированием."""
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.dependencies import get_current_active_user
@@ -14,6 +16,7 @@ def geocode(
     address: str = Query(..., min_length=3, description="Address to geocode"),
     current_user: User = Depends(get_current_active_user),
 ):
+    """Геокодирует адрес через серверную интеграцию с Яндексом."""
     if not geocoder_is_configured():
         raise HTTPException(
             status_code=503,

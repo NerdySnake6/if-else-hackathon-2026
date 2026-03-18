@@ -1,10 +1,9 @@
-# backend/app/schemas.py
+"""Pydantic-схемы для запросов и ответов API."""
+
 from datetime import datetime
 from typing import Optional, List, Literal
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
-
-# ---------- User ----------
 class UserBase(BaseModel):
     email: EmailStr
     display_name: str = Field(min_length=2, max_length=100)
@@ -23,8 +22,6 @@ class UserOut(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-# ---------- Applicant Profile ----------
 class ApplicantProfileBase(BaseModel):
     full_name: Optional[str] = None
     university: Optional[str] = None
@@ -48,8 +45,6 @@ class ApplicantProfileOut(ApplicantProfileBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-# ---------- Employer Profile ----------
 class EmployerProfileBase(BaseModel):
     company_name: Optional[str] = None
     description: Optional[str] = None
@@ -93,8 +88,6 @@ class EmployerProfileOut(EmployerProfileBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-# ---------- Tag ----------
 class TagBase(BaseModel):
     name: str = Field(min_length=1, max_length=50)
     category: Literal["tech", "level", "employment_type", "format"]
@@ -109,8 +102,6 @@ class TagOut(TagBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-# ---------- Opportunity ----------
 class OpportunityBase(BaseModel):
     title: str = Field(min_length=5, max_length=200)
     description: str = Field(min_length=20)
@@ -126,7 +117,7 @@ class OpportunityBase(BaseModel):
 
 
 class OpportunityCreate(OpportunityBase):
-    tag_ids: Optional[List[int]] = None  # список ID тегов
+    tag_ids: Optional[List[int]] = None
 
 
 class OpportunityUpdate(BaseModel):
@@ -159,8 +150,6 @@ class GeocodeResult(BaseModel):
     formatted_address: str
     precision: Optional[str] = None
 
-
-# ---------- Response (отклик) ----------
 class ResponseBase(BaseModel):
     cover_letter: Optional[str] = None
 
@@ -196,8 +185,6 @@ class EmployerResponseOut(BaseModel):
 class ResponseStatusUpdate(BaseModel):
     status: Literal["pending", "accepted", "rejected", "reserve"]
 
-
-# ---------- Contact (нетворкинг) ----------
 class ContactBase(BaseModel):
     pass
 
@@ -216,8 +203,6 @@ class ContactOut(ContactBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-
-# ---------- Token (JWT) ----------
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -247,8 +232,6 @@ class ProfileMeUpdate(BaseModel):
     applicant_profile: Optional[ApplicantProfileUpdate] = None
     employer_profile: Optional[EmployerProfileUpdate] = None
 
-
-# ---------- Login ----------
 class LoginRequest(BaseModel):
-    username: str  # email
+    username: str
     password: str

@@ -1,3 +1,5 @@
+"""Маршруты для откликов соискателей и работы работодателя с ними."""
+
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,6 +18,7 @@ def create_response(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_roles("applicant"))
 ):
+    """Создает отклик текущего соискателя на выбранную возможность."""
     opportunity = (
         db.query(models.Opportunity)
         .filter(models.Opportunity.id == response_data.opportunity_id)
@@ -51,6 +54,7 @@ def list_my_responses(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
+    """Возвращает отклики, созданные текущим пользователем."""
     responses = (
         db.query(models.Response)
         .filter(models.Response.applicant_id == current_user.id)
@@ -65,6 +69,7 @@ def list_employer_responses(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_roles("employer", "curator", "admin"))
 ):
+    """Возвращает входящие отклики работодателю или сотруднику платформы."""
     query = (
         db.query(models.Response, models.Opportunity, models.User)
         .join(models.Opportunity, models.Response.opportunity_id == models.Opportunity.id)
@@ -100,6 +105,7 @@ def update_response_status(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_roles("employer", "curator", "admin"))
 ):
+    """Обновляет статус отклика, доступного текущему пользователю."""
     response = (
         db.query(models.Response)
         .join(models.Opportunity, models.Response.opportunity_id == models.Opportunity.id)

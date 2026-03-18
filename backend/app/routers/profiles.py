@@ -1,3 +1,5 @@
+"""Маршруты для чтения и обновления профилей по ролям пользователей."""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
@@ -13,6 +15,7 @@ def get_my_profile(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
+    """Возвращает текущего пользователя вместе с его ролевым профилем."""
     user = (
         db.query(models.User)
         .options(
@@ -33,6 +36,7 @@ def update_my_profile(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
+    """Обновляет пользователя и профиль, соответствующий его роли."""
     user = (
         db.query(models.User)
         .options(

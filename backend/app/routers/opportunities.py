@@ -1,3 +1,5 @@
+"""Маршруты для просмотра и управления возможностями на платформе."""
+
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -12,6 +14,7 @@ router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 
 
 def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
+    """Определяет, нужно ли выполнять геокодирование локации."""
     if not location:
         return False
     if work_format == "remote":
@@ -25,6 +28,7 @@ def resolve_coordinates(
     lat: Optional[float],
     lng: Optional[float],
 ) -> tuple[Optional[float], Optional[float]]:
+    """Возвращает координаты из входных данных или из геокодера."""
     if lat is not None and lng is not None:
         return lat, lng
 
@@ -50,6 +54,7 @@ def create_opportunity(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_roles("employer", "curator", "admin"))
 ):
+    """Создает возможность и при необходимости автозаполняет координаты."""
     if current_user.role == "employer" and not current_user.is_verified:
         raise HTTPException(status_code=403, detail="Employer not verified")
 
@@ -89,6 +94,7 @@ def list_opportunities(
     tag_ids: Optional[List[int]] = Query(None, description="Filter by tag IDs"),
     db: Session = Depends(get_db)
 ):
+    """Возвращает активные публичные возможности с учетом фильтров."""
     now = datetime.utcnow()
     query = (
         db.query(models.Opportunity)
@@ -115,6 +121,7 @@ def list_opportunities(
 
 @router.get("/{opp_id}", response_model=schemas.OpportunityOut)
 def get_opportunity(opp_id: int, db: Session = Depends(get_db)):
+    """Возвращает одну возможность по ее идентификатору."""
     opp = db.query(models.Opportunity).filter(models.Opportunity.id == opp_id).first()
     if not opp:
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -127,6 +134,7 @@ def update_opportunity(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
+    """Обновляет возможность и пересчитывает координаты при необходимости."""
     opp = db.query(models.Opportunity).filter(models.Opportunity.id == opp_id).first()
     if not opp:
         raise HTTPException(status_code=404, detail="Opportunity not found")
@@ -167,6 +175,7 @@ def delete_opportunity(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
+    """Удаляет возможность, доступную текущему пользователю по правам."""
     opp = db.query(models.Opportunity).filter(models.Opportunity.id == opp_id).first()
     if not opp:
         raise HTTPException(status_code=404, detail="Opportunity not found")
