@@ -147,6 +147,44 @@
                     <div class="card shadow-sm border-0 mt-3">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Мои карточки возможностей</h5>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary d-none" id="refreshEmployerOpportunitiesBtn">Обновить</button>
+                                    <button class="btn btn-sm btn-primary d-none" id="openEmployerOpportunityCreateBtn">Новая карточка</button>
+                                </div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="employerOpportunityStatusFilter">
+                                        <option value="">Все статусы</option>
+                                        <option value="active">Активные</option>
+                                        <option value="inactive">Закрытые и скрытые</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="employerOpportunityTypeFilter">
+                                        <option value="">Все типы</option>
+                                        <option value="internship">Стажировка</option>
+                                        <option value="job">Работа</option>
+                                        <option value="mentorship">Менторство</option>
+                                        <option value="event">Событие</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" id="employerOpportunitySearch" placeholder="Поиск по моим карточкам">
+                                        <button class="btn btn-outline-secondary" type="button" id="employerOpportunityClearBtn">Очистить</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="employer-opportunities-list" class="responses-list">
+                                <p class="text-muted mb-0">Войди как работодатель, чтобы создавать и редактировать свои карточки.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card shadow-sm border-0 mt-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h5 class="card-title mb-0">Профиль</h5>
                                 <span class="small text-muted" id="profileStatusText">Гость</span>
                             </div>
@@ -482,6 +520,75 @@
                                     <input class="form-check-input" type="checkbox" id="curatorOpportunityActive">
                                     <label class="form-check-label" for="curatorOpportunityActive">Карточка активна</label>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить карточку</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="employerOpportunityModal" tabindex="-1" aria-labelledby="employerOpportunityModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="employerOpportunityModalLabel">Карточка возможности</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="employerOpportunityForm">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label for="employerOpportunityTitle" class="form-label">Название</label>
+                                <input type="text" class="form-control" id="employerOpportunityTitle" minlength="5" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="employerOpportunityType" class="form-label">Тип</label>
+                                <select class="form-select" id="employerOpportunityType" required>
+                                    <option value="internship">Стажировка</option>
+                                    <option value="job">Работа</option>
+                                    <option value="mentorship">Менторство</option>
+                                    <option value="event">Событие</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="employerOpportunityWorkFormat" class="form-label">Формат</label>
+                                <select class="form-select" id="employerOpportunityWorkFormat" required>
+                                    <option value="office">Офис</option>
+                                    <option value="hybrid">Гибрид</option>
+                                    <option value="remote">Удаленно</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="employerOpportunityLocation" class="form-label">Локация</label>
+                                <input type="text" class="form-control" id="employerOpportunityLocation" required>
+                                <div class="form-text" id="employerOpportunityLocationHint">Укажи адрес офиса, площадки или город работодателя.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="employerOpportunitySalary" class="form-label">Зарплата или вознаграждение</label>
+                                <input type="text" class="form-control" id="employerOpportunitySalary" placeholder="Например: 80 000 - 120 000">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="employerOpportunityExpiresAt" class="form-label">Срок действия</label>
+                                <input type="datetime-local" class="form-control" id="employerOpportunityExpiresAt">
+                            </div>
+                            <div class="col-md-6" id="employerOpportunityEventDateGroup">
+                                <label for="employerOpportunityEventDate" class="form-label">Дата мероприятия</label>
+                                <input type="datetime-local" class="form-control" id="employerOpportunityEventDate">
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="employerOpportunityActive" checked>
+                                    <label class="form-check-label" for="employerOpportunityActive">Карточка активна</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label for="employerOpportunityDescription" class="form-label">Описание</label>
+                                <textarea class="form-control" id="employerOpportunityDescription" rows="6" minlength="20" required></textarea>
                             </div>
                         </div>
                     </div>

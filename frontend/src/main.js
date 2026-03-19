@@ -8,11 +8,13 @@ const FAVORITE_COMPANIES_KEY = 'tramplin_favorite_companies';
 
 const state = {
     opportunities: [],
+    employerOpportunities: [],
     currentUser: null,
     selectedOpportunityId: null,
     pendingApplyId: null,
     pendingCuratorUserId: null,
     pendingCuratorOpportunityId: null,
+    pendingEmployerOpportunityId: null,
     responses: [],
     employerResponses: [],
     curatorUsers: [],
@@ -29,6 +31,11 @@ const state = {
     },
     employerResponseFilters: {
         status: '',
+        search: '',
+    },
+    employerOpportunityFilters: {
+        status: '',
+        type: '',
         search: '',
     },
     curatorFilters: {
@@ -48,6 +55,7 @@ let registerModal;
 let applyModal;
 let curatorUserModal;
 let curatorOpportunityModal;
+let employerOpportunityModal;
 
 function el(id) {
     return document.getElementById(id);
@@ -503,6 +511,13 @@ function renderSelectedOpportunity() {
     focusBtn.addEventListener('click', () => centerOnOpportunity(opportunity));
     actionWrap.appendChild(focusBtn);
 
+    if (state.currentUser?.role === 'employer' && state.currentUser.id === opportunity.employer_id) {
+        const editBtn = createEl('button', 'btn btn-outline-primary', 'Редактировать мою карточку');
+        editBtn.type = 'button';
+        editBtn.addEventListener('click', () => openEmployerOpportunityModal(opportunity.id));
+        actionWrap.appendChild(editBtn);
+    }
+
     container.appendChild(actionWrap);
 }
 
@@ -527,6 +542,21 @@ function currentRoleLabel(role) {
     if (role === 'curator') return 'Куратор';
     if (role === 'admin') return 'Администратор';
     return role;
+}
+
+function opportunityTypeLabel(type) {
+    if (type === 'internship') return 'Стажировка';
+    if (type === 'job') return 'Работа';
+    if (type === 'mentorship') return 'Менторство';
+    if (type === 'event') return 'Событие';
+    return type;
+}
+
+function workFormatLabel(workFormat) {
+    if (workFormat === 'office') return 'Офис';
+    if (workFormat === 'hybrid') return 'Гибрид';
+    if (workFormat === 'remote') return 'Удаленно';
+    return workFormat;
 }
 
 function renderResponses() {
@@ -648,6 +678,109 @@ function renderEmployerResponses() {
             }
             actions.appendChild(button);
         });
+
+        item.appendChild(actions);
+        container.appendChild(item);
+    });
+}
+
+function getFilteredEmployerOpportunities() {
+    const filters = state.employerOpportunityFilters;
+    return state.employerOpportunities.filter((opportunity) => {
+        if (filters.status === 'active' && !opportunity.is_active) return false;
+        if (filters.status === 'inactive' && opportunity.is_active) return false;
+        if (filters.type && opportunity.type !== filters.type) return false;
+        if (filters.search) {
+            const haystack = `${opportunity.title} ${opportunity.description} ${opportunity.location} ${opportunity.salary_range || ''}`;
+            if (!includesText(haystack, filters.search)) return false;
+        }
+        return true;
+    });
+}
+
+function renderEmployerOpportunities() {
+    const container = el('employer-opportunities-list');
+    const refreshBtn = el('refreshEmployerOpportunitiesBtn');
+    const createBtn = el('openEmployerOpportunityCreateBtn');
+    container.innerHTML = '';
+
+    if (!state.currentUser || state.currentUser.role !== 'employer') {
+        refreshBtn.classList.add('d-none');
+        createBtn.classList.add('d-none');
+        container.appendChild(createEl('p', 'text-muted mb-0', 'Войди как работодатель, чтобы создавать и редактировать свои карточки.'));
+        return;
+    }
+
+    refreshBtn.classList.remove('d-none');
+    createBtn.classList.remove('d-none');
+    createBtn.disabled = !state.currentUser.is_verified;
+
+    if (!state.currentUser.is_verified) {
+        container.appendChild(createEl('p', 'text-muted mb-2', 'После верификации компании куратором здесь станет доступно создание новых карточек.'));
+    }
+
+    if (!state.employerOpportunities.length) {
+        container.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет созданных карточек. Создай первую возможность для студентов и выпускников.'));
+        return;
+    }
+
+    const filtered = getFilteredEmployerOpportunities();
+    if (!filtered.length) {
+        container.appendChild(createEl('p', 'text-muted mb-0', 'По текущим фильтрам карточки не найдены.'));
+        return;
+    }
+
+    filtered.forEach((opportunity) => {
+        const item = createEl('div', 'opportunity-manage-item py-2');
+        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
+        top.appendChild(createEl('div', 'fw-semibold', opportunity.title));
+        top.appendChild(createEl('span', `status-pill ${opportunity.is_active ? 'accepted' : 'rejected'}`, opportunity.is_active ? 'Активна' : 'Закрыта'));
+        item.appendChild(top);
+        item.appendChild(createEl('div', 'opportunity-manage-meta mt-1', `${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
+
+        const secondaryMeta = [];
+        if (opportunity.salary_range) secondaryMeta.push(opportunity.salary_range);
+        if (opportunity.expires_at) secondaryMeta.push(`До ${formatDate(opportunity.expires_at)}`);
+        if (opportunity.event_date) secondaryMeta.push(`Событие ${formatDate(opportunity.event_date)}`);
+        if (secondaryMeta.length) {
+            item.appendChild(createEl('div', 'small text-muted mt-1', secondaryMeta.join(' | ')));
+        }
+
+        item.appendChild(
+            createEl(
+                'div',
+                'small mt-1',
+                opportunity.description.length > 140 ? `${opportunity.description.slice(0, 140)}...` : opportunity.description
+            )
+        );
+
+        const actions = createEl('div', 'opportunity-manage-actions');
+        const editBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Редактировать');
+        editBtn.type = 'button';
+        editBtn.addEventListener('click', () => openEmployerOpportunityModal(opportunity.id));
+        actions.appendChild(editBtn);
+
+        const toggleBtn = createEl(
+            'button',
+            `btn btn-sm ${opportunity.is_active ? 'btn-outline-warning' : 'btn-outline-success'}`,
+            opportunity.is_active ? 'Перевести в архив' : 'Опубликовать'
+        );
+        toggleBtn.type = 'button';
+        toggleBtn.addEventListener('click', () => {
+            void saveEmployerOpportunity({
+                id: opportunity.id,
+                payload: { is_active: !opportunity.is_active },
+                successMessage: opportunity.is_active ? 'Карточка переведена в архив.' : 'Карточка снова опубликована.',
+            });
+        });
+        actions.appendChild(toggleBtn);
+
+        const deleteBtn = createEl('button', 'btn btn-sm btn-outline-danger', 'Удалить');
+        deleteBtn.type = 'button';
+        deleteBtn.addEventListener('click', () => {
+            void deleteEmployerOpportunity(opportunity.id);
+        });
+        actions.appendChild(deleteBtn);
 
         item.appendChild(actions);
         container.appendChild(item);
@@ -950,6 +1083,142 @@ function openCuratorOpportunityModal(opportunityId) {
     curatorOpportunityModal.show();
 }
 
+function resetEmployerOpportunityForm() {
+    state.pendingEmployerOpportunityId = null;
+    el('employerOpportunityModalLabel').textContent = 'Новая карточка возможности';
+    el('employerOpportunityTitle').value = '';
+    el('employerOpportunityType').value = 'job';
+    el('employerOpportunityWorkFormat').value = 'office';
+    el('employerOpportunityLocation').value = '';
+    el('employerOpportunitySalary').value = '';
+    el('employerOpportunityExpiresAt').value = '';
+    el('employerOpportunityEventDate').value = '';
+    el('employerOpportunityDescription').value = '';
+    el('employerOpportunityActive').checked = true;
+    syncEmployerOpportunityFieldHints();
+}
+
+function openEmployerOpportunityModal(opportunityId = null) {
+    if (!opportunityId) {
+        resetEmployerOpportunityForm();
+        const employerProfile = state.profile?.employer_profile;
+        const defaultLocation = employerProfile?.address || employerProfile?.city || '';
+        if (defaultLocation) {
+            el('employerOpportunityLocation').value = defaultLocation;
+        }
+        employerOpportunityModal.show();
+        return;
+    }
+
+    const opportunity = state.employerOpportunities.find((item) => item.id === opportunityId);
+    if (!opportunity) return;
+
+    state.pendingEmployerOpportunityId = opportunityId;
+    el('employerOpportunityModalLabel').textContent = 'Редактирование карточки';
+    el('employerOpportunityTitle').value = opportunity.title || '';
+    el('employerOpportunityType').value = opportunity.type || 'job';
+    el('employerOpportunityWorkFormat').value = opportunity.work_format || 'office';
+    el('employerOpportunityLocation').value = opportunity.location || '';
+    el('employerOpportunitySalary').value = opportunity.salary_range || '';
+    el('employerOpportunityExpiresAt').value = toDateTimeLocalValue(opportunity.expires_at);
+    el('employerOpportunityEventDate').value = toDateTimeLocalValue(opportunity.event_date);
+    el('employerOpportunityDescription').value = opportunity.description || '';
+    el('employerOpportunityActive').checked = Boolean(opportunity.is_active);
+    syncEmployerOpportunityFieldHints();
+    employerOpportunityModal.show();
+}
+
+function syncEmployerOpportunityFieldHints() {
+    const type = el('employerOpportunityType').value;
+    const workFormat = el('employerOpportunityWorkFormat').value;
+    const locationInput = el('employerOpportunityLocation');
+    const locationHint = el('employerOpportunityLocationHint');
+    const eventDateGroup = el('employerOpportunityEventDateGroup');
+
+    if (type === 'event') {
+        eventDateGroup.classList.remove('d-none');
+    } else {
+        eventDateGroup.classList.add('d-none');
+        el('employerOpportunityEventDate').value = '';
+    }
+
+    if (workFormat === 'remote') {
+        locationInput.placeholder = 'Например: Москва';
+        locationHint.textContent = 'Для удаленного формата укажи город работодателя или организатора.';
+    } else if (type === 'event') {
+        locationInput.placeholder = 'Например: Санкт-Петербург, Кронверкский пр., 49';
+        locationHint.textContent = 'Для офлайн-мероприятия лучше указать точный адрес площадки.';
+    } else {
+        locationInput.placeholder = 'Например: Москва, ул. Льва Толстого, 16';
+        locationHint.textContent = 'Укажи адрес офиса, площадки или город работодателя.';
+    }
+}
+
+function buildEmployerOpportunityPayload() {
+    return {
+        title: (el('employerOpportunityTitle').value || '').trim(),
+        description: (el('employerOpportunityDescription').value || '').trim(),
+        type: el('employerOpportunityType').value,
+        work_format: el('employerOpportunityWorkFormat').value,
+        location: (el('employerOpportunityLocation').value || '').trim(),
+        salary_range: normalizeText(el('employerOpportunitySalary').value),
+        expires_at: el('employerOpportunityExpiresAt').value ? new Date(el('employerOpportunityExpiresAt').value).toISOString() : null,
+        event_date: el('employerOpportunityEventDate').value ? new Date(el('employerOpportunityEventDate').value).toISOString() : null,
+        is_active: el('employerOpportunityActive').checked,
+        tag_ids: [],
+    };
+}
+
+async function saveEmployerOpportunity({ id = null, payload, successMessage }) {
+    const path = id ? `/opportunities/${id}` : '/opportunities/';
+    const method = id ? 'PUT' : 'POST';
+    const response = await apiFetch(path, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось сохранить карточку.' }));
+        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось сохранить карточку.');
+        return false;
+    }
+
+    await Promise.all([
+        loadEmployerOpportunities(),
+        loadOpportunities(),
+        loadEmployerResponses(),
+    ]);
+    if (successMessage) {
+        alert(successMessage);
+    }
+    return true;
+}
+
+async function deleteEmployerOpportunity(opportunityId) {
+    const confirmed = window.confirm('Удалить карточку возможности? Это действие нельзя отменить.');
+    if (!confirmed) return;
+
+    const response = await apiFetch(`/opportunities/${opportunityId}`, {
+        method: 'DELETE',
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось удалить карточку.' }));
+        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось удалить карточку.');
+        return;
+    }
+
+    await Promise.all([
+        loadEmployerOpportunities(),
+        loadOpportunities(),
+        loadEmployerResponses(),
+    ]);
+    alert('Карточка удалена.');
+}
+
 function buildProfilePayload() {
     const payload = {
         display_name: normalizeText(el('profileDisplayName').value),
@@ -1036,10 +1305,12 @@ async function loadCurrentUser() {
         state.currentUser = null;
         state.responses = [];
         state.employerResponses = [];
+        state.employerOpportunities = [];
         state.profile = null;
         renderAuthUI();
         renderResponses();
         renderEmployerResponses();
+        renderEmployerOpportunities();
         renderProfileSection();
         renderCuratorSection();
         renderSelectedOpportunity();
@@ -1052,10 +1323,12 @@ async function loadCurrentUser() {
         state.currentUser = null;
         state.responses = [];
         state.employerResponses = [];
+        state.employerOpportunities = [];
         state.profile = null;
         renderAuthUI();
         renderResponses();
         renderEmployerResponses();
+        renderEmployerOpportunities();
         renderProfileSection();
         renderCuratorSection();
         renderSelectedOpportunity();
@@ -1067,6 +1340,7 @@ async function loadCurrentUser() {
     await loadProfile();
     await loadResponses();
     await loadEmployerResponses();
+    await loadEmployerOpportunities();
     await loadCuratorData();
     renderSelectedOpportunity();
 }
@@ -1118,6 +1392,35 @@ async function loadEmployerResponses() {
 
     state.employerResponses = await response.json();
     renderEmployerResponses();
+}
+
+async function loadEmployerOpportunities() {
+    if (!state.currentUser || state.currentUser.role !== 'employer') {
+        state.employerOpportunities = [];
+        renderEmployerOpportunities();
+        return;
+    }
+
+    const params = new URLSearchParams();
+    if (state.employerOpportunityFilters.search) {
+        params.set('query', state.employerOpportunityFilters.search);
+    }
+    if (state.employerOpportunityFilters.type) {
+        params.set('type', state.employerOpportunityFilters.type);
+    }
+    if (state.employerOpportunityFilters.status) {
+        params.set('is_active', String(state.employerOpportunityFilters.status === 'active'));
+    }
+
+    const response = await apiFetch(`/opportunities/my${params.toString() ? `?${params.toString()}` : ''}`);
+    if (!response.ok) {
+        state.employerOpportunities = [];
+        renderEmployerOpportunities();
+        return;
+    }
+
+    state.employerOpportunities = await response.json();
+    renderEmployerOpportunities();
 }
 
 async function loadCuratorData() {
@@ -1280,6 +1583,39 @@ async function handleApplySubmit(event) {
     alert('Отклик отправлен.');
 }
 
+function applyEmployerOpportunityFilters() {
+    state.employerOpportunityFilters.status = el('employerOpportunityStatusFilter').value;
+    state.employerOpportunityFilters.type = el('employerOpportunityTypeFilter').value;
+    state.employerOpportunityFilters.search = el('employerOpportunitySearch').value.trim();
+    void loadEmployerOpportunities();
+}
+
+function resetEmployerOpportunityFilters() {
+    el('employerOpportunityStatusFilter').value = '';
+    el('employerOpportunityTypeFilter').value = '';
+    el('employerOpportunitySearch').value = '';
+    applyEmployerOpportunityFilters();
+}
+
+async function handleEmployerOpportunitySubmit(event) {
+    event.preventDefault();
+    const payload = buildEmployerOpportunityPayload();
+    const isEdit = Boolean(state.pendingEmployerOpportunityId);
+    const saved = await saveEmployerOpportunity({
+        id: state.pendingEmployerOpportunityId,
+        payload,
+        successMessage: isEdit ? 'Карточка обновлена.' : 'Карточка создана.',
+    });
+
+    if (!saved) {
+        return;
+    }
+
+    employerOpportunityModal.hide();
+    event.target.reset();
+    resetEmployerOpportunityForm();
+}
+
 async function handleCuratorUserSubmit(event) {
     event.preventDefault();
     if (!state.pendingCuratorUserId) return;
@@ -1324,14 +1660,17 @@ function handleLogout(event) {
     state.currentUser = null;
     state.responses = [];
     state.employerResponses = [];
+    state.employerOpportunities = [];
     state.curatorUsers = [];
     state.curatorOpportunities = [];
     state.pendingCuratorUserId = null;
     state.pendingCuratorOpportunityId = null;
+    state.pendingEmployerOpportunityId = null;
     state.profile = null;
     renderAuthUI();
     renderResponses();
     renderEmployerResponses();
+    renderEmployerOpportunities();
     renderCuratorSection();
     renderProfileSection();
     renderSelectedOpportunity();
@@ -1343,6 +1682,7 @@ function initModals() {
     applyModal = new window.bootstrap.Modal(el('applyModal'));
     curatorUserModal = new window.bootstrap.Modal(el('curatorUserModal'));
     curatorOpportunityModal = new window.bootstrap.Modal(el('curatorOpportunityModal'));
+    employerOpportunityModal = new window.bootstrap.Modal(el('employerOpportunityModal'));
 }
 
 function bindEvents() {
@@ -1361,6 +1701,7 @@ function bindEvents() {
     el('registerForm').addEventListener('submit', handleRegisterSubmit);
     el('profileForm').addEventListener('submit', handleProfileSubmit);
     el('applyForm').addEventListener('submit', handleApplySubmit);
+    el('employerOpportunityForm').addEventListener('submit', handleEmployerOpportunitySubmit);
     el('curatorUserForm').addEventListener('submit', handleCuratorUserSubmit);
     el('curatorOpportunityForm').addEventListener('submit', handleCuratorOpportunitySubmit);
     el('refreshResponsesBtn').addEventListener('click', () => {
@@ -1368,6 +1709,12 @@ function bindEvents() {
     });
     el('refreshEmployerResponsesBtn').addEventListener('click', () => {
         void loadEmployerResponses();
+    });
+    el('refreshEmployerOpportunitiesBtn').addEventListener('click', () => {
+        void loadEmployerOpportunities();
+    });
+    el('openEmployerOpportunityCreateBtn').addEventListener('click', () => {
+        openEmployerOpportunityModal();
     });
     el('refreshCuratorBtn').addEventListener('click', () => {
         void loadCuratorData();
@@ -1381,6 +1728,12 @@ function bindEvents() {
     el('employerResponseStatusFilter').addEventListener('change', applyEmployerResponseFilters);
     el('employerResponseSearch').addEventListener('input', applyEmployerResponseFilters);
     el('employerResponseClearBtn').addEventListener('click', resetEmployerResponseFilters);
+    el('employerOpportunityStatusFilter').addEventListener('change', applyEmployerOpportunityFilters);
+    el('employerOpportunityTypeFilter').addEventListener('change', applyEmployerOpportunityFilters);
+    el('employerOpportunitySearch').addEventListener('input', applyEmployerOpportunityFilters);
+    el('employerOpportunityClearBtn').addEventListener('click', resetEmployerOpportunityFilters);
+    el('employerOpportunityType').addEventListener('change', syncEmployerOpportunityFieldHints);
+    el('employerOpportunityWorkFormat').addEventListener('change', syncEmployerOpportunityFieldHints);
     el('curatorUserRoleFilter').addEventListener('change', () => {
         state.curatorFilters.role = el('curatorUserRoleFilter').value;
         void loadCuratorData();
@@ -1410,10 +1763,12 @@ async function bootstrap() {
     renderAuthUI();
     renderResponses();
     renderEmployerResponses();
+    renderEmployerOpportunities();
     renderCuratorSection();
     renderProfileSection();
     renderSelectedOpportunity();
     renderFavoritesSummary();
+    syncEmployerOpportunityFieldHints();
 
     try {
         await initMap();

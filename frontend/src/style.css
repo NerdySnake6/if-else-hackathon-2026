@@ -40,6 +40,10 @@ body {
     border-top: 1px solid #e9ecef;
 }
 
+.opportunity-manage-item + .opportunity-manage-item {
+    border-top: 1px solid #e9ecef;
+}
+
 .moderation-item + .moderation-item {
     border-top: 1px solid #e9ecef;
 }
@@ -155,4 +159,16 @@ body {
 .moderation-meta {
     color: #6c757d;
     font-size: 0.85rem;
+}
+
+.opportunity-manage-meta {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.opportunity-manage-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
 }

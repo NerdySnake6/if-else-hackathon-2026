@@ -231,6 +231,90 @@ def test_employer_opportunity_and_response_flow(client, db_session):
     assert update_status.json()["status"] == "accepted"
 
 
+def test_employer_can_manage_own_opportunities(client, db_session):
+    """Проверяет создание, просмотр, редактирование и удаление своих карточек работодателем."""
+    register_response = register_user(
+        client,
+        email="owner@example.com",
+        password="supersecret",
+        display_name="Owner Employer",
+        role="employer",
+    )
+    assert register_response.status_code == 200
+
+    employer = (
+        db_session.query(models.User)
+        .filter(models.User.email == "owner@example.com")
+        .first()
+    )
+    employer.is_verified = True
+    db_session.commit()
+
+    token = login_user(
+        client,
+        email="owner@example.com",
+        password="supersecret",
+    )
+    headers = auth_headers(token)
+
+    create_response = client.post(
+        "/opportunities/",
+        headers=headers,
+        json={
+            "title": "Junior Python Developer",
+            "description": "Полноценная стартовая позиция для начинающего backend-разработчика с наставничеством.",
+            "type": "job",
+            "work_format": "office",
+            "location": "Москва, ул. Льва Толстого, 16",
+            "salary_range": "80 000 - 120 000",
+            "expires_at": (datetime.utcnow() + timedelta(days=14)).isoformat(),
+            "tag_ids": [],
+        },
+    )
+    assert create_response.status_code == 200
+    opportunity_id = create_response.json()["id"]
+
+    my_response = client.get("/opportunities/my", headers=headers)
+    assert my_response.status_code == 200
+    assert len(my_response.json()) == 1
+    assert my_response.json()[0]["title"] == "Junior Python Developer"
+
+    filtered_response = client.get("/opportunities/my?query=Python", headers=headers)
+    assert filtered_response.status_code == 200
+    assert len(filtered_response.json()) == 1
+
+    update_response = client.put(
+        f"/opportunities/{opportunity_id}",
+        headers=headers,
+        json={
+            "title": "Junior Python Developer Updated",
+            "description": "Обновленная карточка с уточненным стеком, условиями работы и расширенным описанием задач.",
+            "type": "job",
+            "work_format": "hybrid",
+            "location": "Санкт-Петербург",
+            "salary_range": "до 140 000",
+            "is_active": False,
+        },
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["title"] == "Junior Python Developer Updated"
+    assert update_response.json()["work_format"] == "hybrid"
+    assert update_response.json()["is_active"] is False
+
+    archived_response = client.get("/opportunities/my?is_active=false", headers=headers)
+    assert archived_response.status_code == 200
+    assert len(archived_response.json()) == 1
+    assert archived_response.json()[0]["id"] == opportunity_id
+
+    delete_response = client.delete(f"/opportunities/{opportunity_id}", headers=headers)
+    assert delete_response.status_code == 200
+    assert delete_response.json() == {"ok": True}
+
+    empty_response = client.get("/opportunities/my", headers=headers)
+    assert empty_response.status_code == 200
+    assert empty_response.json() == []
+
+
 def test_curator_can_verify_employers_and_moderate_opportunities(client, db_session):
     """Проверяет основные сценарии кабинета куратора."""
     curator_user = models.User(

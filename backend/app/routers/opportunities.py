@@ -122,6 +122,44 @@ def list_opportunities(
     opportunities = query.offset(skip).limit(limit).all()
     return opportunities
 
+
+@router.get("/my", response_model=List[schemas.OpportunityOut])
+def list_my_opportunities(
+    skip: int = 0,
+    limit: int = 100,
+    query: Optional[str] = Query(None, description="Search by title, description or location"),
+    type: Optional[str] = Query(None, description="Filter by type"),
+    is_active: Optional[bool] = Query(None, description="Filter by status"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("employer", "curator", "admin")),
+):
+    """Возвращает карточки текущего работодателя для личного кабинета."""
+    opportunities_query = (
+        db.query(models.Opportunity)
+        .options(
+            joinedload(models.Opportunity.tags),
+            joinedload(models.Opportunity.employer).joinedload(models.User.employer_profile),
+        )
+        .order_by(models.Opportunity.published_at.desc())
+    )
+
+    if current_user.role == "employer":
+        opportunities_query = opportunities_query.filter(models.Opportunity.employer_id == current_user.id)
+
+    if query:
+        search = f"%{query}%"
+        opportunities_query = opportunities_query.filter(
+            models.Opportunity.title.ilike(search)
+            | models.Opportunity.description.ilike(search)
+            | models.Opportunity.location.ilike(search)
+        )
+    if type:
+        opportunities_query = opportunities_query.filter(models.Opportunity.type == type)
+    if is_active is not None:
+        opportunities_query = opportunities_query.filter(models.Opportunity.is_active.is_(is_active))
+
+    return opportunities_query.offset(skip).limit(limit).all()
+
 @router.get("/{opp_id}", response_model=schemas.OpportunityOut)
 def get_opportunity(opp_id: int, db: Session = Depends(get_db)):
     """Возвращает одну возможность по ее идентификатору."""
