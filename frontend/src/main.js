@@ -10,6 +10,7 @@ const state = {
     opportunities: [],
     employerOpportunities: [],
     currentUser: null,
+    activeView: 'home',
     selectedOpportunityId: null,
     pendingApplyId: null,
     pendingCuratorUserId: null,
@@ -66,6 +67,30 @@ function createEl(tag, className, text) {
     if (className) node.className = className;
     if (text !== undefined) node.textContent = text;
     return node;
+}
+
+function visibleViews() {
+    const views = ['home'];
+    if (!state.currentUser) return views;
+
+    views.push('profile');
+    if (state.currentUser.role === 'applicant') {
+        views.push('applicant');
+    }
+    if (state.currentUser.role === 'employer') {
+        views.push('employer');
+    }
+    if (['curator', 'admin'].includes(state.currentUser.role)) {
+        views.push('curator');
+    }
+    return views;
+}
+
+function setActiveView(view) {
+    const allowedViews = visibleViews();
+    state.activeView = allowedViews.includes(view) ? view : 'home';
+    renderWorkspaceNav();
+    renderWorkspaceView();
 }
 
 function getToken() {
@@ -181,11 +206,34 @@ function renderAlert(container, kind, text) {
     container.appendChild(createEl('div', `alert alert-${kind} mb-0`, text));
 }
 
+function showNotice(kind, text) {
+    const container = el('app-notice');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const alert = createEl('div', `alert alert-${kind} alert-dismissible fade show`, text);
+    alert.setAttribute('role', 'alert');
+
+    const closeBtn = createEl('button', 'btn-close');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('data-bs-dismiss', 'alert');
+    closeBtn.setAttribute('aria-label', 'Закрыть');
+    alert.appendChild(closeBtn);
+
+    container.appendChild(alert);
+
+    window.setTimeout(() => {
+        if (!alert.isConnected) return;
+        const instance = window.bootstrap.Alert.getOrCreateInstance(alert);
+        instance.close();
+    }, 3500);
+}
+
 function buildOpportunityPopup(opportunity) {
     const popup = createEl('div', 'opportunity-popup');
     popup.appendChild(createEl('h6', '', opportunity.title));
     popup.appendChild(createEl('div', 'company', opportunity.employer_name || 'Работодатель'));
-    popup.appendChild(createEl('div', 'small text-muted', opportunity.type));
+    popup.appendChild(createEl('div', 'small text-muted', opportunityTypeLabel(opportunity.type)));
 
     if (opportunity.salary_range) {
         popup.appendChild(createEl('div', 'salary', `💰 ${opportunity.salary_range}`));
@@ -195,7 +243,7 @@ function buildOpportunityPopup(opportunity) {
     if (tags) {
         popup.appendChild(createEl('div', 'tags', tags));
     }
-    popup.appendChild(createEl('small', '', `${opportunity.location} | ${opportunity.work_format}`));
+    popup.appendChild(createEl('small', '', `${opportunity.location} | ${workFormatLabel(opportunity.work_format)}`));
     return popup;
 }
 
@@ -304,7 +352,7 @@ function renderList(opportunities) {
         header.appendChild(titleWrap);
 
         const badges = createEl('div', 'd-flex flex-wrap gap-1 justify-content-end');
-        badges.appendChild(createEl('small', 'badge bg-secondary', opportunity.type));
+        badges.appendChild(createEl('small', 'badge bg-secondary', opportunityTypeLabel(opportunity.type)));
         if (favoriteOpportunity) {
             badges.appendChild(createEl('small', 'badge text-bg-danger', 'Избр. вакансия'));
         } else if (favoriteCompany) {
@@ -316,7 +364,7 @@ function renderList(opportunities) {
         const meta = createEl('small');
         const icon = createEl('i', 'bi bi-geo-alt');
         meta.appendChild(icon);
-        meta.append(` ${opportunity.location} | ${opportunity.work_format}`);
+        meta.append(` ${opportunity.location} | ${workFormatLabel(opportunity.work_format)}`);
         if (opportunity.salary_range) {
             meta.append(` | ${opportunity.salary_range}`);
         }
@@ -455,7 +503,7 @@ function renderSelectedOpportunity() {
 
     container.appendChild(createEl('h5', 'card-title', opportunity.title));
     container.appendChild(createEl('p', 'detail-meta mb-1', opportunity.employer_name || 'Работодатель'));
-    container.appendChild(createEl('p', 'detail-meta mb-2', `${opportunity.type} | ${opportunity.work_format} | ${opportunity.location}`));
+    container.appendChild(createEl('p', 'detail-meta mb-2', `${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
     container.appendChild(createEl('p', 'mb-3', opportunity.description));
 
     const metaList = createEl('div', 'small text-muted mb-3');
@@ -608,11 +656,12 @@ async function updateEmployerResponseStatus(responseId, status) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Не удалось обновить статус.' }));
-        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось обновить статус.');
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось обновить статус.');
         return;
     }
 
     await loadEmployerResponses();
+    showNotice('success', 'Статус отклика обновлен.');
 }
 
 function renderEmployerResponses() {
@@ -798,11 +847,12 @@ async function updateCuratorUser(userId, payload) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Не удалось обновить пользователя.' }));
-        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось обновить пользователя.');
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось обновить пользователя.');
         return;
     }
 
     await loadCuratorData();
+    showNotice('success', 'Пользователь обновлен.');
 }
 
 async function updateCuratorOpportunity(opportunityId, payload) {
@@ -816,12 +866,13 @@ async function updateCuratorOpportunity(opportunityId, payload) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Не удалось обновить карточку.' }));
-        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось обновить карточку.');
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось обновить карточку.');
         return;
     }
 
     await loadCuratorData();
     await loadOpportunities();
+    showNotice('success', 'Карточка обновлена.');
 }
 
 function getFilteredCuratorUsers() {
@@ -1182,7 +1233,7 @@ async function saveEmployerOpportunity({ id = null, payload, successMessage }) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Не удалось сохранить карточку.' }));
-        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось сохранить карточку.');
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось сохранить карточку.');
         return false;
     }
 
@@ -1192,7 +1243,7 @@ async function saveEmployerOpportunity({ id = null, payload, successMessage }) {
         loadEmployerResponses(),
     ]);
     if (successMessage) {
-        alert(successMessage);
+        showNotice('success', successMessage);
     }
     return true;
 }
@@ -1207,7 +1258,7 @@ async function deleteEmployerOpportunity(opportunityId) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Не удалось удалить карточку.' }));
-        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось удалить карточку.');
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось удалить карточку.');
         return;
     }
 
@@ -1216,7 +1267,7 @@ async function deleteEmployerOpportunity(opportunityId) {
         loadOpportunities(),
         loadEmployerResponses(),
     ]);
-    alert('Карточка удалена.');
+    showNotice('success', 'Карточка удалена.');
 }
 
 function buildProfilePayload() {
@@ -1269,8 +1320,8 @@ function renderAuthUI() {
         registerBtn.parentElement.classList.add('d-none');
         logoutNavItem.classList.remove('d-none');
         currentUserNavItem.classList.remove('d-none');
-        currentUserLabel.textContent = `${state.currentUser.display_name} (${state.currentUser.role})`;
-        authStatusBadge.textContent = state.currentUser.role;
+        currentUserLabel.textContent = `${state.currentUser.display_name} (${currentRoleLabel(state.currentUser.role)})`;
+        authStatusBadge.textContent = currentRoleLabel(state.currentUser.role);
         authStatusBadge.className = 'badge text-bg-success';
     } else {
         loginBtn.parentElement.classList.remove('d-none');
@@ -1280,6 +1331,69 @@ function renderAuthUI() {
         currentUserLabel.textContent = '';
         authStatusBadge.textContent = 'Гость';
         authStatusBadge.className = 'badge text-bg-light';
+    }
+
+    if (!visibleViews().includes(state.activeView)) {
+        state.activeView = 'home';
+    }
+    renderWorkspaceNav();
+    renderWorkspaceView();
+}
+
+function renderWorkspaceNav() {
+    const tabs = {
+        home: el('tabHome'),
+        profile: el('tabProfile'),
+        applicant: el('tabApplicant'),
+        employer: el('tabEmployer'),
+        curator: el('tabCurator'),
+    };
+    const allowedViews = visibleViews();
+
+    Object.entries(tabs).forEach(([view, button]) => {
+        if (!button) return;
+        button.classList.toggle('d-none', !allowedViews.includes(view));
+        button.classList.toggle('btn-primary', state.activeView === view);
+        button.classList.toggle('btn-outline-primary', state.activeView !== view);
+    });
+}
+
+function renderWorkspaceView() {
+    const homeMapColumn = el('homeMapColumn');
+    const workspaceContentColumn = el('workspaceContentColumn');
+    const homeBlocks = [
+        'homeListHeader',
+        'homeFiltersCard',
+        'homeFavoritesCard',
+        'opportunities-list',
+        'homeDetailsCard',
+    ];
+    const roleBlocks = {
+        profile: ['profileCard'],
+        applicant: ['applicantResponsesCard'],
+        employer: ['employerResponsesCard', 'employerOpportunitiesCard'],
+        curator: ['curatorCard'],
+    };
+
+    const isHome = state.activeView === 'home';
+
+    homeMapColumn.classList.toggle('d-none', !isHome);
+    workspaceContentColumn.classList.toggle('col-md-5', isHome);
+    workspaceContentColumn.classList.toggle('col-12', !isHome);
+    workspaceContentColumn.classList.toggle('workspace-wide', !isHome);
+
+    homeBlocks.forEach((id) => {
+        el(id).classList.toggle('d-none', !isHome);
+    });
+
+    Object.values(roleBlocks).flat().forEach((id) => {
+        el(id).classList.add('d-none');
+    });
+
+    if (!isHome) {
+        (roleBlocks[state.activeView] || []).forEach((id) => {
+            el(id).classList.remove('d-none');
+        });
     }
 }
 
@@ -1476,7 +1590,7 @@ async function handleLoginSubmit(event) {
     });
 
     if (!response.ok) {
-        alert('Не удалось войти. Проверь email и пароль.');
+        showNotice('danger', 'Не удалось войти. Проверь email и пароль.');
         return;
     }
 
@@ -1507,14 +1621,14 @@ async function handleRegisterSubmit(event) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Не удалось зарегистрироваться.' }));
-        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось зарегистрироваться.');
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось зарегистрироваться.');
         return;
     }
 
     registerModal.hide();
     event.target.reset();
     el('loginEmail').value = payload.email;
-    alert('Аккаунт создан. Теперь войди в систему.');
+    showNotice('success', 'Аккаунт создан. Теперь войди в систему.');
 }
 
 async function handleProfileSubmit(event) {
@@ -1532,7 +1646,7 @@ async function handleProfileSubmit(event) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Не удалось сохранить профиль.' }));
-        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось сохранить профиль.');
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось сохранить профиль.');
         return;
     }
 
@@ -1542,7 +1656,7 @@ async function handleProfileSubmit(event) {
     }
     renderAuthUI();
     renderProfileSection();
-    alert('Профиль сохранен.');
+    showNotice('success', 'Профиль сохранен.');
 }
 
 function openApplyModal(opportunityId) {
@@ -1573,14 +1687,14 @@ async function handleApplySubmit(event) {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Не удалось отправить отклик.' }));
-        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось отправить отклик.');
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось отправить отклик.');
         return;
     }
 
     applyModal.hide();
     event.target.reset();
     await loadResponses();
-    alert('Отклик отправлен.');
+    showNotice('success', 'Отклик отправлен.');
 }
 
 function applyEmployerOpportunityFilters() {
@@ -1686,6 +1800,12 @@ function initModals() {
 }
 
 function bindEvents() {
+    document.querySelectorAll('[data-view]').forEach((button) => {
+        button.addEventListener('click', () => {
+            setActiveView(button.dataset.view);
+        });
+    });
+
     el('loginBtn').addEventListener('click', (event) => {
         event.preventDefault();
         loginModal.show();

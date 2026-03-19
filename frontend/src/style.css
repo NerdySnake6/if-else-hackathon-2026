@@ -7,6 +7,21 @@ body {
     min-height: 100vh;
 }
 
+#workspaceContentColumn.workspace-wide {
+    width: 100%;
+}
+
+#app-notice .alert {
+    border: 0;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(13, 110, 253, 0.08);
+}
+
+.workspace-tabs .btn {
+    border-radius: 999px;
+    padding-inline: 0.9rem;
+}
+
 #map {
     width: 100%;
     border-radius: 8px;
@@ -116,6 +131,14 @@ body {
 
 .favorites-summary {
     font-size: 0.9rem;
+}
+
+.card.shadow-sm {
+    border-radius: 14px;
+}
+
+.card-title {
+    letter-spacing: -0.01em;
 }
 
 .favorite-chip {
