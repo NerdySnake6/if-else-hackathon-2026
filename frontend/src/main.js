@@ -9,8 +9,12 @@ const state = {
     currentUser: null,
     selectedOpportunityId: null,
     pendingApplyId: null,
+    pendingCuratorUserId: null,
+    pendingCuratorOpportunityId: null,
     responses: [],
     employerResponses: [],
+    curatorUsers: [],
+    curatorOpportunities: [],
     profile: null,
     opportunityFilters: {
         type: '',
@@ -22,6 +26,13 @@ const state = {
         status: '',
         search: '',
     },
+    curatorFilters: {
+        role: 'employer',
+        userSearch: '',
+        verification: '',
+        opportunitySearch: '',
+        opportunityStatus: '',
+    },
 };
 
 let map;
@@ -30,6 +41,8 @@ let placemarks = [];
 let loginModal;
 let registerModal;
 let applyModal;
+let curatorUserModal;
+let curatorOpportunityModal;
 
 function el(id) {
     return document.getElementById(id);
@@ -79,6 +92,15 @@ function normalizeText(value) {
 function normalizeUrl(value) {
     const text = (value || '').trim();
     return text || null;
+}
+
+function toDateTimeLocalValue(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const offset = date.getTimezoneOffset();
+    const local = new Date(date.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 16);
 }
 
 function includesText(haystack, needle) {
@@ -355,6 +377,22 @@ function statusLabel(status) {
     return 'На рассмотрении';
 }
 
+function curatorRoleLabel(role) {
+    if (role === 'employer') return 'Работодатель';
+    if (role === 'applicant') return 'Соискатель';
+    if (role === 'curator') return 'Куратор';
+    if (role === 'admin') return 'Администратор';
+    return role;
+}
+
+function currentRoleLabel(role) {
+    if (role === 'applicant') return 'Соискатель';
+    if (role === 'employer') return 'Работодатель';
+    if (role === 'curator') return 'Куратор';
+    if (role === 'admin') return 'Администратор';
+    return role;
+}
+
 function renderResponses() {
     const container = el('responses-list');
     const refreshBtn = el('refreshResponsesBtn');
@@ -480,6 +518,182 @@ function renderEmployerResponses() {
     });
 }
 
+async function updateCuratorUser(userId, payload) {
+    const response = await apiFetch(`/curator/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось обновить пользователя.' }));
+        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось обновить пользователя.');
+        return;
+    }
+
+    await loadCuratorData();
+}
+
+async function updateCuratorOpportunity(opportunityId, payload) {
+    const response = await apiFetch(`/curator/opportunities/${opportunityId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось обновить карточку.' }));
+        alert(typeof error.detail === 'string' ? error.detail : 'Не удалось обновить карточку.');
+        return;
+    }
+
+    await loadCuratorData();
+    await loadOpportunities();
+}
+
+function getFilteredCuratorUsers() {
+    const filters = state.curatorFilters;
+    return state.curatorUsers.filter((user) => {
+        if (filters.role && user.role !== filters.role) return false;
+        if (filters.verification === 'verified' && !user.is_verified) return false;
+        if (filters.verification === 'unverified' && user.is_verified) return false;
+        if (filters.verification === 'pending' && (user.role !== 'employer' || user.is_verified)) return false;
+        if (filters.userSearch) {
+            const haystack = `${user.display_name} ${user.email}`;
+            if (!includesText(haystack, filters.userSearch)) return false;
+        }
+        return true;
+    });
+}
+
+function getFilteredCuratorOpportunities() {
+    const filters = state.curatorFilters;
+    return state.curatorOpportunities.filter((opportunity) => {
+        if (filters.opportunityStatus === 'active' && !opportunity.is_active) return false;
+        if (filters.opportunityStatus === 'inactive' && opportunity.is_active) return false;
+        if (filters.opportunitySearch) {
+            const haystack = `${opportunity.title} ${opportunity.employer_name} ${opportunity.location} ${opportunity.description}`;
+            if (!includesText(haystack, filters.opportunitySearch)) return false;
+        }
+        return true;
+    });
+}
+
+function renderCuratorSection() {
+    const refreshBtn = el('refreshCuratorBtn');
+    const usersContainer = el('curator-users-list');
+    const opportunitiesContainer = el('curator-opportunities-list');
+    usersContainer.innerHTML = '';
+    opportunitiesContainer.innerHTML = '';
+
+    if (!state.currentUser || !['curator', 'admin'].includes(state.currentUser.role)) {
+        refreshBtn.classList.add('d-none');
+        usersContainer.appendChild(createEl('p', 'text-muted mb-0', 'Войди как куратор, чтобы модерировать пользователей.'));
+        opportunitiesContainer.appendChild(createEl('p', 'text-muted mb-0', 'Карточки для модерации появятся здесь.'));
+        return;
+    }
+
+    refreshBtn.classList.remove('d-none');
+
+    const filteredUsers = getFilteredCuratorUsers();
+    if (!filteredUsers.length) {
+        usersContainer.appendChild(createEl('p', 'text-muted mb-0', 'Пользователи по текущим фильтрам не найдены.'));
+    } else {
+        filteredUsers.forEach((user) => {
+            const item = createEl('div', 'moderation-item py-2');
+            const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
+            top.appendChild(createEl('div', 'fw-semibold', user.display_name));
+            top.appendChild(createEl('span', `status-pill ${user.is_active ? 'accepted' : 'rejected'}`, user.is_active ? 'Активен' : 'Отключен'));
+            item.appendChild(top);
+            item.appendChild(createEl('div', 'moderation-meta mt-1', `${curatorRoleLabel(user.role)} | ${user.email}`));
+
+            if (user.role === 'employer') {
+                const verificationText = user.is_verified ? 'Компания верифицирована' : 'Ожидает верификации';
+                item.appendChild(createEl('div', 'moderation-meta', verificationText));
+                if (user.employer_profile?.company_name) {
+                    item.appendChild(createEl('div', 'small mt-1', user.employer_profile.company_name));
+                }
+            }
+
+            const actions = createEl('div', 'moderation-actions');
+            const editBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Проверить');
+            editBtn.type = 'button';
+            editBtn.disabled = user.role !== 'employer';
+            if (user.role === 'employer') {
+                editBtn.addEventListener('click', () => openCuratorUserModal(user.id));
+            }
+            actions.appendChild(editBtn);
+
+            const verifyBtn = createEl(
+                'button',
+                `btn btn-sm ${user.is_verified ? 'btn-outline-secondary' : 'btn-outline-success'}`,
+                user.is_verified ? 'Снять верификацию' : 'Верифицировать'
+            );
+            verifyBtn.type = 'button';
+            verifyBtn.disabled = user.role !== 'employer';
+            if (user.role === 'employer') {
+                verifyBtn.addEventListener('click', () => {
+                    void updateCuratorUser(user.id, { is_verified: !user.is_verified });
+                });
+            }
+            actions.appendChild(verifyBtn);
+
+            const activeBtn = createEl(
+                'button',
+                `btn btn-sm ${user.is_active ? 'btn-outline-danger' : 'btn-outline-primary'}`,
+                user.is_active ? 'Отключить' : 'Активировать'
+            );
+            activeBtn.type = 'button';
+            activeBtn.addEventListener('click', () => {
+                void updateCuratorUser(user.id, { is_active: !user.is_active });
+            });
+            actions.appendChild(activeBtn);
+
+            item.appendChild(actions);
+            usersContainer.appendChild(item);
+        });
+    }
+
+    const filteredOpportunities = getFilteredCuratorOpportunities();
+    if (!filteredOpportunities.length) {
+        opportunitiesContainer.appendChild(createEl('p', 'text-muted mb-0', 'Карточки по текущим фильтрам не найдены.'));
+        return;
+    }
+
+    filteredOpportunities.forEach((opportunity) => {
+        const item = createEl('div', 'moderation-item py-2');
+        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
+        top.appendChild(createEl('div', 'fw-semibold', opportunity.title));
+        top.appendChild(createEl('span', `status-pill ${opportunity.is_active ? 'accepted' : 'rejected'}`, opportunity.is_active ? 'Активна' : 'Скрыта'));
+        item.appendChild(top);
+        item.appendChild(createEl('div', 'moderation-meta mt-1', `${opportunity.employer_name} | ${opportunity.location}`));
+        item.appendChild(createEl('div', 'small mt-1', opportunity.description.length > 120 ? `${opportunity.description.slice(0, 120)}...` : opportunity.description));
+
+        const actions = createEl('div', 'moderation-actions');
+        const editBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Редактировать');
+        editBtn.type = 'button';
+        editBtn.addEventListener('click', () => openCuratorOpportunityModal(opportunity.id));
+        actions.appendChild(editBtn);
+
+        const toggleBtn = createEl(
+            'button',
+            `btn btn-sm ${opportunity.is_active ? 'btn-outline-danger' : 'btn-outline-success'}`,
+            opportunity.is_active ? 'Скрыть карточку' : 'Опубликовать'
+        );
+        toggleBtn.type = 'button';
+        toggleBtn.addEventListener('click', () => {
+            void updateCuratorOpportunity(opportunity.id, { is_active: !opportunity.is_active });
+        });
+        actions.appendChild(toggleBtn);
+        item.appendChild(actions);
+        opportunitiesContainer.appendChild(item);
+    });
+}
+
 function getFilteredEmployerResponses() {
     const filters = state.employerResponseFilters;
     return state.employerResponses.filter((response) => {
@@ -548,7 +762,7 @@ function renderProfileSection() {
 
     form.classList.remove('d-none');
     guestHint.classList.add('d-none');
-    status.textContent = state.currentUser.role === 'applicant' ? 'Соискатель' : 'Работодатель';
+    status.textContent = currentRoleLabel(state.currentUser.role);
     el('profileDisplayName').value = state.currentUser.display_name || '';
 
     if (state.currentUser.role === 'applicant') {
@@ -566,6 +780,38 @@ function renderProfileSection() {
         employerFields.classList.add('d-none');
         setEmployerRequired(false);
     }
+}
+
+function openCuratorUserModal(userId) {
+    const user = state.curatorUsers.find((item) => item.id === userId);
+    if (!user || user.role !== 'employer') return;
+
+    state.pendingCuratorUserId = userId;
+    el('curatorEmployerDisplayName').value = user.display_name || '';
+    el('curatorEmployerCompanyName').value = user.employer_profile?.company_name || '';
+    el('curatorEmployerDescription').value = user.employer_profile?.description || '';
+    el('curatorEmployerWebsite').value = user.employer_profile?.website || '';
+    el('curatorEmployerCity').value = user.employer_profile?.city || '';
+    el('curatorEmployerAddress').value = user.employer_profile?.address || '';
+    el('curatorEmployerVerified').checked = Boolean(user.is_verified);
+    el('curatorEmployerActive').checked = Boolean(user.is_active);
+    curatorUserModal.show();
+}
+
+function openCuratorOpportunityModal(opportunityId) {
+    const opportunity = state.curatorOpportunities.find((item) => item.id === opportunityId);
+    if (!opportunity) return;
+
+    state.pendingCuratorOpportunityId = opportunityId;
+    el('curatorOpportunityTitle').value = opportunity.title || '';
+    el('curatorOpportunityType').value = opportunity.type || 'job';
+    el('curatorOpportunityWorkFormat').value = opportunity.work_format || 'office';
+    el('curatorOpportunityLocation').value = opportunity.location || '';
+    el('curatorOpportunitySalary').value = opportunity.salary_range || '';
+    el('curatorOpportunityExpiresAt').value = toDateTimeLocalValue(opportunity.expires_at);
+    el('curatorOpportunityDescription').value = opportunity.description || '';
+    el('curatorOpportunityActive').checked = Boolean(opportunity.is_active);
+    curatorOpportunityModal.show();
 }
 
 function buildProfilePayload() {
@@ -659,6 +905,7 @@ async function loadCurrentUser() {
         renderResponses();
         renderEmployerResponses();
         renderProfileSection();
+        renderCuratorSection();
         renderSelectedOpportunity();
         return;
     }
@@ -674,6 +921,7 @@ async function loadCurrentUser() {
         renderResponses();
         renderEmployerResponses();
         renderProfileSection();
+        renderCuratorSection();
         renderSelectedOpportunity();
         return;
     }
@@ -683,6 +931,7 @@ async function loadCurrentUser() {
     await loadProfile();
     await loadResponses();
     await loadEmployerResponses();
+    await loadCuratorData();
     renderSelectedOpportunity();
 }
 
@@ -733,6 +982,43 @@ async function loadEmployerResponses() {
 
     state.employerResponses = await response.json();
     renderEmployerResponses();
+}
+
+async function loadCuratorData() {
+    if (!state.currentUser || !['curator', 'admin'].includes(state.currentUser.role)) {
+        state.curatorUsers = [];
+        state.curatorOpportunities = [];
+        renderCuratorSection();
+        return;
+    }
+
+    const userParams = new URLSearchParams();
+    const opportunitiesParams = new URLSearchParams();
+
+    if (state.curatorFilters.role) {
+        userParams.set('role', state.curatorFilters.role);
+    }
+    if (state.curatorFilters.userSearch) {
+        userParams.set('query', state.curatorFilters.userSearch);
+    }
+    if (state.curatorFilters.opportunitySearch) {
+        opportunitiesParams.set('query', state.curatorFilters.opportunitySearch);
+    }
+    if (state.curatorFilters.opportunityStatus) {
+        opportunitiesParams.set('is_active', String(state.curatorFilters.opportunityStatus === 'active'));
+    }
+
+    const userPath = `/curator/users${userParams.toString() ? `?${userParams.toString()}` : ''}`;
+    const opportunitiesPath = `/curator/opportunities${opportunitiesParams.toString() ? `?${opportunitiesParams.toString()}` : ''}`;
+
+    const [usersResponse, opportunitiesResponse] = await Promise.all([
+        apiFetch(userPath),
+        apiFetch(opportunitiesPath),
+    ]);
+
+    state.curatorUsers = usersResponse.ok ? await usersResponse.json() : [];
+    state.curatorOpportunities = opportunitiesResponse.ok ? await opportunitiesResponse.json() : [];
+    renderCuratorSection();
 }
 
 async function handleLoginSubmit(event) {
@@ -858,16 +1144,59 @@ async function handleApplySubmit(event) {
     alert('Отклик отправлен.');
 }
 
+async function handleCuratorUserSubmit(event) {
+    event.preventDefault();
+    if (!state.pendingCuratorUserId) return;
+
+    await updateCuratorUser(state.pendingCuratorUserId, {
+        display_name: normalizeText(el('curatorEmployerDisplayName').value),
+        is_verified: el('curatorEmployerVerified').checked,
+        is_active: el('curatorEmployerActive').checked,
+        employer_profile: {
+            company_name: normalizeText(el('curatorEmployerCompanyName').value),
+            description: normalizeText(el('curatorEmployerDescription').value),
+            website: normalizeUrl(el('curatorEmployerWebsite').value),
+            city: normalizeText(el('curatorEmployerCity').value),
+            address: normalizeText(el('curatorEmployerAddress').value),
+        },
+    });
+
+    curatorUserModal.hide();
+}
+
+async function handleCuratorOpportunitySubmit(event) {
+    event.preventDefault();
+    if (!state.pendingCuratorOpportunityId) return;
+
+    await updateCuratorOpportunity(state.pendingCuratorOpportunityId, {
+        title: normalizeText(el('curatorOpportunityTitle').value),
+        type: el('curatorOpportunityType').value,
+        work_format: el('curatorOpportunityWorkFormat').value,
+        location: normalizeText(el('curatorOpportunityLocation').value),
+        salary_range: normalizeText(el('curatorOpportunitySalary').value),
+        expires_at: el('curatorOpportunityExpiresAt').value ? new Date(el('curatorOpportunityExpiresAt').value).toISOString() : null,
+        description: normalizeText(el('curatorOpportunityDescription').value),
+        is_active: el('curatorOpportunityActive').checked,
+    });
+
+    curatorOpportunityModal.hide();
+}
+
 function handleLogout(event) {
     event.preventDefault();
     clearToken();
     state.currentUser = null;
     state.responses = [];
     state.employerResponses = [];
+    state.curatorUsers = [];
+    state.curatorOpportunities = [];
+    state.pendingCuratorUserId = null;
+    state.pendingCuratorOpportunityId = null;
     state.profile = null;
     renderAuthUI();
     renderResponses();
     renderEmployerResponses();
+    renderCuratorSection();
     renderProfileSection();
     renderSelectedOpportunity();
 }
@@ -876,6 +1205,8 @@ function initModals() {
     loginModal = new window.bootstrap.Modal(el('loginModal'));
     registerModal = new window.bootstrap.Modal(el('registerModal'));
     applyModal = new window.bootstrap.Modal(el('applyModal'));
+    curatorUserModal = new window.bootstrap.Modal(el('curatorUserModal'));
+    curatorOpportunityModal = new window.bootstrap.Modal(el('curatorOpportunityModal'));
 }
 
 function bindEvents() {
@@ -894,11 +1225,16 @@ function bindEvents() {
     el('registerForm').addEventListener('submit', handleRegisterSubmit);
     el('profileForm').addEventListener('submit', handleProfileSubmit);
     el('applyForm').addEventListener('submit', handleApplySubmit);
+    el('curatorUserForm').addEventListener('submit', handleCuratorUserSubmit);
+    el('curatorOpportunityForm').addEventListener('submit', handleCuratorOpportunitySubmit);
     el('refreshResponsesBtn').addEventListener('click', () => {
         void loadResponses();
     });
     el('refreshEmployerResponsesBtn').addEventListener('click', () => {
         void loadEmployerResponses();
+    });
+    el('refreshCuratorBtn').addEventListener('click', () => {
+        void loadCuratorData();
     });
     el('filterType').addEventListener('change', applyOpportunityFilters);
     el('filterWorkFormat').addEventListener('change', applyOpportunityFilters);
@@ -908,6 +1244,26 @@ function bindEvents() {
     el('employerResponseStatusFilter').addEventListener('change', applyEmployerResponseFilters);
     el('employerResponseSearch').addEventListener('input', applyEmployerResponseFilters);
     el('employerResponseClearBtn').addEventListener('click', resetEmployerResponseFilters);
+    el('curatorUserRoleFilter').addEventListener('change', () => {
+        state.curatorFilters.role = el('curatorUserRoleFilter').value;
+        void loadCuratorData();
+    });
+    el('curatorSearch').addEventListener('input', () => {
+        state.curatorFilters.userSearch = el('curatorSearch').value.trim();
+        void loadCuratorData();
+    });
+    el('curatorVerificationFilter').addEventListener('change', () => {
+        state.curatorFilters.verification = el('curatorVerificationFilter').value;
+        renderCuratorSection();
+    });
+    el('curatorOpportunityStatusFilter').addEventListener('change', () => {
+        state.curatorFilters.opportunityStatus = el('curatorOpportunityStatusFilter').value;
+        void loadCuratorData();
+    });
+    el('curatorOpportunitySearch').addEventListener('input', () => {
+        state.curatorFilters.opportunitySearch = el('curatorOpportunitySearch').value.trim();
+        void loadCuratorData();
+    });
 }
 
 async function bootstrap() {
@@ -916,6 +1272,7 @@ async function bootstrap() {
     renderAuthUI();
     renderResponses();
     renderEmployerResponses();
+    renderCuratorSection();
     renderProfileSection();
     renderSelectedOpportunity();
 

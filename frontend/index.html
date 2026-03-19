@@ -4,15 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Трамплин – Карьерная платформа</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <!-- Собственные стили -->
     <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
     <div id="app">
-        <!-- Навигация -->
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
                 <a class="navbar-brand" href="#">Трамплин</a>
@@ -38,15 +35,12 @@
             </div>
         </nav>
 
-        <!-- Основной контент: карта и список -->
         <div class="container mt-4">
             <div class="row">
-                <!-- Левая колонка: карта -->
                 <div class="col-md-7 mb-3">
                     <h4>Карта возможностей</h4>
                     <div id="map" style="height: 500px;"></div>
                 </div>
-                <!-- Правая колонка: список -->
                 <div class="col-md-5">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h4 class="mb-0">Список возможностей</h4>
@@ -221,6 +215,56 @@
                             <p class="text-muted mb-0" id="profileGuestHint">Войди в систему, чтобы заполнить профиль.</p>
                         </div>
                     </div>
+                    <div class="card shadow-sm border-0 mt-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Кабинет куратора</h5>
+                                <button class="btn btn-sm btn-outline-primary d-none" id="refreshCuratorBtn">Обновить</button>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="curatorUserRoleFilter">
+                                        <option value="employer">Работодатели</option>
+                                        <option value="applicant">Соискатели</option>
+                                        <option value="curator">Кураторы</option>
+                                        <option value="admin">Админы</option>
+                                        <option value="">Все роли</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control form-control-sm" id="curatorSearch" placeholder="Поиск по имени или email">
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="curatorVerificationFilter">
+                                        <option value="">Все статусы</option>
+                                        <option value="pending">Ждут верификации</option>
+                                        <option value="verified">Верифицированы</option>
+                                        <option value="unverified">Не верифицированы</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <h6 class="small text-uppercase text-muted mb-2">Пользователи</h6>
+                            <div id="curator-users-list" class="responses-list mb-3">
+                                <p class="text-muted mb-0">Войди как куратор, чтобы модерировать пользователей.</p>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="curatorOpportunityStatusFilter">
+                                        <option value="">Все карточки</option>
+                                        <option value="active">Активные</option>
+                                        <option value="inactive">Скрытые</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control form-control-sm" id="curatorOpportunitySearch" placeholder="Поиск по карточкам">
+                                </div>
+                            </div>
+                            <h6 class="small text-uppercase text-muted mb-2">Карточки возможностей</h6>
+                            <div id="curator-opportunities-list" class="responses-list">
+                                <p class="text-muted mb-0">Карточки для модерации появятся здесь.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -315,9 +359,122 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS (для работы навигации) -->
+    <div class="modal fade" id="curatorUserModal" tabindex="-1" aria-labelledby="curatorUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="curatorUserModalLabel">Проверка работодателя</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="curatorUserForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="curatorEmployerDisplayName" class="form-label">Отображаемое имя</label>
+                            <input type="text" class="form-control" id="curatorEmployerDisplayName" minlength="2" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="curatorEmployerCompanyName" class="form-label">Название компании</label>
+                            <input type="text" class="form-control" id="curatorEmployerCompanyName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="curatorEmployerDescription" class="form-label">Описание компании</label>
+                            <textarea class="form-control" id="curatorEmployerDescription" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="curatorEmployerWebsite" class="form-label">Сайт</label>
+                            <input type="url" class="form-control" id="curatorEmployerWebsite">
+                        </div>
+                        <div class="mb-3">
+                            <label for="curatorEmployerCity" class="form-label">Город</label>
+                            <input type="text" class="form-control" id="curatorEmployerCity">
+                        </div>
+                        <div class="mb-3">
+                            <label for="curatorEmployerAddress" class="form-label">Адрес</label>
+                            <input type="text" class="form-control" id="curatorEmployerAddress">
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="curatorEmployerVerified">
+                            <label class="form-check-label" for="curatorEmployerVerified">Компания верифицирована</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="curatorEmployerActive">
+                            <label class="form-check-label" for="curatorEmployerActive">Аккаунт активен</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="curatorOpportunityModal" tabindex="-1" aria-labelledby="curatorOpportunityModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="curatorOpportunityModalLabel">Модерация карточки</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="curatorOpportunityForm">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label for="curatorOpportunityTitle" class="form-label">Название</label>
+                                <input type="text" class="form-control" id="curatorOpportunityTitle" minlength="5" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="curatorOpportunityType" class="form-label">Тип</label>
+                                <select class="form-select" id="curatorOpportunityType" required>
+                                    <option value="internship">Стажировка</option>
+                                    <option value="job">Работа</option>
+                                    <option value="mentorship">Менторство</option>
+                                    <option value="event">Событие</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="curatorOpportunityWorkFormat" class="form-label">Формат</label>
+                                <select class="form-select" id="curatorOpportunityWorkFormat" required>
+                                    <option value="office">Офис</option>
+                                    <option value="hybrid">Гибрид</option>
+                                    <option value="remote">Удаленно</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="curatorOpportunityLocation" class="form-label">Локация</label>
+                                <input type="text" class="form-control" id="curatorOpportunityLocation" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="curatorOpportunitySalary" class="form-label">Зарплата</label>
+                                <input type="text" class="form-control" id="curatorOpportunitySalary">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="curatorOpportunityExpiresAt" class="form-label">Срок действия</label>
+                                <input type="datetime-local" class="form-control" id="curatorOpportunityExpiresAt">
+                            </div>
+                            <div class="col-12">
+                                <label for="curatorOpportunityDescription" class="form-label">Описание</label>
+                                <textarea class="form-control" id="curatorOpportunityDescription" rows="5" minlength="20" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="curatorOpportunityActive">
+                                    <label class="form-check-label" for="curatorOpportunityActive">Карточка активна</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить карточку</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Наш главный скрипт (type="module" чтобы работали импорты) -->
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta
 
 from app import models
+from app.auth import create_access_token
 
 
 def register_user(client, *, email, password, display_name, role):
@@ -227,3 +228,92 @@ def test_employer_opportunity_and_response_flow(client, db_session):
     )
     assert update_status.status_code == 200
     assert update_status.json()["status"] == "accepted"
+
+
+def test_curator_can_verify_employers_and_moderate_opportunities(client, db_session):
+    """Проверяет основные сценарии кабинета куратора."""
+    curator_user = models.User(
+        email="curator@example.com",
+        hashed_password="hash",
+        display_name="Curator",
+        role="curator",
+        is_active=True,
+        is_verified=True,
+    )
+    employer_user = models.User(
+        email="needs-review@example.com",
+        hashed_password="hash",
+        display_name="Needs Review",
+        role="employer",
+        is_active=True,
+        is_verified=False,
+    )
+    db_session.add_all([curator_user, employer_user])
+    db_session.commit()
+    db_session.refresh(curator_user)
+    db_session.refresh(employer_user)
+
+    employer_profile = models.EmployerProfile(
+        user_id=employer_user.id,
+        company_name="Review Corp",
+        city="Москва",
+    )
+    opportunity = models.Opportunity(
+        employer_id=employer_user.id,
+        title="Moderation target",
+        description="Карточка, которую куратор должен иметь возможность скрыть или опубликовать.",
+        type="job",
+        work_format="office",
+        location="Москва",
+        is_active=True,
+    )
+    db_session.add_all([employer_profile, opportunity])
+    db_session.commit()
+    db_session.refresh(opportunity)
+
+    token = create_access_token({"sub": curator_user.email, "role": curator_user.role})
+    headers = auth_headers(token)
+
+    users_response = client.get("/curator/users?role=employer", headers=headers)
+    assert users_response.status_code == 200
+    assert len(users_response.json()) == 1
+    assert users_response.json()[0]["is_verified"] is False
+
+    verify_response = client.patch(
+        f"/curator/users/{employer_user.id}",
+        headers=headers,
+        json={
+            "display_name": "Checked Employer",
+            "is_verified": True,
+            "employer_profile": {
+                "company_name": "Review Corp Updated",
+                "description": "Компания прошла ручную модерацию куратора.",
+                "website": "https://review.example.com",
+                "city": "Санкт-Петербург",
+            },
+        },
+    )
+    assert verify_response.status_code == 200
+    assert verify_response.json()["is_verified"] is True
+    assert verify_response.json()["display_name"] == "Checked Employer"
+    assert verify_response.json()["employer_profile"]["company_name"] == "Review Corp Updated"
+
+    opportunities_response = client.get("/curator/opportunities", headers=headers)
+    assert opportunities_response.status_code == 200
+    assert opportunities_response.json()[0]["title"] == "Moderation target"
+
+    moderate_response = client.patch(
+        f"/curator/opportunities/{opportunity.id}",
+        headers=headers,
+        json={
+            "title": "Moderated title",
+            "description": "Куратор обновил описание карточки и оставил ее скрытой после повторной проверки.",
+            "location": "Санкт-Петербург",
+            "salary_range": "до 120 000",
+            "is_active": False,
+        },
+    )
+    assert moderate_response.status_code == 200
+    assert moderate_response.json()["is_active"] is False
+    assert moderate_response.json()["title"] == "Moderated title"
+    assert moderate_response.json()["location"] == "Санкт-Петербург"

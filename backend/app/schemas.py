@@ -88,6 +88,18 @@ class EmployerProfileOut(EmployerProfileBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class CuratorUserOut(UserOut):
+    applicant_profile: Optional[ApplicantProfileOut] = None
+    employer_profile: Optional[EmployerProfileOut] = None
+
+
+class CuratorUserUpdate(BaseModel):
+    display_name: Optional[str] = Field(default=None, min_length=2, max_length=100)
+    is_active: Optional[bool] = None
+    is_verified: Optional[bool] = None
+    employer_profile: Optional[EmployerProfileUpdate] = None
+
 class TagBase(BaseModel):
     name: str = Field(min_length=1, max_length=50)
     category: Literal["tech", "level", "employment_type", "format"]
@@ -142,6 +154,22 @@ class OpportunityOut(OpportunityBase):
     tags: List[TagOut] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CuratorOpportunityOut(OpportunityOut):
+    employer_name: str
+
+
+class CuratorOpportunityUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    type: Optional[Literal["internship", "job", "mentorship", "event"]] = None
+    work_format: Optional[Literal["office", "hybrid", "remote"]] = None
+    location: Optional[str] = None
+    salary_range: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    event_date: Optional[datetime] = None
+    is_active: Optional[bool] = None
 
 
 class GeocodeResult(BaseModel):
