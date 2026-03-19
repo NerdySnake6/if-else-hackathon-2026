@@ -109,3 +109,34 @@ python3 -m py_compile $(rg --files backend/app -g '*.py')
 ```bash
 cd frontend && npm run build
 ```
+
+## CI/CD
+
+В репозитории настроены GitHub Actions workflow:
+
+- `.github/workflows/ci.yml` — проверка backend и сборка frontend для `push` и `pull_request`
+- `.github/workflows/cd.yml` — сборка артефактов на ветке `main`
+
+### Что проверяет CI
+
+- синтаксис Python-модулей backend
+- интеграционные backend-тесты для основных сценариев:
+  - регистрация и вход
+  - обновление профиля
+  - создание возможности работодателем
+  - отклик соискателя
+  - смена статуса отклика работодателем
+- production-сборка frontend
+
+### Что делает CD
+
+- собирает `frontend/dist`
+- сохраняет frontend и backend как артефакты workflow
+
+### Что нужно добавить в GitHub Secrets
+
+Для workflow `CD` в настройках репозитория нужен секрет:
+
+- `VITE_YANDEX_MAPS_API_KEY`
+
+CI использует тестовое значение ключа, потому что для сборки фронта важен сам факт наличия переменной, а не реальный доступ к Яндекс Картам.
