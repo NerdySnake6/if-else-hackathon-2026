@@ -3,6 +3,8 @@ import './style.css';
 const API_BASE = '/api';
 const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
 const TOKEN_KEY = 'tramplin_access_token';
+const FAVORITE_OPPORTUNITIES_KEY = 'tramplin_favorite_opportunities';
+const FAVORITE_COMPANIES_KEY = 'tramplin_favorite_companies';
 
 const state = {
     opportunities: [],
@@ -16,11 +18,14 @@ const state = {
     curatorUsers: [],
     curatorOpportunities: [],
     profile: null,
+    favoriteOpportunityIds: [],
+    favoriteCompanyIds: [],
     opportunityFilters: {
         type: '',
         workFormat: '',
         location: '',
         search: '',
+        favorites: '',
     },
     employerResponseFilters: {
         status: '',
@@ -65,6 +70,53 @@ function setToken(token) {
 
 function clearToken() {
     localStorage.removeItem(TOKEN_KEY);
+}
+
+function loadFavoriteIds(key) {
+    try {
+        const raw = localStorage.getItem(key);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed.filter((value) => Number.isInteger(value)) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveFavoriteIds(key, ids) {
+    localStorage.setItem(key, JSON.stringify(ids));
+}
+
+function loadFavoritesState() {
+    state.favoriteOpportunityIds = loadFavoriteIds(FAVORITE_OPPORTUNITIES_KEY);
+    state.favoriteCompanyIds = loadFavoriteIds(FAVORITE_COMPANIES_KEY);
+}
+
+function isFavoriteOpportunity(opportunityId) {
+    return state.favoriteOpportunityIds.includes(opportunityId);
+}
+
+function isFavoriteCompany(employerId) {
+    return state.favoriteCompanyIds.includes(employerId);
+}
+
+function toggleFavoriteOpportunity(opportunityId) {
+    if (isFavoriteOpportunity(opportunityId)) {
+        state.favoriteOpportunityIds = state.favoriteOpportunityIds.filter((id) => id !== opportunityId);
+    } else {
+        state.favoriteOpportunityIds = [...state.favoriteOpportunityIds, opportunityId];
+    }
+    saveFavoriteIds(FAVORITE_OPPORTUNITIES_KEY, state.favoriteOpportunityIds);
+    renderOpportunitiesSection();
+}
+
+function toggleFavoriteCompany(employerId) {
+    if (isFavoriteCompany(employerId)) {
+        state.favoriteCompanyIds = state.favoriteCompanyIds.filter((id) => id !== employerId);
+    } else {
+        state.favoriteCompanyIds = [...state.favoriteCompanyIds, employerId];
+    }
+    saveFavoriteIds(FAVORITE_COMPANIES_KEY, state.favoriteCompanyIds);
+    renderOpportunitiesSection();
 }
 
 function hasCoords(opportunity) {
@@ -124,7 +176,8 @@ function renderAlert(container, kind, text) {
 function buildOpportunityPopup(opportunity) {
     const popup = createEl('div', 'opportunity-popup');
     popup.appendChild(createEl('h6', '', opportunity.title));
-    popup.appendChild(createEl('div', 'company', opportunity.type));
+    popup.appendChild(createEl('div', 'company', opportunity.employer_name || 'Работодатель'));
+    popup.appendChild(createEl('div', 'small text-muted', opportunity.type));
 
     if (opportunity.salary_range) {
         popup.appendChild(createEl('div', 'salary', `💰 ${opportunity.salary_range}`));
@@ -189,7 +242,11 @@ function renderMap(opportunities) {
             {
                 preset: state.selectedOpportunityId === opportunity.id
                     ? 'islands#darkBlueCircleDotIcon'
-                    : 'islands#blueCircleDotIcon',
+                    : isFavoriteOpportunity(opportunity.id)
+                        ? 'islands#redCircleDotIcon'
+                        : isFavoriteCompany(opportunity.employer_id)
+                            ? 'islands#orangeCircleDotIcon'
+                            : 'islands#blueCircleDotIcon',
             }
         );
 
@@ -220,9 +277,11 @@ function renderList(opportunities) {
     }
 
     opportunities.forEach((opportunity) => {
+        const favoriteOpportunity = isFavoriteOpportunity(opportunity.id);
+        const favoriteCompany = isFavoriteCompany(opportunity.employer_id);
         const item = createEl(
             'a',
-            `list-group-item list-group-item-action opportunity-item${state.selectedOpportunityId === opportunity.id ? ' active' : ''}`
+            `list-group-item list-group-item-action opportunity-item${state.selectedOpportunityId === opportunity.id ? ' active' : ''}${favoriteOpportunity ? ' favorite-opportunity' : ''}${!favoriteOpportunity && favoriteCompany ? ' favorite-company' : ''}`
         );
         item.href = '#';
 
@@ -230,9 +289,20 @@ function renderList(opportunities) {
             ? `${opportunity.description.slice(0, 120)}...`
             : opportunity.description;
 
-        const header = createEl('div', 'd-flex w-100 justify-content-between');
-        header.appendChild(createEl('h6', 'mb-1', opportunity.title));
-        header.appendChild(createEl('small', 'badge bg-secondary', opportunity.type));
+        const header = createEl('div', 'd-flex w-100 justify-content-between gap-2');
+        const titleWrap = createEl('div');
+        titleWrap.appendChild(createEl('h6', 'mb-1', opportunity.title));
+        titleWrap.appendChild(createEl('div', 'small text-muted', opportunity.employer_name || 'Работодатель'));
+        header.appendChild(titleWrap);
+
+        const badges = createEl('div', 'd-flex flex-wrap gap-1 justify-content-end');
+        badges.appendChild(createEl('small', 'badge bg-secondary', opportunity.type));
+        if (favoriteOpportunity) {
+            badges.appendChild(createEl('small', 'badge text-bg-danger', 'Избр. вакансия'));
+        } else if (favoriteCompany) {
+            badges.appendChild(createEl('small', 'badge text-bg-warning', 'Избр. компания'));
+        }
+        header.appendChild(badges);
 
         const desc = createEl('p', 'mb-1', shortDesc);
         const meta = createEl('small');
@@ -266,10 +336,14 @@ function getFilteredOpportunities() {
         if (filters.type && opportunity.type !== filters.type) return false;
         if (filters.workFormat && opportunity.work_format !== filters.workFormat) return false;
         if (filters.location && !includesText(opportunity.location, filters.location)) return false;
+        if (filters.favorites === 'vacancies' && !isFavoriteOpportunity(opportunity.id)) return false;
+        if (filters.favorites === 'companies' && !isFavoriteCompany(opportunity.employer_id)) return false;
+        if (filters.favorites === 'all' && !isFavoriteOpportunity(opportunity.id) && !isFavoriteCompany(opportunity.employer_id)) return false;
         if (filters.search) {
             const tags = Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.name).join(' ') : '';
             const text = [
                 opportunity.title,
+                opportunity.employer_name,
                 opportunity.description,
                 opportunity.location,
                 opportunity.type,
@@ -299,6 +373,7 @@ function renderOpportunitiesSection() {
     renderList(filtered);
     renderSelectedOpportunity();
     renderMap(filtered);
+    renderFavoritesSummary();
 }
 
 function applyOpportunityFilters() {
@@ -306,6 +381,7 @@ function applyOpportunityFilters() {
     state.opportunityFilters.workFormat = el('filterWorkFormat').value;
     state.opportunityFilters.location = el('filterLocation').value.trim();
     state.opportunityFilters.search = el('filterSearch').value.trim();
+    state.opportunityFilters.favorites = el('filterFavorites').value;
     renderOpportunitiesSection();
 }
 
@@ -314,7 +390,48 @@ function resetOpportunityFilters() {
     el('filterWorkFormat').value = '';
     el('filterLocation').value = '';
     el('filterSearch').value = '';
+    el('filterFavorites').value = '';
     applyOpportunityFilters();
+}
+
+function renderFavoritesSummary() {
+    const container = el('favorites-summary');
+    const badge = el('favoriteSummaryBadge');
+    container.innerHTML = '';
+
+    const favoriteOpportunities = state.opportunities.filter((item) => isFavoriteOpportunity(item.id));
+    const favoriteCompanies = state.favoriteCompanyIds
+        .map((companyId) => state.opportunities.find((item) => item.employer_id === companyId))
+        .filter(Boolean);
+
+    badge.textContent = String(favoriteOpportunities.length + favoriteCompanies.length);
+
+    if (!favoriteOpportunities.length && !favoriteCompanies.length) {
+        container.appendChild(createEl('p', 'text-muted mb-0', 'Пока ничего не добавлено в избранное.'));
+        return;
+    }
+
+    favoriteCompanies.forEach((companyOpportunity) => {
+        const chip = createEl('button', 'favorite-chip company', companyOpportunity.employer_name || 'Работодатель');
+        chip.type = 'button';
+        chip.addEventListener('click', () => {
+            el('filterFavorites').value = 'companies';
+            state.opportunityFilters.favorites = 'companies';
+            renderOpportunitiesSection();
+        });
+        container.appendChild(chip);
+    });
+
+    favoriteOpportunities.forEach((opportunity) => {
+        const chip = createEl('button', 'favorite-chip opportunity', opportunity.title);
+        chip.type = 'button';
+        chip.addEventListener('click', () => {
+            state.selectedOpportunityId = opportunity.id;
+            renderOpportunitiesSection();
+            centerOnOpportunity(opportunity);
+        });
+        container.appendChild(chip);
+    });
 }
 
 function renderSelectedOpportunity() {
@@ -329,6 +446,7 @@ function renderSelectedOpportunity() {
     }
 
     container.appendChild(createEl('h5', 'card-title', opportunity.title));
+    container.appendChild(createEl('p', 'detail-meta mb-1', opportunity.employer_name || 'Работодатель'));
     container.appendChild(createEl('p', 'detail-meta mb-2', `${opportunity.type} | ${opportunity.work_format} | ${opportunity.location}`));
     container.appendChild(createEl('p', 'mb-3', opportunity.description));
 
@@ -349,6 +467,24 @@ function renderSelectedOpportunity() {
     }
 
     const actionWrap = createEl('div', 'd-flex flex-wrap gap-2 align-items-center');
+
+    const favoriteOpportunityBtn = createEl(
+        'button',
+        isFavoriteOpportunity(opportunity.id) ? 'btn btn-danger' : 'btn btn-outline-danger',
+        isFavoriteOpportunity(opportunity.id) ? 'Убрать вакансию из избранного' : 'В избранное: вакансия'
+    );
+    favoriteOpportunityBtn.type = 'button';
+    favoriteOpportunityBtn.addEventListener('click', () => toggleFavoriteOpportunity(opportunity.id));
+    actionWrap.appendChild(favoriteOpportunityBtn);
+
+    const favoriteCompanyBtn = createEl(
+        'button',
+        isFavoriteCompany(opportunity.employer_id) ? 'btn btn-warning' : 'btn btn-outline-warning',
+        isFavoriteCompany(opportunity.employer_id) ? 'Убрать компанию из избранного' : 'В избранное: компания'
+    );
+    favoriteCompanyBtn.type = 'button';
+    favoriteCompanyBtn.addEventListener('click', () => toggleFavoriteCompany(opportunity.employer_id));
+    actionWrap.appendChild(favoriteCompanyBtn);
 
     if (!state.currentUser) {
         actionWrap.appendChild(createEl('span', 'text-muted small', 'Войди как соискатель, чтобы откликнуться.'));
@@ -1240,6 +1376,7 @@ function bindEvents() {
     el('filterWorkFormat').addEventListener('change', applyOpportunityFilters);
     el('filterLocation').addEventListener('input', applyOpportunityFilters);
     el('filterSearch').addEventListener('input', applyOpportunityFilters);
+    el('filterFavorites').addEventListener('change', applyOpportunityFilters);
     el('filterResetBtn').addEventListener('click', resetOpportunityFilters);
     el('employerResponseStatusFilter').addEventListener('change', applyEmployerResponseFilters);
     el('employerResponseSearch').addEventListener('input', applyEmployerResponseFilters);
@@ -1269,12 +1406,14 @@ function bindEvents() {
 async function bootstrap() {
     initModals();
     bindEvents();
+    loadFavoritesState();
     renderAuthUI();
     renderResponses();
     renderEmployerResponses();
     renderCuratorSection();
     renderProfileSection();
     renderSelectedOpportunity();
+    renderFavoritesSummary();
 
     try {
         await initMap();

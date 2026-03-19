@@ -72,9 +72,29 @@
                                 <div class="col-md-6">
                                     <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="Поиск по тексту">
                                 </div>
+                                <div class="col-md-6">
+                                    <select class="form-select form-select-sm" id="filterFavorites">
+                                        <option value="">Все возможности</option>
+                                        <option value="vacancies">Избранные вакансии</option>
+                                        <option value="companies">Вакансии избранных компаний</option>
+                                        <option value="all">Любое избранное</option>
+                                    </select>
+                                </div>
                                 <div class="col-12 d-flex justify-content-end">
                                     <button class="btn btn-sm btn-outline-secondary" id="filterResetBtn" type="button">Сбросить</button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-body py-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Избранное</h5>
+                                <span class="badge text-bg-warning text-dark" id="favoriteSummaryBadge">0</span>
+                            </div>
+                            <div class="small text-muted mb-2">Сохраняется в браузере и доступно без авторизации.</div>
+                            <div id="favorites-summary" class="favorites-summary">
+                                <p class="text-muted mb-0">Пока ничего не добавлено в избранное.</p>
                             </div>
                         </div>
                     </div>

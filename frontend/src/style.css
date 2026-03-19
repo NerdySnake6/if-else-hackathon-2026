@@ -23,6 +23,14 @@ body {
     background-color: #e9ecef;
 }
 
+.opportunity-item.favorite-opportunity {
+    border-left: 4px solid #dc3545;
+}
+
+.opportunity-item.favorite-company {
+    border-left: 4px solid #fd7e14;
+}
+
 .responses-list {
     max-height: 240px;
     overflow-y: auto;
@@ -100,6 +108,31 @@ body {
 
 .empty-state {
     color: #6c757d;
+}
+
+.favorites-summary {
+    font-size: 0.9rem;
+}
+
+.favorite-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.55rem;
+    border-radius: 999px;
+    background: #f8f9fa;
+    margin: 0 0.35rem 0.35rem 0;
+    border: 1px solid #e9ecef;
+}
+
+.favorite-chip.company {
+    border-color: #fd7e14;
+    color: #b35c00;
+}
+
+.favorite-chip.opportunity {
+    border-color: #dc3545;
+    color: #b42335;
 }
 
 #profileForm .form-label {

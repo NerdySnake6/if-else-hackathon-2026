@@ -98,7 +98,10 @@ def list_opportunities(
     now = datetime.utcnow()
     query = (
         db.query(models.Opportunity)
-        .options(joinedload(models.Opportunity.tags))
+        .options(
+            joinedload(models.Opportunity.tags),
+            joinedload(models.Opportunity.employer).joinedload(models.User.employer_profile),
+        )
         .filter(models.Opportunity.is_active.is_(True))
         .filter(
             (models.Opportunity.expires_at.is_(None))
@@ -122,7 +125,15 @@ def list_opportunities(
 @router.get("/{opp_id}", response_model=schemas.OpportunityOut)
 def get_opportunity(opp_id: int, db: Session = Depends(get_db)):
     """Возвращает одну возможность по ее идентификатору."""
-    opp = db.query(models.Opportunity).filter(models.Opportunity.id == opp_id).first()
+    opp = (
+        db.query(models.Opportunity)
+        .options(
+            joinedload(models.Opportunity.tags),
+            joinedload(models.Opportunity.employer).joinedload(models.User.employer_profile),
+        )
+        .filter(models.Opportunity.id == opp_id)
+        .first()
+    )
     if not opp:
         raise HTTPException(status_code=404, detail="Opportunity not found")
     return opp
@@ -135,7 +146,15 @@ def update_opportunity(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """Обновляет возможность и пересчитывает координаты при необходимости."""
-    opp = db.query(models.Opportunity).filter(models.Opportunity.id == opp_id).first()
+    opp = (
+        db.query(models.Opportunity)
+        .options(
+            joinedload(models.Opportunity.tags),
+            joinedload(models.Opportunity.employer).joinedload(models.User.employer_profile),
+        )
+        .filter(models.Opportunity.id == opp_id)
+        .first()
+    )
     if not opp:
         raise HTTPException(status_code=404, detail="Opportunity not found")
     

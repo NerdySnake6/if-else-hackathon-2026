@@ -96,6 +96,7 @@ def test_public_endpoints_and_public_opportunities(client, db_session):
     payload = opportunities_response.json()
     assert len(payload) == 1
     assert payload[0]["title"] == "Python Internship"
+    assert payload[0]["employer_name"] == "Public employer"
 
 
 def test_auth_and_profile_flow(client):

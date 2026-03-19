@@ -150,6 +150,7 @@ class OpportunityUpdate(BaseModel):
 class OpportunityOut(OpportunityBase):
     id: int
     employer_id: int
+    employer_name: str
     published_at: datetime
     tags: List[TagOut] = []
 

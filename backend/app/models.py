@@ -159,6 +159,15 @@ class Opportunity(Base):
     tags: Mapped[List["Tag"]] = relationship(secondary=opportunity_tag, back_populates="opportunities")
     responses: Mapped[List["Response"]] = relationship(back_populates="opportunity")
 
+    @property
+    def employer_name(self) -> str:
+        """Возвращает название компании или отображаемое имя работодателя."""
+        if self.employer and self.employer.employer_profile and self.employer.employer_profile.company_name:
+            return self.employer.employer_profile.company_name
+        if self.employer:
+            return self.employer.display_name
+        return "Работодатель"
+
 
 class Response(Base):
     """Отклик соискателя на вакансию/мероприятие"""
