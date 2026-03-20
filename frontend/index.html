@@ -42,7 +42,7 @@
                     <div id="workspaceTabs" class="workspace-tabs d-flex flex-wrap gap-2">
                         <button type="button" class="btn btn-primary btn-sm" data-view="home" id="tabHome">Главная</button>
                         <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="profile" id="tabProfile">Профиль</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="applicant" id="tabApplicant">Отклики</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="applicant" id="tabApplicant">Соискатель</button>
                         <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="employer" id="tabEmployer">Работодатель</button>
                         <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="curator" id="tabCurator">Куратор</button>
                     </div>
@@ -126,6 +126,30 @@
                             </div>
                             <div id="responses-list" class="responses-list">
                                 <p class="text-muted mb-0">Войди как соискатель, чтобы видеть свои отклики.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card shadow-sm border-0 mt-3 d-none" id="applicantContactsCard">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Нетворкинг и контакты</h5>
+                                <button class="btn btn-sm btn-outline-primary d-none" id="refreshContactsBtn">Обновить</button>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control form-control-sm" id="contactSearchInput" placeholder="Поиск по имени, вузу или навыкам">
+                                </div>
+                                <div class="col-md-4 d-flex justify-content-end">
+                                    <button class="btn btn-sm btn-outline-secondary" id="contactSearchResetBtn" type="button">Очистить</button>
+                                </div>
+                            </div>
+                            <h6 class="small text-uppercase text-muted mb-2">Открытые профили для контакта</h6>
+                            <div id="contact-suggestions-list" class="responses-list mb-3">
+                                <p class="text-muted mb-0">Здесь появятся соискатели с открытым профилем.</p>
+                            </div>
+                            <h6 class="small text-uppercase text-muted mb-2">Моя сеть</h6>
+                            <div id="contacts-list" class="responses-list">
+                                <p class="text-muted mb-0">Контакты и заявки в сеть появятся здесь.</p>
                             </div>
                         </div>
                     </div>

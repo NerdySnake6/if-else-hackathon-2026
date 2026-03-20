@@ -315,6 +315,108 @@ def test_employer_can_manage_own_opportunities(client, db_session):
     assert empty_response.json() == []
 
 
+def test_applicants_can_build_network_contacts(client):
+    """Проверяет поиск открытых профилей, заявку в контакты и подтверждение связи."""
+    first_user = register_user(
+        client,
+        email="network-one@example.com",
+        password="supersecret",
+        display_name="Network One",
+        role="applicant",
+    )
+    second_user = register_user(
+        client,
+        email="network-two@example.com",
+        password="supersecret",
+        display_name="Network Two",
+        role="applicant",
+    )
+    assert first_user.status_code == 200
+    assert second_user.status_code == 200
+
+    first_token = login_user(
+        client,
+        email="network-one@example.com",
+        password="supersecret",
+    )
+    second_token = login_user(
+        client,
+        email="network-two@example.com",
+        password="supersecret",
+    )
+
+    first_profile_response = client.put(
+        "/profiles/me",
+        headers=auth_headers(first_token),
+        json={
+            "display_name": "Network One Updated",
+            "applicant_profile": {
+                "full_name": "Иван Нетворкинг",
+                "university": "ИТМО",
+                "skills": "Python, FastAPI",
+                "is_profile_public": True,
+            },
+        },
+    )
+    assert first_profile_response.status_code == 200
+
+    second_profile_response = client.put(
+        "/profiles/me",
+        headers=auth_headers(second_token),
+        json={
+            "display_name": "Network Two Updated",
+            "applicant_profile": {
+                "full_name": "Мария Контакт",
+                "university": "СПбГУ",
+                "skills": "React, TypeScript",
+                "is_profile_public": True,
+            },
+        },
+    )
+    assert second_profile_response.status_code == 200
+
+    suggestions_response = client.get("/contacts/suggestions", headers=auth_headers(first_token))
+    assert suggestions_response.status_code == 200
+    suggestions = suggestions_response.json()
+    assert len(suggestions) == 1
+    assert suggestions[0]["display_name"] == "Network Two Updated"
+
+    create_contact_response = client.post(
+        "/contacts/",
+        headers=auth_headers(first_token),
+        json={"addressee_id": suggestions[0]["id"]},
+    )
+    assert create_contact_response.status_code == 201
+    contact_id = create_contact_response.json()["id"]
+
+    outgoing_contacts = client.get("/contacts/", headers=auth_headers(first_token))
+    assert outgoing_contacts.status_code == 200
+    assert outgoing_contacts.json()[0]["direction"] == "outgoing"
+    assert outgoing_contacts.json()[0]["peer"]["display_name"] == "Network Two Updated"
+
+    incoming_contacts = client.get("/contacts/", headers=auth_headers(second_token))
+    assert incoming_contacts.status_code == 200
+    assert incoming_contacts.json()[0]["direction"] == "incoming"
+    assert incoming_contacts.json()[0]["status"] == "pending"
+
+    accept_response = client.patch(
+        f"/contacts/{contact_id}",
+        headers=auth_headers(second_token),
+        json={"status": "accepted"},
+    )
+    assert accept_response.status_code == 200
+    assert accept_response.json()["status"] == "accepted"
+
+    accepted_contacts = client.get("/contacts/", headers=auth_headers(first_token))
+    assert accepted_contacts.status_code == 200
+    assert accepted_contacts.json()[0]["status"] == "accepted"
+    assert accepted_contacts.json()[0]["peer"]["applicant_profile"]["skills"] == "React, TypeScript"
+
+    repeat_suggestions = client.get("/contacts/suggestions", headers=auth_headers(first_token))
+    assert repeat_suggestions.status_code == 200
+    assert repeat_suggestions.json() == []
+
+
 def test_curator_can_verify_employers_and_moderate_opportunities(client, db_session):
     """Проверяет основные сценарии кабинета куратора."""
     curator_user = models.User(

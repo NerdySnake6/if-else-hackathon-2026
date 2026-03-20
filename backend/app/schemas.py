@@ -222,6 +222,27 @@ class ContactCreate(ContactBase):
     addressee_id: int
 
 
+class ContactStatusUpdate(BaseModel):
+    status: Literal["accepted", "declined"]
+
+
+class ContactApplicantSummary(BaseModel):
+    id: int
+    display_name: str
+    applicant_profile: Optional[ApplicantProfileOut] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ContactNetworkOut(ContactBase):
+    id: int
+    status: str
+    direction: Literal["incoming", "outgoing"]
+    created_at: datetime
+    accepted_at: Optional[datetime] = None
+    peer: ContactApplicantSummary
+
+
 class ContactOut(ContactBase):
     id: int
     requester_id: int

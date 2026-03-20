@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from app.database import init_db
-from app.routers import auth, curator, map, opportunities, profiles, responses
+from app.routers import auth, contacts, curator, map, opportunities, profiles, responses
 
 app = FastAPI(
     title="Трамплин",
@@ -17,6 +17,7 @@ def on_startup():
     init_db()
 
 app.include_router(auth.router)
+app.include_router(contacts.router)
 app.include_router(curator.router)
 app.include_router(map.router)
 app.include_router(opportunities.router)

@@ -17,6 +17,8 @@ const state = {
     pendingCuratorOpportunityId: null,
     pendingEmployerOpportunityId: null,
     responses: [],
+    contacts: [],
+    contactSuggestions: [],
     employerResponses: [],
     curatorUsers: [],
     curatorOpportunities: [],
@@ -34,6 +36,7 @@ const state = {
         status: '',
         search: '',
     },
+    contactSearch: '',
     employerOpportunityFilters: {
         status: '',
         type: '',
@@ -576,6 +579,12 @@ function statusLabel(status) {
     return 'На рассмотрении';
 }
 
+function contactStatusLabel(status) {
+    if (status === 'accepted') return 'Контакт подтвержден';
+    if (status === 'declined') return 'Заявка отклонена';
+    return 'Заявка отправлена';
+}
+
 function curatorRoleLabel(role) {
     if (role === 'employer') return 'Работодатель';
     if (role === 'applicant') return 'Соискатель';
@@ -642,6 +651,147 @@ function renderResponses() {
         }
 
         container.appendChild(item);
+    });
+}
+
+async function sendContactRequest(addresseeId) {
+    const response = await apiFetch('/contacts/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ addressee_id: addresseeId }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось отправить заявку в контакты.' }));
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось отправить заявку в контакты.');
+        return;
+    }
+
+    await loadContacts();
+    showNotice('success', 'Заявка в контакты отправлена.');
+}
+
+async function updateContactStatus(contactId, status) {
+    const response = await apiFetch(`/contacts/${contactId}`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось обновить статус контакта.' }));
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось обновить статус контакта.');
+        return;
+    }
+
+    await loadContacts();
+    showNotice('success', status === 'accepted' ? 'Контакт подтвержден.' : 'Заявка отклонена.');
+}
+
+function renderContactsSection() {
+    const suggestionsContainer = el('contact-suggestions-list');
+    const contactsContainer = el('contacts-list');
+    const refreshBtn = el('refreshContactsBtn');
+    suggestionsContainer.innerHTML = '';
+    contactsContainer.innerHTML = '';
+
+    if (!state.currentUser || state.currentUser.role !== 'applicant') {
+        refreshBtn.classList.add('d-none');
+        suggestionsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Войди как соискатель, чтобы расширять сеть контактов.'));
+        contactsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Контакты и заявки в сеть появятся после входа.'));
+        return;
+    }
+
+    refreshBtn.classList.remove('d-none');
+
+    if (!state.contactSuggestions.length) {
+        suggestionsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Подходящих открытых профилей пока нет или все уже у тебя в сети.'));
+    } else {
+        state.contactSuggestions.forEach((person) => {
+            const item = createEl('div', 'contact-item py-2');
+            const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
+            top.appendChild(createEl('div', 'fw-semibold', person.applicant_profile?.full_name || person.display_name));
+            top.appendChild(createEl('span', 'status-pill pending', 'Открытый профиль'));
+            item.appendChild(top);
+
+            const metaParts = [
+                person.display_name,
+                person.applicant_profile?.university,
+                person.applicant_profile?.course_or_year,
+            ].filter(Boolean);
+            if (metaParts.length) {
+                item.appendChild(createEl('div', 'small text-muted mt-1', metaParts.join(' | ')));
+            }
+            if (person.applicant_profile?.skills) {
+                item.appendChild(createEl('div', 'small mt-1', `Навыки: ${person.applicant_profile.skills}`));
+            }
+            if (person.applicant_profile?.bio) {
+                item.appendChild(createEl('div', 'small text-muted mt-1', person.applicant_profile.bio));
+            }
+
+            const action = createEl('div', 'contact-actions');
+            const requestBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Добавить в контакты');
+            requestBtn.type = 'button';
+            requestBtn.addEventListener('click', () => {
+                void sendContactRequest(person.id);
+            });
+            action.appendChild(requestBtn);
+            item.appendChild(action);
+            suggestionsContainer.appendChild(item);
+        });
+    }
+
+    if (!state.contacts.length) {
+        contactsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет ни входящих, ни подтвержденных контактов.'));
+        return;
+    }
+
+    state.contacts.forEach((contact) => {
+        const item = createEl('div', 'contact-item py-2');
+        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
+        top.appendChild(createEl('div', 'fw-semibold', contact.peer.applicant_profile?.full_name || contact.peer.display_name));
+        const pillClass = contact.status === 'accepted' ? 'accepted' : contact.status === 'declined' ? 'rejected' : 'pending';
+        top.appendChild(createEl('span', `status-pill ${pillClass}`, contactStatusLabel(contact.status)));
+        item.appendChild(top);
+
+        const directionText = contact.direction === 'incoming' ? 'Входящая заявка' : 'Исходящая заявка';
+        const metaParts = [
+            directionText,
+            contact.peer.applicant_profile?.university,
+            contact.peer.applicant_profile?.course_or_year,
+        ].filter(Boolean);
+        item.appendChild(createEl('div', 'small text-muted mt-1', metaParts.join(' | ')));
+
+        if (contact.peer.applicant_profile?.skills) {
+            item.appendChild(createEl('div', 'small mt-1', `Навыки: ${contact.peer.applicant_profile.skills}`));
+        }
+        if (contact.peer.applicant_profile?.bio) {
+            item.appendChild(createEl('div', 'small text-muted mt-1', contact.peer.applicant_profile.bio));
+        }
+
+        if (contact.direction === 'incoming' && contact.status === 'pending') {
+            const actions = createEl('div', 'contact-actions');
+            const acceptBtn = createEl('button', 'btn btn-sm btn-outline-success', 'Принять');
+            acceptBtn.type = 'button';
+            acceptBtn.addEventListener('click', () => {
+                void updateContactStatus(contact.id, 'accepted');
+            });
+            actions.appendChild(acceptBtn);
+
+            const declineBtn = createEl('button', 'btn btn-sm btn-outline-danger', 'Отклонить');
+            declineBtn.type = 'button';
+            declineBtn.addEventListener('click', () => {
+                void updateContactStatus(contact.id, 'declined');
+            });
+            actions.appendChild(declineBtn);
+            item.appendChild(actions);
+        }
+
+        contactsContainer.appendChild(item);
     });
 }
 
@@ -1370,7 +1520,7 @@ function renderWorkspaceView() {
     ];
     const roleBlocks = {
         profile: ['profileCard'],
-        applicant: ['applicantResponsesCard'],
+        applicant: ['applicantResponsesCard', 'applicantContactsCard'],
         employer: ['employerResponsesCard', 'employerOpportunitiesCard'],
         curator: ['curatorCard'],
     };
@@ -1418,11 +1568,14 @@ async function loadCurrentUser() {
     if (!token) {
         state.currentUser = null;
         state.responses = [];
+        state.contacts = [];
+        state.contactSuggestions = [];
         state.employerResponses = [];
         state.employerOpportunities = [];
         state.profile = null;
         renderAuthUI();
         renderResponses();
+        renderContactsSection();
         renderEmployerResponses();
         renderEmployerOpportunities();
         renderProfileSection();
@@ -1436,11 +1589,14 @@ async function loadCurrentUser() {
         clearToken();
         state.currentUser = null;
         state.responses = [];
+        state.contacts = [];
+        state.contactSuggestions = [];
         state.employerResponses = [];
         state.employerOpportunities = [];
         state.profile = null;
         renderAuthUI();
         renderResponses();
+        renderContactsSection();
         renderEmployerResponses();
         renderEmployerOpportunities();
         renderProfileSection();
@@ -1453,6 +1609,7 @@ async function loadCurrentUser() {
     renderAuthUI();
     await loadProfile();
     await loadResponses();
+    await loadContacts();
     await loadEmployerResponses();
     await loadEmployerOpportunities();
     await loadCuratorData();
@@ -1488,6 +1645,29 @@ async function loadResponses() {
 
     state.responses = await response.json();
     renderResponses();
+}
+
+async function loadContacts() {
+    if (!state.currentUser || state.currentUser.role !== 'applicant') {
+        state.contacts = [];
+        state.contactSuggestions = [];
+        renderContactsSection();
+        return;
+    }
+
+    const params = new URLSearchParams();
+    if (state.contactSearch) {
+        params.set('query', state.contactSearch);
+    }
+
+    const [contactsResponse, suggestionsResponse] = await Promise.all([
+        apiFetch('/contacts/'),
+        apiFetch(`/contacts/suggestions${params.toString() ? `?${params.toString()}` : ''}`),
+    ]);
+
+    state.contacts = contactsResponse.ok ? await contactsResponse.json() : [];
+    state.contactSuggestions = suggestionsResponse.ok ? await suggestionsResponse.json() : [];
+    renderContactsSection();
 }
 
 async function loadEmployerResponses() {
@@ -1773,6 +1953,8 @@ function handleLogout(event) {
     clearToken();
     state.currentUser = null;
     state.responses = [];
+    state.contacts = [];
+    state.contactSuggestions = [];
     state.employerResponses = [];
     state.employerOpportunities = [];
     state.curatorUsers = [];
@@ -1783,6 +1965,7 @@ function handleLogout(event) {
     state.profile = null;
     renderAuthUI();
     renderResponses();
+    renderContactsSection();
     renderEmployerResponses();
     renderEmployerOpportunities();
     renderCuratorSection();
@@ -1827,6 +2010,9 @@ function bindEvents() {
     el('refreshResponsesBtn').addEventListener('click', () => {
         void loadResponses();
     });
+    el('refreshContactsBtn').addEventListener('click', () => {
+        void loadContacts();
+    });
     el('refreshEmployerResponsesBtn').addEventListener('click', () => {
         void loadEmployerResponses();
     });
@@ -1848,6 +2034,15 @@ function bindEvents() {
     el('employerResponseStatusFilter').addEventListener('change', applyEmployerResponseFilters);
     el('employerResponseSearch').addEventListener('input', applyEmployerResponseFilters);
     el('employerResponseClearBtn').addEventListener('click', resetEmployerResponseFilters);
+    el('contactSearchInput').addEventListener('input', () => {
+        state.contactSearch = el('contactSearchInput').value.trim();
+        void loadContacts();
+    });
+    el('contactSearchResetBtn').addEventListener('click', () => {
+        el('contactSearchInput').value = '';
+        state.contactSearch = '';
+        void loadContacts();
+    });
     el('employerOpportunityStatusFilter').addEventListener('change', applyEmployerOpportunityFilters);
     el('employerOpportunityTypeFilter').addEventListener('change', applyEmployerOpportunityFilters);
     el('employerOpportunitySearch').addEventListener('input', applyEmployerOpportunityFilters);
@@ -1882,6 +2077,7 @@ async function bootstrap() {
     loadFavoritesState();
     renderAuthUI();
     renderResponses();
+    renderContactsSection();
     renderEmployerResponses();
     renderEmployerOpportunities();
     renderCuratorSection();
