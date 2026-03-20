@@ -15,6 +15,7 @@ const state = {
     pendingApplyId: null,
     pendingRecommendationPeerId: null,
     pendingCuratorUserId: null,
+    pendingCuratorUserRole: null,
     pendingCuratorOpportunityId: null,
     pendingEmployerOpportunityId: null,
     responses: [],
@@ -64,6 +65,7 @@ let applyModal;
 let recommendModal;
 let applicantProfileModal;
 let curatorUserModal;
+let curatorCreateModal;
 let curatorOpportunityModal;
 let employerOpportunityModal;
 
@@ -1297,6 +1299,26 @@ async function updateCuratorUser(userId, payload) {
     showNotice('success', 'Пользователь обновлен.');
 }
 
+async function createCuratorAccount(payload) {
+    const response = await apiFetch('/curator/curators', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось создать куратора.' }));
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось создать куратора.');
+        return false;
+    }
+
+    await loadCuratorData();
+    showNotice('success', 'Новый куратор создан.');
+    return true;
+}
+
 async function updateCuratorOpportunity(opportunityId, payload) {
     const response = await apiFetch(`/curator/opportunities/${opportunityId}`, {
         method: 'PATCH',
@@ -1321,9 +1343,13 @@ function getFilteredCuratorUsers() {
     const filters = state.curatorFilters;
     return state.curatorUsers.filter((user) => {
         if (filters.role && user.role !== filters.role) return false;
-        if (filters.verification === 'verified' && !user.is_verified) return false;
-        if (filters.verification === 'unverified' && user.is_verified) return false;
-        if (filters.verification === 'pending' && (user.role !== 'employer' || user.is_verified)) return false;
+        if (user.role === 'employer') {
+            if (filters.verification === 'verified' && !user.is_verified) return false;
+            if (filters.verification === 'unverified' && user.is_verified) return false;
+            if (filters.verification === 'pending' && user.is_verified) return false;
+        } else if (filters.verification === 'pending') {
+            return false;
+        }
         if (filters.userSearch) {
             const haystack = `${user.display_name} ${user.email}`;
             if (!includesText(haystack, filters.userSearch)) return false;
@@ -1345,8 +1371,52 @@ function getFilteredCuratorOpportunities() {
     });
 }
 
+function curatorActionLabel(role) {
+    if (role === 'employer') return 'Проверить';
+    if (role === 'applicant') return 'Редактировать';
+    if (role === 'curator') return 'Открыть';
+    if (role === 'admin') return 'Открыть';
+    return 'Редактировать';
+}
+
+function resetCuratorUserForm() {
+    state.pendingCuratorUserId = null;
+    state.pendingCuratorUserRole = null;
+    el('curatorUserModalLabel').textContent = 'Модерация пользователя';
+    el('curatorUserModalMeta').textContent = 'Куратор может обновить статус аккаунта и содержимое профиля.';
+    el('curatorUserDisplayName').value = '';
+    el('curatorApplicantFullName').value = '';
+    el('curatorApplicantUniversity').value = '';
+    el('curatorApplicantCourse').value = '';
+    el('curatorApplicantSkills').value = '';
+    el('curatorApplicantExperience').value = '';
+    el('curatorApplicantBio').value = '';
+    el('curatorApplicantGithub').value = '';
+    el('curatorApplicantPortfolio').value = '';
+    el('curatorApplicantPublic').checked = false;
+    el('curatorApplicantShowResponses').checked = false;
+    el('curatorEmployerCompanyName').value = '';
+    el('curatorEmployerIndustry').value = '';
+    el('curatorEmployerDescription').value = '';
+    el('curatorEmployerWebsite').value = '';
+    el('curatorEmployerSocialLinks').value = '';
+    el('curatorEmployerCity').value = '';
+    el('curatorEmployerAddress').value = '';
+    el('curatorEmployerVerified').checked = false;
+    el('curatorUserActive').checked = true;
+    el('curatorApplicantFields').classList.add('d-none');
+    el('curatorEmployerFields').classList.add('d-none');
+}
+
+function syncCuratorUserModal(role) {
+    el('curatorApplicantFields').classList.toggle('d-none', role !== 'applicant');
+    el('curatorEmployerFields').classList.toggle('d-none', role !== 'employer');
+}
+
 function renderCuratorSection() {
     const refreshBtn = el('refreshCuratorBtn');
+    const createBtn = el('openCuratorCreateBtn');
+    const adminHint = el('curatorAdminHint');
     const usersContainer = el('curator-users-list');
     const opportunitiesContainer = el('curator-opportunities-list');
     usersContainer.innerHTML = '';
@@ -1354,12 +1424,18 @@ function renderCuratorSection() {
 
     if (!state.currentUser || !['curator', 'admin'].includes(state.currentUser.role)) {
         refreshBtn.classList.add('d-none');
+        createBtn.classList.add('d-none');
+        adminHint.textContent = 'Здесь можно модерировать пользователей, карточки и справочник тегов.';
         usersContainer.appendChild(createEl('p', 'text-muted mb-0', 'Войди как куратор, чтобы модерировать пользователей.'));
         opportunitiesContainer.appendChild(createEl('p', 'text-muted mb-0', 'Карточки для модерации появятся здесь.'));
         return;
     }
 
     refreshBtn.classList.remove('d-none');
+    createBtn.classList.toggle('d-none', state.currentUser.role !== 'admin');
+    adminHint.textContent = state.currentUser.role === 'admin'
+        ? 'Администратор может управлять всеми аккаунтами и создавать новых кураторов.'
+        : 'Куратор модерирует пользователей, карточки возможностей и справочник тегов.';
 
     const filteredUsers = getFilteredCuratorUsers();
     if (!filteredUsers.length) {
@@ -1379,13 +1455,33 @@ function renderCuratorSection() {
                 if (user.employer_profile?.company_name) {
                     item.appendChild(createEl('div', 'small mt-1', user.employer_profile.company_name));
                 }
+            } else if (user.role === 'applicant' && user.applicant_profile) {
+                const profileBits = [
+                    user.applicant_profile.full_name,
+                    user.applicant_profile.university,
+                    user.applicant_profile.course_or_year,
+                ].filter(Boolean);
+                if (profileBits.length) {
+                    item.appendChild(createEl('div', 'moderation-meta', profileBits.join(' | ')));
+                }
+                if (user.applicant_profile.skills) {
+                    item.appendChild(
+                        createEl(
+                            'div',
+                            'small mt-1',
+                            user.applicant_profile.skills.length > 120
+                                ? `${user.applicant_profile.skills.slice(0, 120)}...`
+                                : user.applicant_profile.skills
+                        )
+                    );
+                }
             }
 
             const actions = createEl('div', 'moderation-actions');
-            const editBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Проверить');
+            const editBtn = createEl('button', 'btn btn-sm btn-outline-primary', curatorActionLabel(user.role));
             editBtn.type = 'button';
-            editBtn.disabled = user.role !== 'employer';
-            if (user.role === 'employer') {
+            editBtn.disabled = ['curator', 'admin'].includes(user.role) && state.currentUser.role !== 'admin';
+            if (!editBtn.disabled) {
                 editBtn.addEventListener('click', () => openCuratorUserModal(user.id));
             }
             actions.appendChild(editBtn);
@@ -1546,17 +1642,45 @@ function renderProfileSection() {
 
 function openCuratorUserModal(userId) {
     const user = state.curatorUsers.find((item) => item.id === userId);
-    if (!user || user.role !== 'employer') return;
+    if (!user) return;
+    if (['curator', 'admin'].includes(user.role) && state.currentUser?.role !== 'admin') return;
 
+    resetCuratorUserForm();
     state.pendingCuratorUserId = userId;
-    el('curatorEmployerDisplayName').value = user.display_name || '';
-    el('curatorEmployerCompanyName').value = user.employer_profile?.company_name || '';
-    el('curatorEmployerDescription').value = user.employer_profile?.description || '';
-    el('curatorEmployerWebsite').value = user.employer_profile?.website || '';
-    el('curatorEmployerCity').value = user.employer_profile?.city || '';
-    el('curatorEmployerAddress').value = user.employer_profile?.address || '';
-    el('curatorEmployerVerified').checked = Boolean(user.is_verified);
-    el('curatorEmployerActive').checked = Boolean(user.is_active);
+    state.pendingCuratorUserRole = user.role;
+    el('curatorUserDisplayName').value = user.display_name || '';
+    el('curatorUserActive').checked = Boolean(user.is_active);
+    syncCuratorUserModal(user.role);
+
+    if (user.role === 'employer') {
+        el('curatorUserModalLabel').textContent = 'Проверка работодателя';
+        el('curatorUserModalMeta').textContent = 'Здесь можно верифицировать компанию и отредактировать данные работодателя.';
+        el('curatorEmployerCompanyName').value = user.employer_profile?.company_name || '';
+        el('curatorEmployerIndustry').value = user.employer_profile?.industry || '';
+        el('curatorEmployerDescription').value = user.employer_profile?.description || '';
+        el('curatorEmployerWebsite').value = user.employer_profile?.website || '';
+        el('curatorEmployerSocialLinks').value = user.employer_profile?.social_links || '';
+        el('curatorEmployerCity').value = user.employer_profile?.city || '';
+        el('curatorEmployerAddress').value = user.employer_profile?.address || '';
+        el('curatorEmployerVerified').checked = Boolean(user.is_verified);
+    } else if (user.role === 'applicant') {
+        el('curatorUserModalLabel').textContent = 'Модерация соискателя';
+        el('curatorUserModalMeta').textContent = 'Куратор может скорректировать профиль соискателя и его настройки приватности.';
+        el('curatorApplicantFullName').value = user.applicant_profile?.full_name || '';
+        el('curatorApplicantUniversity').value = user.applicant_profile?.university || '';
+        el('curatorApplicantCourse').value = user.applicant_profile?.course_or_year || '';
+        el('curatorApplicantSkills').value = user.applicant_profile?.skills || '';
+        el('curatorApplicantExperience').value = user.applicant_profile?.experience || '';
+        el('curatorApplicantBio').value = user.applicant_profile?.bio || '';
+        el('curatorApplicantGithub').value = user.applicant_profile?.github_url || '';
+        el('curatorApplicantPortfolio').value = user.applicant_profile?.portfolio_url || '';
+        el('curatorApplicantPublic').checked = Boolean(user.applicant_profile?.is_profile_public);
+        el('curatorApplicantShowResponses').checked = Boolean(user.applicant_profile?.show_responses);
+    } else {
+        el('curatorUserModalLabel').textContent = user.role === 'admin' ? 'Администратор платформы' : 'Куратор платформы';
+        el('curatorUserModalMeta').textContent = 'Для служебных учетных записей здесь доступно только управление активностью аккаунта.';
+    }
+
     curatorUserModal.show();
 }
 
@@ -2246,22 +2370,58 @@ async function handleEmployerOpportunitySubmit(event) {
 
 async function handleCuratorUserSubmit(event) {
     event.preventDefault();
-    if (!state.pendingCuratorUserId) return;
+    if (!state.pendingCuratorUserId || !state.pendingCuratorUserRole) return;
 
-    await updateCuratorUser(state.pendingCuratorUserId, {
-        display_name: normalizeText(el('curatorEmployerDisplayName').value),
-        is_verified: el('curatorEmployerVerified').checked,
-        is_active: el('curatorEmployerActive').checked,
-        employer_profile: {
+    const payload = {
+        display_name: normalizeText(el('curatorUserDisplayName').value),
+        is_active: el('curatorUserActive').checked,
+    };
+
+    if (state.pendingCuratorUserRole === 'employer') {
+        payload.is_verified = el('curatorEmployerVerified').checked;
+        payload.employer_profile = {
             company_name: normalizeText(el('curatorEmployerCompanyName').value),
+            industry: normalizeText(el('curatorEmployerIndustry').value),
             description: normalizeText(el('curatorEmployerDescription').value),
             website: normalizeUrl(el('curatorEmployerWebsite').value),
+            social_links: normalizeText(el('curatorEmployerSocialLinks').value),
             city: normalizeText(el('curatorEmployerCity').value),
             address: normalizeText(el('curatorEmployerAddress').value),
-        },
-    });
+        };
+    } else if (state.pendingCuratorUserRole === 'applicant') {
+        payload.applicant_profile = {
+            full_name: normalizeText(el('curatorApplicantFullName').value),
+            university: normalizeText(el('curatorApplicantUniversity').value),
+            course_or_year: normalizeText(el('curatorApplicantCourse').value),
+            skills: normalizeText(el('curatorApplicantSkills').value),
+            experience: normalizeText(el('curatorApplicantExperience').value),
+            bio: normalizeText(el('curatorApplicantBio').value),
+            github_url: normalizeUrl(el('curatorApplicantGithub').value),
+            portfolio_url: normalizeUrl(el('curatorApplicantPortfolio').value),
+            is_profile_public: el('curatorApplicantPublic').checked,
+            show_responses: el('curatorApplicantShowResponses').checked,
+        };
+    }
+
+    await updateCuratorUser(state.pendingCuratorUserId, payload);
 
     curatorUserModal.hide();
+    resetCuratorUserForm();
+}
+
+async function handleCuratorCreateSubmit(event) {
+    event.preventDefault();
+
+    const success = await createCuratorAccount({
+        display_name: normalizeText(el('curatorCreateName').value),
+        email: el('curatorCreateEmail').value.trim(),
+        password: el('curatorCreatePassword').value,
+    });
+
+    if (!success) return;
+
+    curatorCreateModal.hide();
+    event.target.reset();
 }
 
 async function handleCuratorOpportunitySubmit(event) {
@@ -2295,6 +2455,7 @@ function handleLogout(event) {
     state.curatorUsers = [];
     state.curatorOpportunities = [];
     state.pendingCuratorUserId = null;
+    state.pendingCuratorUserRole = null;
     state.pendingCuratorOpportunityId = null;
     state.pendingEmployerOpportunityId = null;
     state.profile = null;
@@ -2315,6 +2476,7 @@ function initModals() {
     recommendModal = new window.bootstrap.Modal(el('recommendModal'));
     applicantProfileModal = new window.bootstrap.Modal(el('applicantProfileModal'));
     curatorUserModal = new window.bootstrap.Modal(el('curatorUserModal'));
+    curatorCreateModal = new window.bootstrap.Modal(el('curatorCreateModal'));
     curatorOpportunityModal = new window.bootstrap.Modal(el('curatorOpportunityModal'));
     employerOpportunityModal = new window.bootstrap.Modal(el('employerOpportunityModal'));
 }
@@ -2346,7 +2508,12 @@ function bindEvents() {
     el('curatorTagForm').addEventListener('submit', handleCuratorTagSubmit);
     el('employerOpportunityForm').addEventListener('submit', handleEmployerOpportunitySubmit);
     el('curatorUserForm').addEventListener('submit', handleCuratorUserSubmit);
+    el('curatorCreateForm').addEventListener('submit', handleCuratorCreateSubmit);
     el('curatorOpportunityForm').addEventListener('submit', handleCuratorOpportunitySubmit);
+    el('openCuratorCreateBtn').addEventListener('click', () => {
+        el('curatorCreateForm').reset();
+        curatorCreateModal.show();
+    });
     el('refreshResponsesBtn').addEventListener('click', () => {
         void loadResponses();
     });

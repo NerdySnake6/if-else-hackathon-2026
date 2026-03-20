@@ -814,3 +814,117 @@ def test_curator_can_verify_employers_and_moderate_opportunities(client, db_sess
     assert moderate_response.json()["is_active"] is False
     assert moderate_response.json()["title"] == "Moderated title"
     assert moderate_response.json()["location"] == "Санкт-Петербург"
+
+
+def test_curator_can_update_applicant_profile(client, db_session):
+    """Проверяет, что куратор может модерировать профиль соискателя."""
+    curator_user = models.User(
+        email="curator-profiles@example.com",
+        hashed_password="hash",
+        display_name="Curator Profiles",
+        role="curator",
+        is_active=True,
+        is_verified=True,
+    )
+    applicant_user = models.User(
+        email="student-review@example.com",
+        hashed_password="hash",
+        display_name="Student Draft",
+        role="applicant",
+        is_active=True,
+        is_verified=False,
+    )
+    db_session.add_all([curator_user, applicant_user])
+    db_session.commit()
+    db_session.refresh(curator_user)
+    db_session.refresh(applicant_user)
+
+    applicant_profile = models.ApplicantProfile(
+        user_id=applicant_user.id,
+        full_name="Черновик Профиля",
+        university="МИФИ",
+        course_or_year="2 курс",
+    )
+    db_session.add(applicant_profile)
+    db_session.commit()
+
+    token = create_access_token({"sub": curator_user.email, "role": curator_user.role})
+    headers = auth_headers(token)
+
+    update_response = client.patch(
+        f"/curator/users/{applicant_user.id}",
+        headers=headers,
+        json={
+            "display_name": "Student Reviewed",
+            "is_active": True,
+            "applicant_profile": {
+                "full_name": "Ирина Студентова",
+                "university": "ИТМО",
+                "course_or_year": "4 курс",
+                "skills": "Python, FastAPI, SQL",
+                "experience": "Учебные проекты и хакатоны",
+                "bio": "Ищу первую стажировку в backend-разработке.",
+                "is_profile_public": True,
+                "show_responses": True,
+            },
+        },
+    )
+    assert update_response.status_code == 200
+    payload = update_response.json()
+    assert payload["display_name"] == "Student Reviewed"
+    assert payload["applicant_profile"]["full_name"] == "Ирина Студентова"
+    assert payload["applicant_profile"]["is_profile_public"] is True
+    assert payload["applicant_profile"]["show_responses"] is True
+
+
+def test_admin_can_create_curator_accounts(client, db_session):
+    """Проверяет, что только администратор может создавать кураторов."""
+    admin_user = models.User(
+        email="admin-create@example.com",
+        hashed_password="hash",
+        display_name="Administrator",
+        role="admin",
+        is_active=True,
+        is_verified=True,
+    )
+    curator_user = models.User(
+        email="plain-curator@example.com",
+        hashed_password="hash",
+        display_name="Plain Curator",
+        role="curator",
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add_all([admin_user, curator_user])
+    db_session.commit()
+    db_session.refresh(admin_user)
+    db_session.refresh(curator_user)
+
+    admin_headers = auth_headers(create_access_token({"sub": admin_user.email, "role": admin_user.role}))
+    curator_headers = auth_headers(create_access_token({"sub": curator_user.email, "role": curator_user.role}))
+
+    forbidden_response = client.post(
+        "/curator/curators",
+        headers=curator_headers,
+        json={
+            "email": "blocked-curator@example.com",
+            "display_name": "Blocked",
+            "password": "supersecret",
+        },
+    )
+    assert forbidden_response.status_code == 403
+
+    create_response = client.post(
+        "/curator/curators",
+        headers=admin_headers,
+        json={
+            "email": "new-curator@example.com",
+            "display_name": "New Curator",
+            "password": "supersecret",
+        },
+    )
+    assert create_response.status_code == 201
+    payload = create_response.json()
+    assert payload["role"] == "curator"
+    assert payload["is_active"] is True
+    assert payload["is_verified"] is True

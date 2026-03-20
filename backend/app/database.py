@@ -1,9 +1,12 @@
 """Настройка подключения к базе данных и фабрики сессий."""
 
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
 from app import models
+from app.auth import get_password_hash
 from app.models import Base
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./tramplin.db"
@@ -44,6 +47,7 @@ def init_db():
     """Создает таблицы на основе текущих моделей SQLAlchemy."""
     Base.metadata.create_all(bind=engine)
     seed_default_tags()
+    seed_default_admin()
 
 
 def seed_default_tags():
@@ -62,5 +66,35 @@ def seed_default_tags():
         if missing_tags:
             db.add_all(missing_tags)
             db.commit()
+    finally:
+        db.close()
+
+
+def seed_default_admin():
+    """Создает администратора по умолчанию, если его еще нет в базе."""
+    db = SessionLocal()
+    try:
+        existing_admin = (
+            db.query(models.User)
+            .filter(models.User.role == "admin")
+            .first()
+        )
+        if existing_admin:
+            return
+
+        admin_email = os.getenv("TRAMPLIN_ADMIN_EMAIL", "admin@tramplin.local")
+        admin_password = os.getenv("TRAMPLIN_ADMIN_PASSWORD", "admin12345")
+        admin_name = os.getenv("TRAMPLIN_ADMIN_NAME", "Администратор")
+
+        admin_user = models.User(
+            email=admin_email,
+            hashed_password=get_password_hash(admin_password),
+            display_name=admin_name,
+            role="admin",
+            is_active=True,
+            is_verified=True,
+        )
+        db.add(admin_user)
+        db.commit()
     finally:
         db.close()

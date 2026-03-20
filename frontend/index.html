@@ -345,8 +345,12 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h5 class="card-title mb-0">Кабинет куратора</h5>
-                                <button class="btn btn-sm btn-outline-primary d-none" id="refreshCuratorBtn">Обновить</button>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-success d-none" id="openCuratorCreateBtn">Новый куратор</button>
+                                    <button class="btn btn-sm btn-outline-primary d-none" id="refreshCuratorBtn">Обновить</button>
+                                </div>
                             </div>
+                            <p class="text-muted small mb-3" id="curatorAdminHint">Здесь можно модерировать пользователей, карточки и справочник тегов. Администратор дополнительно создает учетные записи кураторов.</p>
                             <div class="row g-2 mb-3">
                                 <div class="col-md-4">
                                     <select class="form-select form-select-sm" id="curatorUserRoleFilter">
@@ -549,47 +553,132 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="curatorUserModalLabel">Проверка работодателя</h5>
+                    <h5 class="modal-title" id="curatorUserModalLabel">Модерация пользователя</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="curatorUserForm">
                     <div class="modal-body">
+                        <p class="text-muted small mb-3" id="curatorUserModalMeta">Куратор может обновить статус аккаунта и содержимое профиля.</p>
                         <div class="mb-3">
-                            <label for="curatorEmployerDisplayName" class="form-label">Отображаемое имя</label>
-                            <input type="text" class="form-control" id="curatorEmployerDisplayName" minlength="2" required>
+                            <label for="curatorUserDisplayName" class="form-label">Отображаемое имя</label>
+                            <input type="text" class="form-control" id="curatorUserDisplayName" minlength="2" required>
                         </div>
-                        <div class="mb-3">
-                            <label for="curatorEmployerCompanyName" class="form-label">Название компании</label>
-                            <input type="text" class="form-control" id="curatorEmployerCompanyName" required>
+                        <div id="curatorApplicantFields" class="d-none">
+                            <div class="mb-3">
+                                <label for="curatorApplicantFullName" class="form-label">ФИО</label>
+                                <input type="text" class="form-control" id="curatorApplicantFullName">
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorApplicantUniversity" class="form-label">Вуз</label>
+                                <input type="text" class="form-control" id="curatorApplicantUniversity">
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorApplicantCourse" class="form-label">Курс или год выпуска</label>
+                                <input type="text" class="form-control" id="curatorApplicantCourse">
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorApplicantSkills" class="form-label">Навыки</label>
+                                <textarea class="form-control" id="curatorApplicantSkills" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorApplicantExperience" class="form-label">Опыт и проекты</label>
+                                <textarea class="form-control" id="curatorApplicantExperience" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorApplicantBio" class="form-label">О себе</label>
+                                <textarea class="form-control" id="curatorApplicantBio" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorApplicantGithub" class="form-label">GitHub</label>
+                                <input type="url" class="form-control" id="curatorApplicantGithub">
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorApplicantPortfolio" class="form-label">Портфолио</label>
+                                <input type="url" class="form-control" id="curatorApplicantPortfolio">
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="curatorApplicantPublic">
+                                <label class="form-check-label" for="curatorApplicantPublic">Профиль открыт для авторизованных пользователей</label>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="curatorApplicantShowResponses">
+                                <label class="form-check-label" for="curatorApplicantShowResponses">Отклики видны контактам и кураторам</label>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="curatorEmployerDescription" class="form-label">Описание компании</label>
-                            <textarea class="form-control" id="curatorEmployerDescription" rows="3"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label for="curatorEmployerWebsite" class="form-label">Сайт</label>
-                            <input type="url" class="form-control" id="curatorEmployerWebsite">
-                        </div>
-                        <div class="mb-3">
-                            <label for="curatorEmployerCity" class="form-label">Город</label>
-                            <input type="text" class="form-control" id="curatorEmployerCity">
-                        </div>
-                        <div class="mb-3">
-                            <label for="curatorEmployerAddress" class="form-label">Адрес</label>
-                            <input type="text" class="form-control" id="curatorEmployerAddress">
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="curatorEmployerVerified">
-                            <label class="form-check-label" for="curatorEmployerVerified">Компания верифицирована</label>
+                        <div id="curatorEmployerFields" class="d-none">
+                            <div class="mb-3">
+                                <label for="curatorEmployerCompanyName" class="form-label">Название компании</label>
+                                <input type="text" class="form-control" id="curatorEmployerCompanyName">
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorEmployerIndustry" class="form-label">Сфера деятельности</label>
+                                <input type="text" class="form-control" id="curatorEmployerIndustry">
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorEmployerDescription" class="form-label">Описание компании</label>
+                                <textarea class="form-control" id="curatorEmployerDescription" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorEmployerWebsite" class="form-label">Сайт</label>
+                                <input type="url" class="form-control" id="curatorEmployerWebsite">
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorEmployerSocialLinks" class="form-label">Соцсети и внешние ссылки</label>
+                                <textarea class="form-control" id="curatorEmployerSocialLinks" rows="2"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorEmployerCity" class="form-label">Город</label>
+                                <input type="text" class="form-control" id="curatorEmployerCity">
+                            </div>
+                            <div class="mb-3">
+                                <label for="curatorEmployerAddress" class="form-label">Адрес</label>
+                                <input type="text" class="form-control" id="curatorEmployerAddress">
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="curatorEmployerVerified">
+                                <label class="form-check-label" for="curatorEmployerVerified">Компания верифицирована</label>
+                            </div>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="curatorEmployerActive">
-                            <label class="form-check-label" for="curatorEmployerActive">Аккаунт активен</label>
+                            <input class="form-check-input" type="checkbox" id="curatorUserActive">
+                            <label class="form-check-label" for="curatorUserActive">Аккаунт активен</label>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
                         <button type="submit" class="btn btn-primary">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="curatorCreateModal" tabindex="-1" aria-labelledby="curatorCreateModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="curatorCreateModalLabel">Новый куратор</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="curatorCreateForm">
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">Только администратор может создать новую учетную запись куратора.</p>
+                        <div class="mb-3">
+                            <label for="curatorCreateName" class="form-label">Имя</label>
+                            <input type="text" class="form-control" id="curatorCreateName" minlength="2" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="curatorCreateEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="curatorCreateEmail" required>
+                        </div>
+                        <div class="mb-0">
+                            <label for="curatorCreatePassword" class="form-label">Пароль</label>
+                            <input type="password" class="form-control" id="curatorCreatePassword" minlength="6" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Создать куратора</button>
                     </div>
                 </form>
             </div>

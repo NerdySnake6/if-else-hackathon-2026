@@ -5,12 +5,37 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
-from app import models, schemas
+from app import auth, models, schemas
 from app.database import get_db
 from app.dependencies import require_roles
 
 
 router = APIRouter(prefix="/curator", tags=["curator"])
+
+
+@router.post("/curators", response_model=schemas.UserOut, status_code=201)
+def create_curator_account(
+    payload: schemas.CuratorAccountCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("admin")),
+):
+    """Создает новую учетную запись куратора. Доступно только администратору."""
+    existing_user = db.query(models.User).filter(models.User.email == payload.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    curator_user = models.User(
+        email=payload.email,
+        hashed_password=auth.get_password_hash(payload.password),
+        display_name=payload.display_name.strip(),
+        role="curator",
+        is_active=True,
+        is_verified=True,
+    )
+    db.add(curator_user)
+    db.commit()
+    db.refresh(curator_user)
+    return curator_user
 
 
 @router.get("/users", response_model=List[schemas.CuratorUserOut])
@@ -63,11 +88,31 @@ def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if user.id == current_user.id and payload.is_active is False:
+        raise HTTPException(status_code=400, detail="You cannot deactivate your own account")
+
+    if user.role in {"curator", "admin"} and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can manage curator accounts")
+
     update_data = payload.model_dump(exclude_unset=True)
+    applicant_profile_data = update_data.pop("applicant_profile", None)
     employer_profile_data = update_data.pop("employer_profile", None)
 
     for field, value in update_data.items():
         setattr(user, field, value)
+
+    if applicant_profile_data is not None:
+        if user.role != "applicant":
+            raise HTTPException(status_code=400, detail="Applicant profile can be updated only for applicant role")
+
+        applicant_profile = user.applicant_profile
+        if applicant_profile is None:
+            applicant_profile = models.ApplicantProfile(user_id=user.id)
+            db.add(applicant_profile)
+            user.applicant_profile = applicant_profile
+
+        for field, value in applicant_profile_data.items():
+            setattr(applicant_profile, field, value)
 
     if employer_profile_data is not None:
         if user.role != "employer":

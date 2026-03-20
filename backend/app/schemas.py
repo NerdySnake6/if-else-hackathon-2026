@@ -98,7 +98,14 @@ class CuratorUserUpdate(BaseModel):
     display_name: Optional[str] = Field(default=None, min_length=2, max_length=100)
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
+    applicant_profile: Optional[ApplicantProfileUpdate] = None
     employer_profile: Optional[EmployerProfileUpdate] = None
+
+
+class CuratorAccountCreate(BaseModel):
+    email: EmailStr
+    display_name: str = Field(min_length=2, max_length=100)
+    password: str = Field(min_length=6)
 
 class TagBase(BaseModel):
     name: str = Field(min_length=1, max_length=50)
