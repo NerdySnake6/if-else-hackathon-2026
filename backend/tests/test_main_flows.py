@@ -417,6 +417,135 @@ def test_applicants_can_build_network_contacts(client):
     assert repeat_suggestions.json() == []
 
 
+def test_applicants_can_recommend_opportunities_to_contacts(client, db_session):
+    """Проверяет рекомендации вакансий и мероприятий между подтвержденными контактами."""
+    first_user = register_user(
+        client,
+        email="recommend-one@example.com",
+        password="supersecret",
+        display_name="Recommend One",
+        role="applicant",
+    )
+    second_user = register_user(
+        client,
+        email="recommend-two@example.com",
+        password="supersecret",
+        display_name="Recommend Two",
+        role="applicant",
+    )
+    employer_user = register_user(
+        client,
+        email="recommend-employer@example.com",
+        password="supersecret",
+        display_name="Recommend Employer",
+        role="employer",
+    )
+    assert first_user.status_code == 200
+    assert second_user.status_code == 200
+    assert employer_user.status_code == 200
+
+    first_token = login_user(
+        client,
+        email="recommend-one@example.com",
+        password="supersecret",
+    )
+    second_token = login_user(
+        client,
+        email="recommend-two@example.com",
+        password="supersecret",
+    )
+    employer_token = login_user(
+        client,
+        email="recommend-employer@example.com",
+        password="supersecret",
+    )
+
+    first_profile = client.put(
+        "/profiles/me",
+        headers=auth_headers(first_token),
+        json={
+            "display_name": "Recommend One Updated",
+            "applicant_profile": {
+                "full_name": "Иван Рекомендатор",
+                "skills": "Python",
+                "is_profile_public": True,
+            },
+        },
+    )
+    second_profile = client.put(
+        "/profiles/me",
+        headers=auth_headers(second_token),
+        json={
+            "display_name": "Recommend Two Updated",
+            "applicant_profile": {
+                "full_name": "Мария Получатель",
+                "skills": "React",
+                "is_profile_public": True,
+            },
+        },
+    )
+    assert first_profile.status_code == 200
+    assert second_profile.status_code == 200
+
+    employer_model = (
+        db_session.query(models.User)
+        .filter(models.User.email == "recommend-employer@example.com")
+        .first()
+    )
+    employer_model.is_verified = True
+    db_session.commit()
+
+    create_opportunity = client.post(
+        "/opportunities/",
+        headers=auth_headers(employer_token),
+        json={
+            "title": "Frontend Event",
+            "description": "Карьерное мероприятие для студентов с воркшопами, лекциями и знакомством с командой.",
+            "type": "event",
+            "work_format": "office",
+            "location": "Санкт-Петербург",
+            "tag_ids": [],
+        },
+    )
+    assert create_opportunity.status_code == 200
+    opportunity_id = create_opportunity.json()["id"]
+
+    create_contact = client.post(
+        "/contacts/",
+        headers=auth_headers(first_token),
+        json={"addressee_id": second_profile.json()["id"]},
+    )
+    assert create_contact.status_code == 201
+    contact_id = create_contact.json()["id"]
+
+    accept_contact = client.patch(
+        f"/contacts/{contact_id}",
+        headers=auth_headers(second_token),
+        json={"status": "accepted"},
+    )
+    assert accept_contact.status_code == 200
+
+    recommendation_response = client.post(
+        "/recommendations/",
+        headers=auth_headers(first_token),
+        json={
+            "recommended_user_id": second_profile.json()["id"],
+            "opportunity_id": opportunity_id,
+            "message": "Мне кажется, это событие подойдет под твой стек и интерес к фронтенду.",
+        },
+    )
+    assert recommendation_response.status_code == 201
+    assert recommendation_response.json()["direction"] == "outgoing"
+    assert recommendation_response.json()["opportunity"]["title"] == "Frontend Event"
+
+    my_recommendations = client.get("/recommendations/", headers=auth_headers(second_token))
+    assert my_recommendations.status_code == 200
+    assert len(my_recommendations.json()) == 1
+    assert my_recommendations.json()[0]["direction"] == "incoming"
+    assert my_recommendations.json()[0]["peer"]["display_name"] == "Recommend One Updated"
+    assert my_recommendations.json()[0]["message"].startswith("Мне кажется")
+
+
 def test_curator_can_verify_employers_and_moderate_opportunities(client, db_session):
     """Проверяет основные сценарии кабинета куратора."""
     curator_user = models.User(

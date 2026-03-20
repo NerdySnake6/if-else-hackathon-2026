@@ -151,6 +151,10 @@
                             <div id="contacts-list" class="responses-list">
                                 <p class="text-muted mb-0">Контакты и заявки в сеть появятся здесь.</p>
                             </div>
+                            <h6 class="small text-uppercase text-muted mb-2 mt-3">Рекомендации возможностей</h6>
+                            <div id="recommendations-list" class="responses-list">
+                                <p class="text-muted mb-0">Здесь будут входящие и исходящие рекомендации по вакансиям и мероприятиям.</p>
+                            </div>
                         </div>
                     </div>
                     <div class="card shadow-sm border-0 mt-3 d-none" id="employerResponsesCard">
@@ -448,6 +452,31 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
                         <button type="submit" class="btn btn-primary">Отправить отклик</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="recommendModal" tabindex="-1" aria-labelledby="recommendModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="recommendModalLabel">Рекомендовать возможность</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="recommendForm">
+                    <div class="modal-body">
+                        <p class="text-muted small mb-2" id="recommendPeerMeta"></p>
+                        <p class="text-muted small mb-3" id="recommendOpportunityMeta"></p>
+                        <div class="mb-0">
+                            <label for="recommendMessage" class="form-label">Почему ты рекомендуешь эту возможность</label>
+                            <textarea class="form-control" id="recommendMessage" rows="4" placeholder="Например: тебе подойдет стек, формат и тематика мероприятия."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Отправить рекомендацию</button>
                     </div>
                 </form>
             </div>

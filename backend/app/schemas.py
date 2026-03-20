@@ -243,6 +243,32 @@ class ContactNetworkOut(ContactBase):
     peer: ContactApplicantSummary
 
 
+class RecommendationCreate(BaseModel):
+    recommended_user_id: int
+    opportunity_id: int
+    message: Optional[str] = None
+
+
+class RecommendationOpportunitySummary(BaseModel):
+    id: int
+    title: str
+    type: str
+    work_format: str
+    location: str
+    employer_name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RecommendationOut(BaseModel):
+    id: int
+    direction: Literal["incoming", "outgoing"]
+    created_at: datetime
+    message: Optional[str] = None
+    peer: ContactApplicantSummary
+    opportunity: RecommendationOpportunitySummary
+
+
 class ContactOut(ContactBase):
     id: int
     requester_id: int

@@ -13,12 +13,14 @@ const state = {
     activeView: 'home',
     selectedOpportunityId: null,
     pendingApplyId: null,
+    pendingRecommendationPeerId: null,
     pendingCuratorUserId: null,
     pendingCuratorOpportunityId: null,
     pendingEmployerOpportunityId: null,
     responses: [],
     contacts: [],
     contactSuggestions: [],
+    recommendations: [],
     employerResponses: [],
     curatorUsers: [],
     curatorOpportunities: [],
@@ -57,6 +59,7 @@ let placemarks = [];
 let loginModal;
 let registerModal;
 let applyModal;
+let recommendModal;
 let curatorUserModal;
 let curatorOpportunityModal;
 let employerOpportunityModal;
@@ -570,6 +573,7 @@ function renderSelectedOpportunity() {
     }
 
     container.appendChild(actionWrap);
+    renderContactsSection();
 }
 
 function statusLabel(status) {
@@ -692,17 +696,72 @@ async function updateContactStatus(contactId, status) {
     showNotice('success', status === 'accepted' ? 'Контакт подтвержден.' : 'Заявка отклонена.');
 }
 
+function openRecommendModal(peerId) {
+    const contact = state.contacts.find((item) => item.peer.id === peerId && item.status === 'accepted');
+    const opportunity = selectedOpportunity();
+    if (!contact) {
+        showNotice('danger', 'Сначала нужен подтвержденный контакт.');
+        return;
+    }
+    if (!opportunity) {
+        showNotice('danger', 'Сначала выбери вакансию или мероприятие на главной.');
+        return;
+    }
+
+    state.pendingRecommendationPeerId = peerId;
+    el('recommendPeerMeta').textContent = `Кому: ${contact.peer.applicant_profile?.full_name || contact.peer.display_name}`;
+    el('recommendOpportunityMeta').textContent = `Что рекомендуешь: ${opportunity.title} | ${opportunity.employer_name}`;
+    el('recommendMessage').value = '';
+    recommendModal.show();
+}
+
+async function handleRecommendationSubmit(event) {
+    event.preventDefault();
+    const opportunity = selectedOpportunity();
+    if (!state.pendingRecommendationPeerId || !opportunity) {
+        showNotice('danger', 'Не удалось определить контакт или выбранную возможность.');
+        return;
+    }
+
+    const response = await apiFetch('/recommendations/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            recommended_user_id: state.pendingRecommendationPeerId,
+            opportunity_id: opportunity.id,
+            message: normalizeText(el('recommendMessage').value),
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось отправить рекомендацию.' }));
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось отправить рекомендацию.');
+        return;
+    }
+
+    recommendModal.hide();
+    event.target.reset();
+    state.pendingRecommendationPeerId = null;
+    await loadRecommendations();
+    showNotice('success', 'Рекомендация отправлена контакту.');
+}
+
 function renderContactsSection() {
     const suggestionsContainer = el('contact-suggestions-list');
     const contactsContainer = el('contacts-list');
+    const recommendationsContainer = el('recommendations-list');
     const refreshBtn = el('refreshContactsBtn');
     suggestionsContainer.innerHTML = '';
     contactsContainer.innerHTML = '';
+    recommendationsContainer.innerHTML = '';
 
     if (!state.currentUser || state.currentUser.role !== 'applicant') {
         refreshBtn.classList.add('d-none');
         suggestionsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Войди как соискатель, чтобы расширять сеть контактов.'));
         contactsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Контакты и заявки в сеть появятся после входа.'));
+        recommendationsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Рекомендации появятся после входа.'));
         return;
     }
 
@@ -789,9 +848,56 @@ function renderContactsSection() {
             });
             actions.appendChild(declineBtn);
             item.appendChild(actions);
+        } else if (contact.status === 'accepted') {
+            const actions = createEl('div', 'contact-actions');
+            const recommendBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Рекомендовать выбранную карточку');
+            recommendBtn.type = 'button';
+            recommendBtn.disabled = !selectedOpportunity();
+            recommendBtn.addEventListener('click', () => {
+                openRecommendModal(contact.peer.id);
+            });
+            actions.appendChild(recommendBtn);
+            item.appendChild(actions);
         }
 
         contactsContainer.appendChild(item);
+    });
+
+    if (!state.recommendations.length) {
+        recommendationsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Ты еще не отправлял и не получал рекомендации.'));
+        return;
+    }
+
+    state.recommendations.forEach((recommendation) => {
+        const item = createEl('div', 'contact-item py-2');
+        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
+        top.appendChild(createEl('div', 'fw-semibold', recommendation.opportunity.title));
+        top.appendChild(
+            createEl(
+                'span',
+                `status-pill ${recommendation.direction === 'incoming' ? 'accepted' : 'pending'}`,
+                recommendation.direction === 'incoming' ? 'Рекомендовано тебе' : 'Ты рекомендовал'
+            )
+        );
+        item.appendChild(top);
+        item.appendChild(
+            createEl(
+                'div',
+                'small text-muted mt-1',
+                `${recommendation.peer.display_name} | ${opportunityTypeLabel(recommendation.opportunity.type)} | ${recommendation.opportunity.employer_name}`
+            )
+        );
+        item.appendChild(
+            createEl(
+                'div',
+                'small text-muted',
+                `${workFormatLabel(recommendation.opportunity.work_format)} | ${recommendation.opportunity.location}`
+            )
+        );
+        if (recommendation.message) {
+            item.appendChild(createEl('div', 'small mt-2', recommendation.message));
+        }
+        recommendationsContainer.appendChild(item);
     });
 }
 
@@ -1570,6 +1676,7 @@ async function loadCurrentUser() {
         state.responses = [];
         state.contacts = [];
         state.contactSuggestions = [];
+        state.recommendations = [];
         state.employerResponses = [];
         state.employerOpportunities = [];
         state.profile = null;
@@ -1591,6 +1698,7 @@ async function loadCurrentUser() {
         state.responses = [];
         state.contacts = [];
         state.contactSuggestions = [];
+        state.recommendations = [];
         state.employerResponses = [];
         state.employerOpportunities = [];
         state.profile = null;
@@ -1610,6 +1718,7 @@ async function loadCurrentUser() {
     await loadProfile();
     await loadResponses();
     await loadContacts();
+    await loadRecommendations();
     await loadEmployerResponses();
     await loadEmployerOpportunities();
     await loadCuratorData();
@@ -1667,6 +1776,24 @@ async function loadContacts() {
 
     state.contacts = contactsResponse.ok ? await contactsResponse.json() : [];
     state.contactSuggestions = suggestionsResponse.ok ? await suggestionsResponse.json() : [];
+    renderContactsSection();
+}
+
+async function loadRecommendations() {
+    if (!state.currentUser || state.currentUser.role !== 'applicant') {
+        state.recommendations = [];
+        renderContactsSection();
+        return;
+    }
+
+    const response = await apiFetch('/recommendations/');
+    if (!response.ok) {
+        state.recommendations = [];
+        renderContactsSection();
+        return;
+    }
+
+    state.recommendations = await response.json();
     renderContactsSection();
 }
 
@@ -1955,6 +2082,7 @@ function handleLogout(event) {
     state.responses = [];
     state.contacts = [];
     state.contactSuggestions = [];
+    state.recommendations = [];
     state.employerResponses = [];
     state.employerOpportunities = [];
     state.curatorUsers = [];
@@ -1977,6 +2105,7 @@ function initModals() {
     loginModal = new window.bootstrap.Modal(el('loginModal'));
     registerModal = new window.bootstrap.Modal(el('registerModal'));
     applyModal = new window.bootstrap.Modal(el('applyModal'));
+    recommendModal = new window.bootstrap.Modal(el('recommendModal'));
     curatorUserModal = new window.bootstrap.Modal(el('curatorUserModal'));
     curatorOpportunityModal = new window.bootstrap.Modal(el('curatorOpportunityModal'));
     employerOpportunityModal = new window.bootstrap.Modal(el('employerOpportunityModal'));
@@ -2004,6 +2133,7 @@ function bindEvents() {
     el('registerForm').addEventListener('submit', handleRegisterSubmit);
     el('profileForm').addEventListener('submit', handleProfileSubmit);
     el('applyForm').addEventListener('submit', handleApplySubmit);
+    el('recommendForm').addEventListener('submit', handleRecommendationSubmit);
     el('employerOpportunityForm').addEventListener('submit', handleEmployerOpportunitySubmit);
     el('curatorUserForm').addEventListener('submit', handleCuratorUserSubmit);
     el('curatorOpportunityForm').addEventListener('submit', handleCuratorOpportunitySubmit);

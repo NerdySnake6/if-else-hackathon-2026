@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from app.database import init_db
-from app.routers import auth, contacts, curator, map, opportunities, profiles, responses
+from app.routers import auth, contacts, curator, map, opportunities, profiles, recommendations, responses
 
 app = FastAPI(
     title="Трамплин",
@@ -22,6 +22,7 @@ app.include_router(curator.router)
 app.include_router(map.router)
 app.include_router(opportunities.router)
 app.include_router(profiles.router)
+app.include_router(recommendations.router)
 app.include_router(responses.router)
 
 @app.get("/")

@@ -51,6 +51,18 @@ class User(Base):
     
     # Отклики пользователя (для соискателей)
     responses: Mapped[List["Response"]] = relationship(back_populates="applicant")
+
+    # Рекомендации, которые пользователь отправил контактам
+    sent_recommendations: Mapped[List["Recommendation"]] = relationship(
+        foreign_keys="Recommendation.recommender_id",
+        back_populates="recommender",
+    )
+
+    # Рекомендации, которые пользователь получил от контактов
+    received_recommendations: Mapped[List["Recommendation"]] = relationship(
+        foreign_keys="Recommendation.recommended_user_id",
+        back_populates="recommended_user",
+    )
     
     # Нетворкинг: контакты, где пользователь инициатор
     sent_contacts: Mapped[List["Contact"]] = relationship(foreign_keys="Contact.requester_id", back_populates="requester")
@@ -158,6 +170,7 @@ class Opportunity(Base):
     employer: Mapped["User"] = relationship(back_populates="opportunities")
     tags: Mapped[List["Tag"]] = relationship(secondary=opportunity_tag, back_populates="opportunities")
     responses: Mapped[List["Response"]] = relationship(back_populates="opportunity")
+    recommendations: Mapped[List["Recommendation"]] = relationship(back_populates="opportunity")
 
     @property
     def employer_name(self) -> str:
@@ -208,3 +221,25 @@ class Contact(Base):
     # Связи
     requester: Mapped["User"] = relationship(foreign_keys=[requester_id], back_populates="sent_contacts")
     addressee: Mapped["User"] = relationship(foreign_keys=[addressee_id], back_populates="received_contacts")
+
+
+class Recommendation(Base):
+    """Рекомендация возможности одному из профессиональных контактов."""
+    __tablename__ = "recommendations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    recommender_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    recommended_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    opportunity_id: Mapped[int] = mapped_column(ForeignKey("opportunities.id"))
+    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    recommender: Mapped["User"] = relationship(
+        foreign_keys=[recommender_id],
+        back_populates="sent_recommendations",
+    )
+    recommended_user: Mapped["User"] = relationship(
+        foreign_keys=[recommended_user_id],
+        back_populates="received_recommendations",
+    )
+    opportunity: Mapped["Opportunity"] = relationship(back_populates="recommendations")
