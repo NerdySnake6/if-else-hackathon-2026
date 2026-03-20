@@ -1,6 +1,7 @@
 """Маршруты для чтения и обновления профилей по ролям пользователей."""
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
@@ -86,3 +87,65 @@ def update_my_profile(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.get("/applicants/{user_id}", response_model=schemas.ApplicantProfileVisibilityOut)
+def get_applicant_profile_for_network(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user),
+):
+    """Возвращает профиль соискателя с учетом приватности и контактов."""
+    if current_user.role not in {"applicant", "curator", "admin"}:
+        raise HTTPException(status_code=403, detail="Only applicants and curators can view applicant profiles")
+
+    user = (
+        db.query(models.User)
+        .options(
+            joinedload(models.User.applicant_profile),
+            joinedload(models.User.responses),
+        )
+        .filter(models.User.id == user_id, models.User.role == "applicant")
+        .first()
+    )
+    if not user or not user.applicant_profile:
+        raise HTTPException(status_code=404, detail="Applicant profile not found")
+
+    is_self = current_user.id == user.id
+    is_contact = False
+    if current_user.role == "applicant" and not is_self:
+        is_contact = (
+            db.query(models.Contact)
+            .filter(
+                models.Contact.status == "accepted",
+                or_(
+                    (models.Contact.requester_id == current_user.id) & (models.Contact.addressee_id == user.id),
+                    (models.Contact.requester_id == user.id) & (models.Contact.addressee_id == current_user.id),
+                ),
+            )
+            .first()
+            is not None
+        )
+
+    can_view_profile = (
+        is_self
+        or current_user.role in {"curator", "admin"}
+        or user.applicant_profile.is_profile_public
+        or is_contact
+    )
+    if not can_view_profile:
+        raise HTTPException(status_code=403, detail="Applicant profile is private")
+
+    visible_responses: list[models.Response] = []
+    if is_self or current_user.role in {"curator", "admin"}:
+        visible_responses = user.responses
+    elif user.applicant_profile.show_responses and (user.applicant_profile.is_profile_public or is_contact):
+        visible_responses = user.responses
+
+    return schemas.ApplicantProfileVisibilityOut(
+        id=user.id,
+        display_name=user.display_name,
+        is_contact=is_contact,
+        applicant_profile=schemas.ApplicantProfileOut.model_validate(user.applicant_profile),
+        visible_responses=[schemas.ResponseOut.model_validate(response) for response in visible_responses],
+    )

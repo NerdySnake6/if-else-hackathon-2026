@@ -308,6 +308,15 @@ class ProfileMeUpdate(BaseModel):
     applicant_profile: Optional[ApplicantProfileUpdate] = None
     employer_profile: Optional[EmployerProfileUpdate] = None
 
+
+class ApplicantProfileVisibilityOut(BaseModel):
+    id: int
+    display_name: str
+    is_contact: bool
+    applicant_profile: ApplicantProfileOut
+    visible_responses: list[ResponseOut] = []
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str

@@ -546,6 +546,127 @@ def test_applicants_can_recommend_opportunities_to_contacts(client, db_session):
     assert my_recommendations.json()[0]["message"].startswith("Мне кажется")
 
 
+def test_applicant_profile_privacy_controls_access(client, db_session):
+    """Проверяет приватность профиля и видимость откликов для других соискателей."""
+    private_user = register_user(
+        client,
+        email="privacy-private@example.com",
+        password="supersecret",
+        display_name="Private User",
+        role="applicant",
+    )
+    viewer_user = register_user(
+        client,
+        email="privacy-viewer@example.com",
+        password="supersecret",
+        display_name="Viewer User",
+        role="applicant",
+    )
+    employer_user = register_user(
+        client,
+        email="privacy-employer@example.com",
+        password="supersecret",
+        display_name="Privacy Employer",
+        role="employer",
+    )
+    assert private_user.status_code == 200
+    assert viewer_user.status_code == 200
+    assert employer_user.status_code == 200
+
+    private_token = login_user(
+        client,
+        email="privacy-private@example.com",
+        password="supersecret",
+    )
+    viewer_token = login_user(
+        client,
+        email="privacy-viewer@example.com",
+        password="supersecret",
+    )
+    employer_token = login_user(
+        client,
+        email="privacy-employer@example.com",
+        password="supersecret",
+    )
+
+    private_profile = client.put(
+        "/profiles/me",
+        headers=auth_headers(private_token),
+        json={
+            "display_name": "Private User Updated",
+            "applicant_profile": {
+                "full_name": "Скрытый Соискатель",
+                "skills": "Python",
+                "bio": "Не хочу показывать профиль всем подряд.",
+                "is_profile_public": False,
+                "show_responses": False,
+            },
+        },
+    )
+    assert private_profile.status_code == 200
+    private_user_id = private_profile.json()["id"]
+
+    employer = (
+        db_session.query(models.User)
+        .filter(models.User.email == "privacy-employer@example.com")
+        .first()
+    )
+    employer.is_verified = True
+    db_session.commit()
+
+    opportunity = client.post(
+        "/opportunities/",
+        headers=auth_headers(employer_token),
+        json={
+            "title": "Privacy Job",
+            "description": "Вакансия для проверки видимости откликов и поведения приватного профиля.",
+            "type": "job",
+            "work_format": "remote",
+            "location": "Москва",
+            "tag_ids": [],
+        },
+    )
+    assert opportunity.status_code == 200
+
+    response = client.post(
+        "/responses/",
+        headers=auth_headers(private_token),
+        json={
+            "opportunity_id": opportunity.json()["id"],
+            "cover_letter": "Отклик для проверки приватности.",
+        },
+    )
+    assert response.status_code == 201
+
+    forbidden_profile = client.get(
+        f"/profiles/applicants/{private_user_id}",
+        headers=auth_headers(viewer_token),
+    )
+    assert forbidden_profile.status_code == 403
+
+    open_profile = client.put(
+        "/profiles/me",
+        headers=auth_headers(private_token),
+        json={
+            "applicant_profile": {
+                "is_profile_public": True,
+                "show_responses": True,
+            },
+        },
+    )
+    assert open_profile.status_code == 200
+
+    visible_profile = client.get(
+        f"/profiles/applicants/{private_user_id}",
+        headers=auth_headers(viewer_token),
+    )
+    assert visible_profile.status_code == 200
+    payload = visible_profile.json()
+    assert payload["applicant_profile"]["bio"] == "Не хочу показывать профиль всем подряд."
+    assert len(payload["visible_responses"]) == 1
+    assert payload["visible_responses"][0]["cover_letter"] == "Отклик для проверки приватности."
+
+
 def test_curator_can_verify_employers_and_moderate_opportunities(client, db_session):
     """Проверяет основные сценарии кабинета куратора."""
     curator_user = models.User(

@@ -60,6 +60,7 @@ let loginModal;
 let registerModal;
 let applyModal;
 let recommendModal;
+let applicantProfileModal;
 let curatorUserModal;
 let curatorOpportunityModal;
 let employerOpportunityModal;
@@ -748,6 +749,59 @@ async function handleRecommendationSubmit(event) {
     showNotice('success', 'Рекомендация отправлена контакту.');
 }
 
+async function openApplicantProfileModal(userId) {
+    const container = el('applicantProfileDetails');
+    container.innerHTML = '<p class="text-muted mb-0">Загрузка профиля...</p>';
+    applicantProfileModal.show();
+
+    const response = await apiFetch(`/profiles/applicants/${userId}`);
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось загрузить профиль.' }));
+        container.innerHTML = '';
+        container.appendChild(createEl('div', 'alert alert-warning mb-0', typeof error.detail === 'string' ? error.detail : 'Не удалось загрузить профиль.'));
+        return;
+    }
+
+    const data = await response.json();
+    const profile = data.applicant_profile;
+    container.innerHTML = '';
+    container.appendChild(createEl('h5', 'mb-1', profile.full_name || data.display_name));
+    container.appendChild(createEl('div', 'small text-muted mb-3', data.is_contact ? 'Контакт в твоей сети' : 'Открытый профиль'));
+
+    const meta = [
+        profile.university,
+        profile.course_or_year,
+    ].filter(Boolean);
+    if (meta.length) {
+        container.appendChild(createEl('div', 'small text-muted mb-2', meta.join(' | ')));
+    }
+    if (profile.skills) {
+        container.appendChild(createEl('div', 'mb-2', `Навыки: ${profile.skills}`));
+    }
+    if (profile.experience) {
+        container.appendChild(createEl('div', 'mb-2', `Опыт: ${profile.experience}`));
+    }
+    if (profile.bio) {
+        container.appendChild(createEl('div', 'mb-3', profile.bio));
+    }
+
+    if (!data.visible_responses.length) {
+        container.appendChild(createEl('div', 'small text-muted', 'Отклики скрыты настройками приватности или пока отсутствуют.'));
+        return;
+    }
+
+    container.appendChild(createEl('h6', 'small text-uppercase text-muted mt-3 mb-2', 'Видимые отклики'));
+    data.visible_responses.forEach((responseItem) => {
+        const item = createEl('div', 'contact-item py-2');
+        item.appendChild(createEl('div', 'fw-semibold', `Отклик на возможность #${responseItem.opportunity_id}`));
+        item.appendChild(createEl('div', 'small text-muted mt-1', `Статус: ${statusLabel(responseItem.status)}`));
+        if (responseItem.cover_letter) {
+            item.appendChild(createEl('div', 'small mt-2', responseItem.cover_letter));
+        }
+        container.appendChild(item);
+    });
+}
+
 function renderContactsSection() {
     const suggestionsContainer = el('contact-suggestions-list');
     const contactsContainer = el('contacts-list');
@@ -793,6 +847,13 @@ function renderContactsSection() {
             }
 
             const action = createEl('div', 'contact-actions');
+            const profileBtn = createEl('button', 'btn btn-sm btn-outline-secondary', 'Открыть профиль');
+            profileBtn.type = 'button';
+            profileBtn.addEventListener('click', () => {
+                void openApplicantProfileModal(person.id);
+            });
+            action.appendChild(profileBtn);
+
             const requestBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Добавить в контакты');
             requestBtn.type = 'button';
             requestBtn.addEventListener('click', () => {
@@ -834,6 +895,13 @@ function renderContactsSection() {
 
         if (contact.direction === 'incoming' && contact.status === 'pending') {
             const actions = createEl('div', 'contact-actions');
+            const profileBtn = createEl('button', 'btn btn-sm btn-outline-secondary', 'Открыть профиль');
+            profileBtn.type = 'button';
+            profileBtn.addEventListener('click', () => {
+                void openApplicantProfileModal(contact.peer.id);
+            });
+            actions.appendChild(profileBtn);
+
             const acceptBtn = createEl('button', 'btn btn-sm btn-outline-success', 'Принять');
             acceptBtn.type = 'button';
             acceptBtn.addEventListener('click', () => {
@@ -850,6 +918,13 @@ function renderContactsSection() {
             item.appendChild(actions);
         } else if (contact.status === 'accepted') {
             const actions = createEl('div', 'contact-actions');
+            const profileBtn = createEl('button', 'btn btn-sm btn-outline-secondary', 'Открыть профиль');
+            profileBtn.type = 'button';
+            profileBtn.addEventListener('click', () => {
+                void openApplicantProfileModal(contact.peer.id);
+            });
+            actions.appendChild(profileBtn);
+
             const recommendBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Рекомендовать выбранную карточку');
             recommendBtn.type = 'button';
             recommendBtn.disabled = !selectedOpportunity();
@@ -897,6 +972,14 @@ function renderContactsSection() {
         if (recommendation.message) {
             item.appendChild(createEl('div', 'small mt-2', recommendation.message));
         }
+        const actions = createEl('div', 'contact-actions');
+        const profileBtn = createEl('button', 'btn btn-sm btn-outline-secondary', 'Открыть профиль');
+        profileBtn.type = 'button';
+        profileBtn.addEventListener('click', () => {
+            void openApplicantProfileModal(recommendation.peer.id);
+        });
+        actions.appendChild(profileBtn);
+        item.appendChild(actions);
         recommendationsContainer.appendChild(item);
     });
 }
@@ -2106,6 +2189,7 @@ function initModals() {
     registerModal = new window.bootstrap.Modal(el('registerModal'));
     applyModal = new window.bootstrap.Modal(el('applyModal'));
     recommendModal = new window.bootstrap.Modal(el('recommendModal'));
+    applicantProfileModal = new window.bootstrap.Modal(el('applicantProfileModal'));
     curatorUserModal = new window.bootstrap.Modal(el('curatorUserModal'));
     curatorOpportunityModal = new window.bootstrap.Modal(el('curatorOpportunityModal'));
     employerOpportunityModal = new window.bootstrap.Modal(el('employerOpportunityModal'));
