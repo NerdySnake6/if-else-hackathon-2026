@@ -2111,6 +2111,7 @@ function renderAuthUI() {
     const currentUserNavItem = el('currentUserNavItem');
     const currentUserLabel = el('currentUserLabel');
     const authStatusBadge = el('authStatusBadge');
+    const guestGuideCard = el('guestGuideCard');
 
     if (state.currentUser) {
         loginBtn.parentElement.classList.add('d-none');
@@ -2120,6 +2121,7 @@ function renderAuthUI() {
         currentUserLabel.textContent = `${state.currentUser.display_name} (${currentRoleLabel(state.currentUser.role)})`;
         authStatusBadge.textContent = currentRoleLabel(state.currentUser.role);
         authStatusBadge.className = 'badge text-bg-success';
+        guestGuideCard?.classList.add('d-none');
     } else {
         loginBtn.parentElement.classList.remove('d-none');
         registerBtn.parentElement.classList.remove('d-none');
@@ -2128,6 +2130,7 @@ function renderAuthUI() {
         currentUserLabel.textContent = '';
         authStatusBadge.textContent = 'Гостевой режим';
         authStatusBadge.className = 'badge text-bg-warning text-dark';
+        guestGuideCard?.classList.remove('d-none');
     }
 
     if (!visibleViews().includes(state.activeView)) {
@@ -2162,10 +2165,10 @@ function renderWorkspaceView() {
     const workspaceContentColumn = el('workspaceContentColumn');
     const homeBlocks = [
         'homeListHeader',
+        'guestGuideCard',
         'homeFiltersCard',
         'homeFavoritesCard',
         'opportunities-list',
-        'homeDetailsCard',
     ];
     const roleBlocks = {
         profile: ['profileCard'],
@@ -2741,6 +2744,13 @@ function bindEvents() {
     el('heroLoginBtn').addEventListener('click', (event) => {
         event.preventDefault();
         loginModal.show();
+    });
+    el('guestGuideExploreBtn').addEventListener('click', () => {
+        el('homeMapColumn')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    el('guestGuideRegisterBtn').addEventListener('click', (event) => {
+        event.preventDefault();
+        registerModal.show();
     });
 
     el('logoutBtn').addEventListener('click', handleLogout);

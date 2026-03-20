@@ -107,6 +107,34 @@ body {
     padding-inline: 0.9rem;
 }
 
+.navbar-workspace-tabs {
+    align-items: center;
+}
+
+.navbar-workspace-tabs .btn {
+    border-color: rgba(255, 255, 255, 0.28);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.navbar-workspace-tabs .btn:hover,
+.navbar-workspace-tabs .btn:focus-visible {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.navbar-workspace-tabs .btn.btn-primary {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #fff;
+    box-shadow: none;
+}
+
+.navbar-workspace-tabs .btn.btn-outline-primary {
+    box-shadow: none;
+}
+
 #map {
     width: 100%;
     flex: 1 1 auto;
@@ -347,6 +375,89 @@ body {
     border: 1px solid #edf2f7;
 }
 
+.guest-guide-block {
+    background:
+        radial-gradient(circle at top right, rgba(13, 110, 253, 0.16), transparent 42%),
+        linear-gradient(180deg, rgba(13, 110, 253, 0.14), rgba(255, 255, 255, 0.98));
+    border-color: #cfe0fb;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.guest-guide-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.guest-guide-subtitle {
+    color: #5b6b7f;
+    font-size: 0.86rem;
+}
+
+.guest-guide-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    background: #0d6efd;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.guest-guide-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.guest-guide-step {
+    display: grid;
+    grid-template-columns: 2rem 1fr;
+    gap: 0.75rem;
+    align-items: start;
+    padding: 0.8rem 0.85rem;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid #cfe0fb;
+    box-shadow: 0 10px 22px rgba(13, 110, 253, 0.06);
+}
+
+.guest-step-number {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #0d6efd;
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 700;
+    box-shadow: 0 10px 18px rgba(13, 110, 253, 0.18);
+}
+
+.guest-step-title {
+    color: #24415f;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+}
+
+.guest-step-text {
+    color: #5b6b7f;
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+.guest-guide-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
 .home-section-title {
     font-size: 0.8rem;
     text-transform: uppercase;
@@ -529,6 +640,12 @@ body {
         display: block;
     }
 
+    .navbar-workspace-tabs {
+        margin-top: 0.75rem;
+        margin-bottom: 0.35rem;
+        margin-left: 0 !important;
+    }
+
     .workspace-hero {
         flex-direction: column;
     }
@@ -548,5 +665,9 @@ body {
 
     #map {
         min-height: 360px;
+    }
+
+    .guest-guide-step {
+        grid-template-columns: 1.8rem 1fr;
     }
 }

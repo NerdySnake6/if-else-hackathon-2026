@@ -17,6 +17,13 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
+                    <div id="workspaceTabs" class="workspace-tabs navbar-workspace-tabs d-flex flex-wrap gap-2 ms-lg-4">
+                        <button type="button" class="btn btn-primary btn-sm" data-view="home" id="tabHome">Главная</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="profile" id="tabProfile">Профиль</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="applicant" id="tabApplicant">Соискатель</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="employer" id="tabEmployer">Работодатель</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="curator" id="tabCurator">Куратор</button>
+                    </div>
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item d-none" id="currentUserNavItem">
                             <span class="nav-link text-white-50" id="currentUserLabel"></span>
@@ -37,17 +44,6 @@
 
         <div class="container mt-4">
             <div id="app-notice" class="mb-3"></div>
-            <div class="card shadow-sm border-0 mb-3">
-                <div class="card-body py-2">
-                    <div id="workspaceTabs" class="workspace-tabs d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-primary btn-sm" data-view="home" id="tabHome">Главная</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="profile" id="tabProfile">Профиль</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="applicant" id="tabApplicant">Соискатель</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="employer" id="tabEmployer">Работодатель</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-view="curator" id="tabCurator">Куратор</button>
-                    </div>
-                </div>
-            </div>
             <div class="card shadow-sm border-0 mb-3 workspace-hero-card">
                 <div class="card-body py-3">
                     <div class="workspace-hero">
@@ -92,6 +88,42 @@
                                     <p class="text-muted small mb-0">Подбери подходящую вакансию, стажировку или событие по формату, тегам и локации.</p>
                                 </div>
                                 <span class="badge text-bg-light" id="authStatusBadge">Гость</span>
+                            </div>
+                            <div class="home-section-block guest-guide-block mb-3" id="guestGuideCard">
+                                <div class="guest-guide-header mb-3">
+                                    <div>
+                                        <div class="home-section-title mb-1">Как начать</div>
+                                        <div class="guest-guide-subtitle">Быстрый маршрут для гостя без регистрации.</div>
+                                    </div>
+                                    <span class="guest-guide-badge">3 шага</span>
+                                </div>
+                                <div class="guest-guide-grid">
+                                    <div class="guest-guide-step">
+                                        <div class="guest-step-number">1</div>
+                                        <div>
+                                            <div class="guest-step-title">Выбери формат</div>
+                                            <div class="guest-step-text">Отфильтруй стажировки, вакансии и события по типу, формату и локации.</div>
+                                        </div>
+                                    </div>
+                                    <div class="guest-guide-step">
+                                        <div class="guest-step-number">2</div>
+                                        <div>
+                                            <div class="guest-step-title">Изучи варианты</div>
+                                            <div class="guest-step-text">Сравни предложения на карте и в списке, чтобы быстро понять, что подходит тебе.</div>
+                                        </div>
+                                    </div>
+                                    <div class="guest-guide-step">
+                                        <div class="guest-step-number">3</div>
+                                        <div>
+                                            <div class="guest-step-title">Сохрани интересное</div>
+                                            <div class="guest-step-text">Добавляй компании и возможности в избранное еще до регистрации.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="guest-guide-actions mt-3">
+                                    <button type="button" class="btn btn-primary btn-sm" id="guestGuideExploreBtn">Открыть карту</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="guestGuideRegisterBtn">Регистрация</button>
+                                </div>
                             </div>
                             <div class="home-section-block mb-3" id="homeFiltersCard">
                                 <div class="home-section-title">Фильтры</div>
