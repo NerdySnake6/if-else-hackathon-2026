@@ -667,6 +667,66 @@ def test_applicant_profile_privacy_controls_access(client, db_session):
     assert payload["visible_responses"][0]["cover_letter"] == "Отклик для проверки приватности."
 
 
+def test_tags_catalog_creation_and_public_filtering(client, db_session):
+    """Проверяет стартовые теги, создание нового тега и фильтрацию карточек по нему."""
+    tags_response = client.get("/tags/")
+    assert tags_response.status_code == 200
+    assert any(tag["name"] == "Python" for tag in tags_response.json())
+
+    employer_register = register_user(
+        client,
+        email="tag-employer@example.com",
+        password="supersecret",
+        display_name="Tag Employer",
+        role="employer",
+    )
+    assert employer_register.status_code == 200
+
+    employer = (
+        db_session.query(models.User)
+        .filter(models.User.email == "tag-employer@example.com")
+        .first()
+    )
+    employer.is_verified = True
+    db_session.commit()
+
+    employer_token = login_user(
+        client,
+        email="tag-employer@example.com",
+        password="supersecret",
+    )
+
+    create_tag_response = client.post(
+        "/tags/",
+        headers=auth_headers(employer_token),
+        json={
+            "name": "Data Science",
+            "category": "tech",
+        },
+    )
+    assert create_tag_response.status_code == 201
+    tag_id = create_tag_response.json()["id"]
+
+    opportunity_response = client.post(
+        "/opportunities/",
+        headers=auth_headers(employer_token),
+        json={
+            "title": "Data Science Internship",
+            "description": "Стажировка с аналитикой данных, Python и практикой работы с продуктовой командой.",
+            "type": "internship",
+            "work_format": "hybrid",
+            "location": "Москва",
+            "tag_ids": [tag_id],
+        },
+    )
+    assert opportunity_response.status_code == 200
+
+    filtered_response = client.get(f"/opportunities/?tag_ids={tag_id}")
+    assert filtered_response.status_code == 200
+    assert len(filtered_response.json()) == 1
+    assert filtered_response.json()[0]["tags"][0]["name"] == "Data Science"
+
+
 def test_curator_can_verify_employers_and_moderate_opportunities(client, db_session):
     """Проверяет основные сценарии кабинета куратора."""
     curator_user = models.User(

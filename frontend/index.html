@@ -93,6 +93,12 @@
                                         <option value="all">Любое избранное</option>
                                     </select>
                                 </div>
+                                <div class="col-12">
+                                    <div class="small text-muted mb-1">Фильтр по тегам</div>
+                                    <div id="filterTagOptions" class="tag-selector">
+                                        <span class="text-muted small">Теги загружаются...</span>
+                                    </div>
+                                </div>
                                 <div class="col-12 d-flex justify-content-end">
                                     <button class="btn btn-sm btn-outline-secondary" id="filterResetBtn" type="button">Сбросить</button>
                                 </div>
@@ -220,6 +226,27 @@
                             </div>
                             <div id="employer-opportunities-list" class="responses-list">
                                 <p class="text-muted mb-0">Войди как работодатель, чтобы создавать и редактировать свои карточки.</p>
+                            </div>
+                            <hr class="my-3">
+                            <h6 class="small text-uppercase text-muted mb-2">Справочник тегов</h6>
+                            <form id="tagForm" class="row g-2 mb-3">
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control form-control-sm" id="tagNameInput" placeholder="Новый тег" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="tagCategoryInput" required>
+                                        <option value="tech">Технология</option>
+                                        <option value="level">Уровень</option>
+                                        <option value="employment_type">Занятость</option>
+                                        <option value="format">Формат</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">Добавить</button>
+                                </div>
+                            </form>
+                            <div id="tag-library" class="tag-library">
+                                <p class="text-muted mb-0">Теги загружаются...</p>
                             </div>
                         </div>
                     </div>
@@ -361,6 +388,27 @@
                             <h6 class="small text-uppercase text-muted mb-2">Карточки возможностей</h6>
                             <div id="curator-opportunities-list" class="responses-list">
                                 <p class="text-muted mb-0">Карточки для модерации появятся здесь.</p>
+                            </div>
+                            <hr class="my-3">
+                            <h6 class="small text-uppercase text-muted mb-2">Справочник тегов</h6>
+                            <form id="curatorTagForm" class="row g-2 mb-3">
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control form-control-sm" id="curatorTagNameInput" placeholder="Новый тег" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="curatorTagCategoryInput" required>
+                                        <option value="tech">Технология</option>
+                                        <option value="level">Уровень</option>
+                                        <option value="employment_type">Занятость</option>
+                                        <option value="format">Формат</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">Добавить</button>
+                                </div>
+                            </form>
+                            <div id="curator-tag-library" class="tag-library">
+                                <p class="text-muted mb-0">Теги загружаются...</p>
                             </div>
                         </div>
                     </div>
@@ -669,6 +717,12 @@
                             <div class="col-12">
                                 <label for="employerOpportunityDescription" class="form-label">Описание</label>
                                 <textarea class="form-control" id="employerOpportunityDescription" rows="6" minlength="20" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Теги</label>
+                                <div id="employerOpportunityTagOptions" class="tag-selector">
+                                    <span class="text-muted small">Теги загружаются...</span>
+                                </div>
                             </div>
                         </div>
                     </div>

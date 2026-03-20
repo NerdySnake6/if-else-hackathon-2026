@@ -137,6 +137,46 @@ body {
     font-size: 0.9rem;
 }
 
+.tag-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.tag-choice {
+    border: 1px solid #dbe4f0;
+    background: #fff;
+    color: #355070;
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.tag-choice.active {
+    background: #0d6efd;
+    color: #fff;
+    border-color: #0d6efd;
+}
+
+.tag-library {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag-library-item {
+    border: 1px solid #e9ecef;
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.82rem;
+    background: #fff;
+}
+
+.tag-library-item small {
+    color: #6c757d;
+}
+
 .card.shadow-sm {
     border-radius: 14px;
 }

@@ -21,6 +21,7 @@ const state = {
     contacts: [],
     contactSuggestions: [],
     recommendations: [],
+    tags: [],
     employerResponses: [],
     curatorUsers: [],
     curatorOpportunities: [],
@@ -33,6 +34,7 @@ const state = {
         location: '',
         search: '',
         favorites: '',
+        tagIds: [],
     },
     employerResponseFilters: {
         status: '',
@@ -186,6 +188,12 @@ function normalizeUrl(value) {
     return text || null;
 }
 
+function selectedTagIdsFromContainer(containerId) {
+    return Array.from(document.querySelectorAll(`#${containerId} .tag-choice.active`))
+        .map((item) => Number(item.dataset.tagId))
+        .filter((value) => Number.isInteger(value));
+}
+
 function toDateTimeLocalValue(value) {
     if (!value) return '';
     const date = new Date(value);
@@ -197,6 +205,14 @@ function toDateTimeLocalValue(value) {
 
 function includesText(haystack, needle) {
     return (haystack || '').toLowerCase().includes((needle || '').toLowerCase());
+}
+
+function tagCategoryLabel(category) {
+    if (category === 'tech') return 'Технология';
+    if (category === 'level') return 'Уровень';
+    if (category === 'employment_type') return 'Занятость';
+    if (category === 'format') return 'Формат';
+    return category;
 }
 
 function formatDate(dateString) {
@@ -402,6 +418,10 @@ function getFilteredOpportunities() {
         if (filters.favorites === 'vacancies' && !isFavoriteOpportunity(opportunity.id)) return false;
         if (filters.favorites === 'companies' && !isFavoriteCompany(opportunity.employer_id)) return false;
         if (filters.favorites === 'all' && !isFavoriteOpportunity(opportunity.id) && !isFavoriteCompany(opportunity.employer_id)) return false;
+        if (filters.tagIds.length) {
+            const opportunityTagIds = Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.id) : [];
+            if (!filters.tagIds.every((tagId) => opportunityTagIds.includes(tagId))) return false;
+        }
         if (filters.search) {
             const tags = Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.name).join(' ') : '';
             const text = [
@@ -445,6 +465,7 @@ function applyOpportunityFilters() {
     state.opportunityFilters.location = el('filterLocation').value.trim();
     state.opportunityFilters.search = el('filterSearch').value.trim();
     state.opportunityFilters.favorites = el('filterFavorites').value;
+    state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
     renderOpportunitiesSection();
 }
 
@@ -454,6 +475,8 @@ function resetOpportunityFilters() {
     el('filterLocation').value = '';
     el('filterSearch').value = '';
     el('filterFavorites').value = '';
+    state.opportunityFilters.tagIds = [];
+    renderTagChoices('filterTagOptions', []);
     applyOpportunityFilters();
 }
 
@@ -494,6 +517,53 @@ function renderFavoritesSummary() {
             centerOnOpportunity(opportunity);
         });
         container.appendChild(chip);
+    });
+}
+
+function renderTagChoices(containerId, selectedIds = [], { toggleable = true } = {}) {
+    const container = el(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!state.tags.length) {
+        container.appendChild(createEl('span', 'text-muted small', 'Теги пока не загружены.'));
+        return;
+    }
+
+    state.tags.forEach((tag) => {
+        const button = createEl('button', `tag-choice${selectedIds.includes(tag.id) ? ' active' : ''}`, tag.name);
+        button.type = 'button';
+        button.dataset.tagId = String(tag.id);
+        button.title = tagCategoryLabel(tag.category);
+        if (toggleable) {
+            button.addEventListener('click', () => {
+                button.classList.toggle('active');
+                if (containerId === 'filterTagOptions') {
+                    state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
+                    renderOpportunitiesSection();
+                }
+            });
+        }
+        container.appendChild(button);
+    });
+}
+
+function renderTagLibrary() {
+    ['tag-library', 'curator-tag-library'].forEach((containerId) => {
+        const container = el(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        if (!state.tags.length) {
+            container.appendChild(createEl('p', 'text-muted mb-0', 'Теги пока не загружены.'));
+            return;
+        }
+
+        state.tags.forEach((tag) => {
+            const item = createEl('span', 'tag-library-item');
+            item.textContent = tag.name;
+            item.appendChild(createEl('small', 'ms-2', tagCategoryLabel(tag.category)));
+            container.appendChild(item);
+        });
     });
 }
 
@@ -747,6 +817,39 @@ async function handleRecommendationSubmit(event) {
     state.pendingRecommendationPeerId = null;
     await loadRecommendations();
     showNotice('success', 'Рекомендация отправлена контакту.');
+}
+
+async function submitTagForm(nameInputId, categoryInputId, formElement) {
+    const response = await apiFetch('/tags/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: (el(nameInputId).value || '').trim(),
+            category: el(categoryInputId).value,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось добавить тег.' }));
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось добавить тег.');
+        return;
+    }
+
+    formElement.reset();
+    await loadTags();
+    showNotice('success', 'Тег добавлен в справочник.');
+}
+
+async function handleTagSubmit(event) {
+    event.preventDefault();
+    await submitTagForm('tagNameInput', 'tagCategoryInput', event.target);
+}
+
+async function handleCuratorTagSubmit(event) {
+    event.preventDefault();
+    await submitTagForm('curatorTagNameInput', 'curatorTagCategoryInput', event.target);
 }
 
 async function openApplicantProfileModal(userId) {
@@ -1485,6 +1588,7 @@ function resetEmployerOpportunityForm() {
     el('employerOpportunityEventDate').value = '';
     el('employerOpportunityDescription').value = '';
     el('employerOpportunityActive').checked = true;
+    renderTagChoices('employerOpportunityTagOptions', []);
     syncEmployerOpportunityFieldHints();
 }
 
@@ -1514,6 +1618,10 @@ function openEmployerOpportunityModal(opportunityId = null) {
     el('employerOpportunityEventDate').value = toDateTimeLocalValue(opportunity.event_date);
     el('employerOpportunityDescription').value = opportunity.description || '';
     el('employerOpportunityActive').checked = Boolean(opportunity.is_active);
+    renderTagChoices(
+        'employerOpportunityTagOptions',
+        Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.id) : []
+    );
     syncEmployerOpportunityFieldHints();
     employerOpportunityModal.show();
 }
@@ -1555,7 +1663,7 @@ function buildEmployerOpportunityPayload() {
         expires_at: el('employerOpportunityExpiresAt').value ? new Date(el('employerOpportunityExpiresAt').value).toISOString() : null,
         event_date: el('employerOpportunityEventDate').value ? new Date(el('employerOpportunityEventDate').value).toISOString() : null,
         is_active: el('employerOpportunityActive').checked,
-        tag_ids: [],
+        tag_ids: selectedTagIdsFromContainer('employerOpportunityTagOptions'),
     };
 }
 
@@ -1819,6 +1927,22 @@ async function loadOpportunities() {
         state.selectedOpportunityId = state.opportunities[0].id;
     }
     renderOpportunitiesSection();
+}
+
+async function loadTags() {
+    const response = await fetch(`${API_BASE}/tags/`);
+    if (!response.ok) {
+        state.tags = [];
+        renderTagChoices('filterTagOptions', []);
+        renderTagChoices('employerOpportunityTagOptions', []);
+        renderTagLibrary();
+        return;
+    }
+
+    state.tags = await response.json();
+    renderTagChoices('filterTagOptions', state.opportunityFilters.tagIds);
+    renderTagChoices('employerOpportunityTagOptions', selectedTagIdsFromContainer('employerOpportunityTagOptions'));
+    renderTagLibrary();
 }
 
 async function loadResponses() {
@@ -2218,6 +2342,8 @@ function bindEvents() {
     el('profileForm').addEventListener('submit', handleProfileSubmit);
     el('applyForm').addEventListener('submit', handleApplySubmit);
     el('recommendForm').addEventListener('submit', handleRecommendationSubmit);
+    el('tagForm').addEventListener('submit', handleTagSubmit);
+    el('curatorTagForm').addEventListener('submit', handleCuratorTagSubmit);
     el('employerOpportunityForm').addEventListener('submit', handleEmployerOpportunitySubmit);
     el('curatorUserForm').addEventListener('submit', handleCuratorUserSubmit);
     el('curatorOpportunityForm').addEventListener('submit', handleCuratorOpportunitySubmit);
@@ -2298,10 +2424,12 @@ async function bootstrap() {
     renderProfileSection();
     renderSelectedOpportunity();
     renderFavoritesSummary();
+    renderTagLibrary();
     syncEmployerOpportunityFieldHints();
 
     try {
         await initMap();
+        await loadTags();
         await loadOpportunities();
         await loadCurrentUser();
     } catch (error) {
