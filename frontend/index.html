@@ -48,19 +48,53 @@
                     </div>
                 </div>
             </div>
+            <div class="card shadow-sm border-0 mb-3 workspace-hero-card">
+                <div class="card-body py-3">
+                    <div class="workspace-hero">
+                        <div>
+                            <div class="workspace-eyebrow" id="workspaceEyebrow">Публичная витрина</div>
+                            <h3 class="workspace-title mb-1" id="workspaceTitle">Главная</h3>
+                            <p class="workspace-description mb-0" id="workspaceDescription">Здесь собраны вакансии, стажировки, менторские программы и карьерные события.</p>
+                            <div class="workspace-actions mt-3" id="workspaceHeroActions">
+                                <button type="button" class="btn btn-primary btn-sm" id="heroExploreBtn">Смотреть возможности</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="heroRegisterBtn">Создать аккаунт</button>
+                                <button type="button" class="btn btn-link btn-sm px-0 text-decoration-none d-none" id="heroLoginBtn">Уже есть аккаунт? Войти</button>
+                            </div>
+                            <div class="hero-benefits mt-3" id="heroBenefits">
+                                <span class="hero-benefit">Карта офлайн и удаленных возможностей</span>
+                                <span class="hero-benefit">Фильтры по тегам, формату и локации</span>
+                                <span class="hero-benefit">Избранное сохраняется даже без входа</span>
+                            </div>
+                        </div>
+                        <div class="workspace-meta" id="workspaceMeta"></div>
+                    </div>
+                </div>
+            </div>
             <div class="row">
                 <div class="col-md-7 mb-3" id="homeMapColumn">
-                    <h4>Карта возможностей</h4>
-                    <p class="text-muted mb-3">Публичная витрина стажировок, вакансий, менторских программ и карьерных событий.</p>
-                    <div id="map" style="height: 500px;"></div>
+                    <div class="map-panel">
+                        <div class="map-panel-header">
+                            <div>
+                                <h4 class="mb-1">Карта возможностей</h4>
+                                <p class="text-muted mb-0">Смотри, где проходят офлайн-события и из каких городов компании предлагают удаленные форматы.</p>
+                            </div>
+                            <span class="map-panel-chip">Публичный доступ</span>
+                        </div>
+                        <div id="map" style="height: 360px;"></div>
+                    </div>
                 </div>
                 <div class="col-md-5" id="workspaceContentColumn">
-                    <div class="d-flex justify-content-between align-items-center mb-2" id="homeListHeader">
-                        <h4 class="mb-0">Список возможностей</h4>
-                        <span class="badge text-bg-light" id="authStatusBadge">Гость</span>
-                    </div>
-                    <div class="card shadow-sm border-0 mb-3" id="homeFiltersCard">
+                    <div class="card shadow-sm border-0 mb-3 home-explorer-card" id="homeExplorerCard">
                         <div class="card-body py-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3" id="homeListHeader">
+                                <div>
+                                    <h4 class="mb-1">Найти возможность</h4>
+                                    <p class="text-muted small mb-0">Подбери подходящую вакансию, стажировку или событие по формату, тегам и локации.</p>
+                                </div>
+                                <span class="badge text-bg-light" id="authStatusBadge">Гость</span>
+                            </div>
+                            <div class="home-section-block mb-3" id="homeFiltersCard">
+                                <div class="home-section-title">Фильтры</div>
                             <div class="row g-2">
                                 <div class="col-md-6">
                                     <select class="form-select form-select-sm" id="filterType">
@@ -85,40 +119,52 @@
                                 <div class="col-md-6">
                                     <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="Поиск по тексту">
                                 </div>
-                                <div class="col-md-6">
-                                    <select class="form-select form-select-sm" id="filterFavorites">
-                                        <option value="">Все возможности</option>
-                                        <option value="vacancies">Избранные вакансии</option>
-                                        <option value="companies">Вакансии избранных компаний</option>
-                                        <option value="all">Любое избранное</option>
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <div class="small text-muted mb-1">Фильтр по тегам</div>
-                                    <div id="filterTagOptions" class="tag-selector">
-                                        <span class="text-muted small">Теги загружаются...</span>
+                            </div>
+                            <details class="advanced-filters mt-3">
+                                <summary>Расширенные фильтры</summary>
+                                <div class="row g-2 mt-1">
+                                    <div class="col-md-6">
+                                        <select class="form-select form-select-sm" id="filterFavorites">
+                                            <option value="">Все возможности</option>
+                                            <option value="vacancies">Избранные вакансии</option>
+                                            <option value="companies">Вакансии избранных компаний</option>
+                                            <option value="all">Любое избранное</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="small text-muted mb-1">Фильтр по тегам</div>
+                                        <div id="filterTagOptions" class="tag-selector">
+                                            <span class="text-muted small">Теги загружаются...</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 d-flex justify-content-end">
+                                        <button class="btn btn-sm btn-outline-secondary" id="filterResetBtn" type="button">Сбросить</button>
                                     </div>
                                 </div>
-                                <div class="col-12 d-flex justify-content-end">
-                                    <button class="btn btn-sm btn-outline-secondary" id="filterResetBtn" type="button">Сбросить</button>
+                            </details>
+                            </div>
+                            <div class="home-section-block home-list-block">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="home-section-title mb-0">Подходящие возможности</div>
+                                    <span class="small text-muted" id="homeOpportunityCount">0 результатов</span>
+                                </div>
+                                <div id="opportunities-list" class="list-group"></div>
+                            </div>
+                            <div class="home-section-block compact-favorites-block mt-3" id="homeFavoritesCard">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <div class="home-section-title mb-0">Избранное</div>
+                                        <div class="small text-muted">Сохраняется в браузере даже без входа.</div>
+                                    </div>
+                                    <span class="badge text-bg-warning text-dark" id="favoriteSummaryBadge">0</span>
+                                </div>
+                                <div id="favorites-summary" class="favorites-summary">
+                                    <p class="text-muted mb-0">Пока ничего не добавлено в избранное.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="card shadow-sm border-0 mb-3" id="homeFavoritesCard">
-                        <div class="card-body py-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Избранное</h5>
-                                <span class="badge text-bg-warning text-dark" id="favoriteSummaryBadge">0</span>
-                            </div>
-                            <div class="small text-muted mb-2">Сохраняется в браузере и доступно без авторизации.</div>
-                            <div id="favorites-summary" class="favorites-summary">
-                                <p class="text-muted mb-0">Пока ничего не добавлено в избранное.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="opportunities-list" class="list-group" style="max-height: 500px; overflow-y: auto;"></div>
-                    <div class="card shadow-sm border-0 mt-3" id="homeDetailsCard">
+                    <div class="card shadow-sm border-0 mt-3 home-details-card d-none" id="homeDetailsCard">
                         <div class="card-body" id="opportunity-details">
                             <h5 class="card-title">Выбери возможность</h5>
                             <p class="text-muted mb-0">Здесь появятся детали вакансии и кнопка отклика.</p>

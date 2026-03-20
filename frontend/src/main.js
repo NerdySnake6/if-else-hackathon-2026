@@ -5,6 +5,7 @@ const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
 const TOKEN_KEY = 'tramplin_access_token';
 const FAVORITE_OPPORTUNITIES_KEY = 'tramplin_favorite_opportunities';
 const FAVORITE_COMPANIES_KEY = 'tramplin_favorite_companies';
+const FAVORITE_COMPANY_NAMES_KEY = 'tramplin_favorite_company_names';
 
 const state = {
     opportunities: [],
@@ -29,6 +30,7 @@ const state = {
     profile: null,
     favoriteOpportunityIds: [],
     favoriteCompanyIds: [],
+    favoriteCompanyNames: {},
     opportunityFilters: {
         type: '',
         workFormat: '',
@@ -130,9 +132,29 @@ function saveFavoriteIds(key, ids) {
     localStorage.setItem(key, JSON.stringify(ids));
 }
 
+function loadFavoriteCompanyNames() {
+    try {
+        const raw = localStorage.getItem(FAVORITE_COMPANY_NAMES_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+        return Object.fromEntries(
+            Object.entries(parsed)
+                .filter(([key, value]) => Number.isInteger(Number(key)) && typeof value === 'string' && value.trim())
+                .map(([key, value]) => [key, value.trim()])
+        );
+    } catch {
+        return {};
+    }
+}
+
+function saveFavoriteCompanyNames() {
+    localStorage.setItem(FAVORITE_COMPANY_NAMES_KEY, JSON.stringify(state.favoriteCompanyNames));
+}
+
 function loadFavoritesState() {
     state.favoriteOpportunityIds = loadFavoriteIds(FAVORITE_OPPORTUNITIES_KEY);
     state.favoriteCompanyIds = loadFavoriteIds(FAVORITE_COMPANIES_KEY);
+    state.favoriteCompanyNames = loadFavoriteCompanyNames();
 }
 
 function isFavoriteOpportunity(opportunityId) {
@@ -153,13 +175,18 @@ function toggleFavoriteOpportunity(opportunityId) {
     renderOpportunitiesSection();
 }
 
-function toggleFavoriteCompany(employerId) {
+function toggleFavoriteCompany(employerId, employerName = null) {
     if (isFavoriteCompany(employerId)) {
         state.favoriteCompanyIds = state.favoriteCompanyIds.filter((id) => id !== employerId);
+        delete state.favoriteCompanyNames[String(employerId)];
     } else {
         state.favoriteCompanyIds = [...state.favoriteCompanyIds, employerId];
+        if (employerName) {
+            state.favoriteCompanyNames[String(employerId)] = employerName;
+        }
     }
     saveFavoriteIds(FAVORITE_COMPANIES_KEY, state.favoriteCompanyIds);
+    saveFavoriteCompanyNames();
     renderOpportunitiesSection();
 }
 
@@ -348,12 +375,48 @@ function centerOnOpportunity(opportunity) {
     }
 }
 
+function hasActiveOpportunityFilters() {
+    return Boolean(
+        state.opportunityFilters.type
+        || state.opportunityFilters.workFormat
+        || state.opportunityFilters.location
+        || state.opportunityFilters.search
+        || state.opportunityFilters.favorites
+        || state.opportunityFilters.tagIds.length
+    );
+}
+
 function renderList(opportunities) {
     const list = el('opportunities-list');
+    const count = el('homeOpportunityCount');
     list.innerHTML = '';
+    if (count) {
+        count.textContent = `${opportunities.length} ${opportunities.length === 1 ? 'результат' : opportunities.length < 5 ? 'результата' : 'результатов'}`;
+    }
 
     if (!opportunities.length) {
-        list.appendChild(createEl('div', 'list-group-item empty-state', 'Нет доступных возможностей'));
+        const panel = createEl('div', 'empty-state-panel');
+        panel.appendChild(createEl('div', 'empty-state-icon', '✦'));
+        panel.appendChild(createEl('div', 'fw-semibold', hasActiveOpportunityFilters() ? 'По текущим фильтрам ничего не найдено' : 'Пока нет опубликованных возможностей'));
+        panel.appendChild(
+            createEl(
+                'div',
+                'text-muted small',
+                hasActiveOpportunityFilters()
+                    ? 'Попробуй убрать часть фильтров или выбрать другие теги, чтобы расширить поиск.'
+                    : 'Когда работодатели и организаторы добавят карточки, они появятся здесь и на карте.'
+            )
+        );
+        if (hasActiveOpportunityFilters()) {
+            const resetBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Сбросить фильтры');
+            resetBtn.type = 'button';
+            resetBtn.addEventListener('click', resetOpportunityFilters);
+            panel.appendChild(resetBtn);
+        } else {
+            const hint = createEl('div', 'small text-muted', 'Начать можно с регистрации или изучения карты.');
+            panel.appendChild(hint);
+        }
+        list.appendChild(panel);
         return;
     }
 
@@ -447,8 +510,10 @@ function syncSelectedOpportunity(filteredOpportunities) {
         return;
     }
     const selectedStillVisible = filteredOpportunities.some((item) => item.id === state.selectedOpportunityId);
-    if (!selectedStillVisible) {
+    if (!selectedStillVisible && state.activeView !== 'home') {
         state.selectedOpportunityId = filteredOpportunities[0].id;
+    } else if (!selectedStillVisible) {
+        state.selectedOpportunityId = null;
     }
 }
 
@@ -459,6 +524,7 @@ function renderOpportunitiesSection() {
     renderSelectedOpportunity();
     renderMap(filtered);
     renderFavoritesSummary();
+    renderWorkspaceHero();
 }
 
 function applyOpportunityFilters() {
@@ -489,8 +555,14 @@ function renderFavoritesSummary() {
 
     const favoriteOpportunities = state.opportunities.filter((item) => isFavoriteOpportunity(item.id));
     const favoriteCompanies = state.favoriteCompanyIds
-        .map((companyId) => state.opportunities.find((item) => item.employer_id === companyId))
-        .filter(Boolean);
+        .map((companyId) => {
+            const currentOpportunity = state.opportunities.find((item) => item.employer_id === companyId) || null;
+            return {
+                companyId,
+                companyName: currentOpportunity?.employer_name || state.favoriteCompanyNames[String(companyId)] || 'Компания',
+                currentOpportunity,
+            };
+        });
 
     badge.textContent = String(favoriteOpportunities.length + favoriteCompanies.length);
 
@@ -499,13 +571,19 @@ function renderFavoritesSummary() {
         return;
     }
 
-    favoriteCompanies.forEach((companyOpportunity) => {
-        const chip = createEl('button', 'favorite-chip company', companyOpportunity.employer_name || 'Работодатель');
+    favoriteCompanies.forEach((company) => {
+        const chip = createEl('button', 'favorite-chip company', company.companyName);
         chip.type = 'button';
         chip.addEventListener('click', () => {
             el('filterFavorites').value = 'companies';
             state.opportunityFilters.favorites = 'companies';
+            if (company.currentOpportunity) {
+                state.selectedOpportunityId = company.currentOpportunity.id;
+            }
             renderOpportunitiesSection();
+            if (company.currentOpportunity) {
+                centerOnOpportunity(company.currentOpportunity);
+            }
         });
         container.appendChild(chip);
     });
@@ -520,6 +598,133 @@ function renderFavoritesSummary() {
         });
         container.appendChild(chip);
     });
+}
+
+function workspaceMetaForView() {
+    const filteredOpportunities = getFilteredOpportunities();
+    const favoriteCount = state.favoriteOpportunityIds.length + state.favoriteCompanyIds.length;
+
+    if (state.activeView === 'home') {
+        const homeTitle = state.currentUser
+            ? 'Главная'
+            : 'Трамплин для старта в IT';
+        const homeDescription = state.currentUser
+            ? 'Ищи вакансии, стажировки, менторские программы и карьерные события на карте и в ленте.'
+            : 'Найди первую стажировку, вакансию или карьерное событие и сохрани интересные варианты еще до регистрации.';
+        return {
+            eyebrow: state.currentUser ? `Режим: ${currentRoleLabel(state.currentUser.role)}` : 'Публичная витрина',
+            title: homeTitle,
+            description: homeDescription,
+            pills: [
+                `${filteredOpportunities.length} возможностей`,
+                `${state.opportunityFilters.tagIds.length} активных тегов`,
+                `${favoriteCount} в избранном`,
+            ],
+        };
+    }
+
+    if (state.activeView === 'profile') {
+        return {
+            eyebrow: 'Личный кабинет',
+            title: 'Профиль',
+            description: 'Поддерживай профиль в актуальном состоянии: он влияет на то, как тебя видят работодатели, контакты и кураторы.',
+            pills: [
+                state.currentUser ? currentRoleLabel(state.currentUser.role) : 'Гость',
+                state.profile?.applicant_profile?.is_profile_public ? 'Профиль открыт' : 'Профиль скрыт',
+                state.profile?.employer_profile?.company_name || state.currentUser?.display_name || 'Без названия',
+            ],
+        };
+    }
+
+    if (state.activeView === 'applicant') {
+        const acceptedContacts = state.contacts.filter((item) => item.status === 'accepted').length;
+        return {
+            eyebrow: 'Кабинет соискателя',
+            title: 'Соискатель',
+            description: 'Следи за откликами, развивай профессиональные контакты и делись возможностями с людьми из своей сети.',
+            pills: [
+                `${state.responses.length} откликов`,
+                `${acceptedContacts} контактов`,
+                `${state.recommendations.length} рекомендаций`,
+            ],
+        };
+    }
+
+    if (state.activeView === 'employer') {
+        const activeOpportunities = state.employerOpportunities.filter((item) => item.is_active).length;
+        return {
+            eyebrow: 'Кабинет работодателя',
+            title: 'Работодатель',
+            description: 'Управляй карточками возможностей, поддерживай витрину компании в актуальном состоянии и обрабатывай отклики.',
+            pills: [
+                `${state.employerOpportunities.length} карточек`,
+                `${activeOpportunities} активных`,
+                `${state.employerResponses.length} откликов`,
+            ],
+        };
+    }
+
+    if (state.activeView === 'curator') {
+        const pendingEmployers = state.curatorUsers.filter((user) => user.role === 'employer' && !user.is_verified).length;
+        return {
+            eyebrow: state.currentUser?.role === 'admin' ? 'Панель администратора' : 'Панель модерации',
+            title: 'Куратор',
+            description: 'Проверяй работодателей, модерируй карточки возможностей и держи платформу в целостном и безопасном состоянии.',
+            pills: [
+                `${state.curatorUsers.length} пользователей`,
+                `${pendingEmployers} ждут верификации`,
+                `${state.curatorOpportunities.length} карточек`,
+            ],
+        };
+    }
+
+    return {
+        eyebrow: 'Платформа',
+        title: 'Трамплин',
+        description: 'Карьерная платформа для студентов, выпускников, работодателей и карьерных центров.',
+        pills: [],
+    };
+}
+
+function renderWorkspaceHero() {
+    const meta = workspaceMetaForView();
+    el('workspaceEyebrow').textContent = meta.eyebrow;
+    el('workspaceTitle').textContent = meta.title;
+    el('workspaceDescription').textContent = meta.description;
+
+    const metaContainer = el('workspaceMeta');
+    metaContainer.innerHTML = '';
+    meta.pills.filter(Boolean).forEach((pill) => {
+        metaContainer.appendChild(createEl('span', 'workspace-pill', pill));
+    });
+
+    const heroActions = el('workspaceHeroActions');
+    const exploreBtn = el('heroExploreBtn');
+    const registerBtn = el('heroRegisterBtn');
+    const loginBtn = el('heroLoginBtn');
+
+    if (!heroActions || !exploreBtn || !registerBtn || !loginBtn) return;
+
+    const isHome = state.activeView === 'home';
+    const isGuest = !state.currentUser;
+    heroActions.classList.toggle('d-none', !isHome);
+    registerBtn.classList.toggle('d-none', !isGuest);
+    loginBtn.classList.toggle('d-none', !isGuest);
+
+    if (isGuest) {
+        exploreBtn.textContent = 'Смотреть возможности';
+        exploreBtn.className = 'btn btn-primary btn-sm';
+        registerBtn.className = 'btn btn-outline-primary btn-sm';
+    } else if (state.currentUser.role === 'applicant') {
+        exploreBtn.textContent = 'Перейти к карте';
+        exploreBtn.className = 'btn btn-primary btn-sm';
+    } else if (state.currentUser.role === 'employer') {
+        exploreBtn.textContent = 'Открыть витрину';
+        exploreBtn.className = 'btn btn-primary btn-sm';
+    } else {
+        exploreBtn.textContent = 'Посмотреть платформу';
+        exploreBtn.className = 'btn btn-primary btn-sm';
+    }
 }
 
 function renderTagChoices(containerId, selectedIds = [], { toggleable = true } = {}) {
@@ -571,15 +776,18 @@ function renderTagLibrary() {
 
 function renderSelectedOpportunity() {
     const container = el('opportunity-details');
+    const detailsCard = el('homeDetailsCard');
     const opportunity = selectedOpportunity();
     container.innerHTML = '';
 
     if (!opportunity) {
+        detailsCard.classList.add('d-none');
         container.appendChild(createEl('h5', 'card-title', 'Выбери возможность'));
         container.appendChild(createEl('p', 'text-muted mb-0', 'Здесь появятся детали вакансии и кнопка отклика.'));
         return;
     }
 
+    detailsCard.classList.remove('d-none');
     container.appendChild(createEl('h5', 'card-title', opportunity.title));
     container.appendChild(createEl('p', 'detail-meta mb-1', opportunity.employer_name || 'Работодатель'));
     container.appendChild(createEl('p', 'detail-meta mb-2', `${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
@@ -601,7 +809,7 @@ function renderSelectedOpportunity() {
         container.appendChild(tagsRow);
     }
 
-    const actionWrap = createEl('div', 'd-flex flex-wrap gap-2 align-items-center');
+    const actionWrap = createEl('div', 'd-flex flex-wrap gap-2 align-items-center detail-actions');
 
     const favoriteOpportunityBtn = createEl(
         'button',
@@ -618,7 +826,7 @@ function renderSelectedOpportunity() {
         isFavoriteCompany(opportunity.employer_id) ? 'Убрать компанию из избранного' : 'В избранное: компания'
     );
     favoriteCompanyBtn.type = 'button';
-    favoriteCompanyBtn.addEventListener('click', () => toggleFavoriteCompany(opportunity.employer_id));
+    favoriteCompanyBtn.addEventListener('click', () => toggleFavoriteCompany(opportunity.employer_id, opportunity.employer_name));
     actionWrap.appendChild(favoriteCompanyBtn);
 
     if (!state.currentUser) {
@@ -729,6 +937,7 @@ function renderResponses() {
 
         container.appendChild(item);
     });
+    renderWorkspaceHero();
 }
 
 async function sendContactRequest(addresseeId) {
@@ -921,6 +1130,7 @@ function renderContactsSection() {
         suggestionsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Войди как соискатель, чтобы расширять сеть контактов.'));
         contactsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Контакты и заявки в сеть появятся после входа.'));
         recommendationsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Рекомендации появятся после входа.'));
+        renderWorkspaceHero();
         return;
     }
 
@@ -972,6 +1182,7 @@ function renderContactsSection() {
 
     if (!state.contacts.length) {
         contactsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет ни входящих, ни подтвержденных контактов.'));
+        renderWorkspaceHero();
         return;
     }
 
@@ -1045,6 +1256,7 @@ function renderContactsSection() {
 
     if (!state.recommendations.length) {
         recommendationsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Ты еще не отправлял и не получал рекомендации.'));
+        renderWorkspaceHero();
         return;
     }
 
@@ -1087,6 +1299,7 @@ function renderContactsSection() {
         item.appendChild(actions);
         recommendationsContainer.appendChild(item);
     });
+    renderWorkspaceHero();
 }
 
 async function updateEmployerResponseStatus(responseId, status) {
@@ -1116,6 +1329,7 @@ function renderEmployerResponses() {
     if (!state.currentUser || state.currentUser.role !== 'employer') {
         refreshBtn.classList.add('d-none');
         container.appendChild(createEl('p', 'text-muted mb-0', 'Войди как работодатель, чтобы видеть входящие отклики.'));
+        renderWorkspaceHero();
         return;
     }
 
@@ -1125,11 +1339,13 @@ function renderEmployerResponses() {
 
     if (!state.employerResponses.length) {
         container.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет входящих откликов.'));
+        renderWorkspaceHero();
         return;
     }
 
     if (!filteredResponses.length) {
         container.appendChild(createEl('p', 'text-muted mb-0', 'По текущим фильтрам откликов не найдено.'));
+        renderWorkspaceHero();
         return;
     }
 
@@ -1175,6 +1391,7 @@ function renderEmployerResponses() {
         item.appendChild(actions);
         container.appendChild(item);
     });
+    renderWorkspaceHero();
 }
 
 function getFilteredEmployerOpportunities() {
@@ -1201,6 +1418,7 @@ function renderEmployerOpportunities() {
         refreshBtn.classList.add('d-none');
         createBtn.classList.add('d-none');
         container.appendChild(createEl('p', 'text-muted mb-0', 'Войди как работодатель, чтобы создавать и редактировать свои карточки.'));
+        renderWorkspaceHero();
         return;
     }
 
@@ -1214,12 +1432,14 @@ function renderEmployerOpportunities() {
 
     if (!state.employerOpportunities.length) {
         container.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет созданных карточек. Создай первую возможность для студентов и выпускников.'));
+        renderWorkspaceHero();
         return;
     }
 
     const filtered = getFilteredEmployerOpportunities();
     if (!filtered.length) {
         container.appendChild(createEl('p', 'text-muted mb-0', 'По текущим фильтрам карточки не найдены.'));
+        renderWorkspaceHero();
         return;
     }
 
@@ -1278,6 +1498,7 @@ function renderEmployerOpportunities() {
         item.appendChild(actions);
         container.appendChild(item);
     });
+    renderWorkspaceHero();
 }
 
 async function updateCuratorUser(userId, payload) {
@@ -1428,6 +1649,7 @@ function renderCuratorSection() {
         adminHint.textContent = 'Здесь можно модерировать пользователей, карточки и справочник тегов.';
         usersContainer.appendChild(createEl('p', 'text-muted mb-0', 'Войди как куратор, чтобы модерировать пользователей.'));
         opportunitiesContainer.appendChild(createEl('p', 'text-muted mb-0', 'Карточки для модерации появятся здесь.'));
+        renderWorkspaceHero();
         return;
     }
 
@@ -1519,6 +1741,7 @@ function renderCuratorSection() {
     const filteredOpportunities = getFilteredCuratorOpportunities();
     if (!filteredOpportunities.length) {
         opportunitiesContainer.appendChild(createEl('p', 'text-muted mb-0', 'Карточки по текущим фильтрам не найдены.'));
+        renderWorkspaceHero();
         return;
     }
 
@@ -1550,6 +1773,7 @@ function renderCuratorSection() {
         item.appendChild(actions);
         opportunitiesContainer.appendChild(item);
     });
+    renderWorkspaceHero();
 }
 
 function getFilteredEmployerResponses() {
@@ -1615,6 +1839,7 @@ function renderProfileSection() {
         guestHint.classList.remove('d-none');
         status.textContent = 'Гость';
         setEmployerRequired(false);
+        renderWorkspaceHero();
         return;
     }
 
@@ -1638,6 +1863,7 @@ function renderProfileSection() {
         employerFields.classList.add('d-none');
         setEmployerRequired(false);
     }
+    renderWorkspaceHero();
 }
 
 function openCuratorUserModal(userId) {
@@ -1900,8 +2126,8 @@ function renderAuthUI() {
         logoutNavItem.classList.add('d-none');
         currentUserNavItem.classList.add('d-none');
         currentUserLabel.textContent = '';
-        authStatusBadge.textContent = 'Гость';
-        authStatusBadge.className = 'badge text-bg-light';
+        authStatusBadge.textContent = 'Гостевой режим';
+        authStatusBadge.className = 'badge text-bg-warning text-dark';
     }
 
     if (!visibleViews().includes(state.activeView)) {
@@ -1909,6 +2135,7 @@ function renderAuthUI() {
     }
     renderWorkspaceNav();
     renderWorkspaceView();
+    renderWorkspaceHero();
 }
 
 function renderWorkspaceNav() {
@@ -1927,6 +2154,7 @@ function renderWorkspaceNav() {
         button.classList.toggle('btn-primary', state.activeView === view);
         button.classList.toggle('btn-outline-primary', state.activeView !== view);
     });
+    renderWorkspaceHero();
 }
 
 function renderWorkspaceView() {
@@ -1966,6 +2194,8 @@ function renderWorkspaceView() {
             el(id).classList.remove('d-none');
         });
     }
+
+    renderWorkspaceHero();
 }
 
 async function loadProfile() {
@@ -2496,6 +2726,21 @@ function bindEvents() {
     el('registerBtn').addEventListener('click', (event) => {
         event.preventDefault();
         registerModal.show();
+    });
+
+    el('heroExploreBtn').addEventListener('click', () => {
+        if (state.activeView !== 'home') {
+            setActiveView('home');
+        }
+        el('homeExplorerCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    el('heroRegisterBtn').addEventListener('click', (event) => {
+        event.preventDefault();
+        registerModal.show();
+    });
+    el('heroLoginBtn').addEventListener('click', (event) => {
+        event.preventDefault();
+        loginModal.show();
     });
 
     el('logoutBtn').addEventListener('click', handleLogout);
