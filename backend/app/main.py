@@ -1,5 +1,6 @@
 """Точка входа FastAPI-приложения проекта «Трамплин»."""
 
+import uvicorn
 from fastapi import FastAPI
 
 from app.database import init_db
@@ -35,3 +36,7 @@ def root():
 def health_check():
     """Возвращает простой ответ для проверки доступности сервиса."""
     return {"status": "ok"}
+
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
