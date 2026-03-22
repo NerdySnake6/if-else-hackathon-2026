@@ -23,14 +23,14 @@ class UserOut(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 class ApplicantProfileBase(BaseModel):
-    full_name: Optional[str] = None
-    university: Optional[str] = None
-    course_or_year: Optional[str] = None
-    bio: Optional[str] = None
-    skills: Optional[str] = None
-    experience: Optional[str] = None
-    github_url: Optional[str] = None
-    portfolio_url: Optional[str] = None
+    full_name: Optional[str] = Field(default=None, max_length=200)
+    university: Optional[str] = Field(default=None, max_length=200)
+    course_or_year: Optional[str] = Field(default=None, max_length=50)
+    bio: Optional[str] = Field(default=None, max_length=500)
+    skills: Optional[str] = Field(default=None, max_length=500)
+    experience: Optional[str] = Field(default=None, max_length=1500)
+    github_url: Optional[str] = Field(default=None, max_length=500)
+    portfolio_url: Optional[str] = Field(default=None, max_length=500)
     is_profile_public: bool = False
     show_responses: bool = False
 
@@ -46,13 +46,13 @@ class ApplicantProfileOut(ApplicantProfileBase):
     model_config = ConfigDict(from_attributes=True)
 
 class EmployerProfileBase(BaseModel):
-    company_name: Optional[str] = None
-    description: Optional[str] = None
-    industry: Optional[str] = None
-    website: Optional[str] = None
-    social_links: Optional[str] = None
-    city: Optional[str] = None
-    address: Optional[str] = None
+    company_name: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=1500)
+    industry: Optional[str] = Field(default=None, max_length=100)
+    website: Optional[str] = Field(default=None, max_length=500)
+    social_links: Optional[str] = Field(default=None, max_length=1000)
+    city: Optional[str] = Field(default=None, max_length=100)
+    address: Optional[str] = Field(default=None, max_length=300)
 
 
 class EmployerProfileCreate(EmployerProfileBase):
@@ -60,26 +60,26 @@ class EmployerProfileCreate(EmployerProfileBase):
 
 
 class ApplicantProfileUpdate(BaseModel):
-    full_name: Optional[str] = None
-    university: Optional[str] = None
-    course_or_year: Optional[str] = None
-    bio: Optional[str] = None
-    skills: Optional[str] = None
-    experience: Optional[str] = None
-    github_url: Optional[str] = None
-    portfolio_url: Optional[str] = None
+    full_name: Optional[str] = Field(default=None, max_length=200)
+    university: Optional[str] = Field(default=None, max_length=200)
+    course_or_year: Optional[str] = Field(default=None, max_length=50)
+    bio: Optional[str] = Field(default=None, max_length=500)
+    skills: Optional[str] = Field(default=None, max_length=500)
+    experience: Optional[str] = Field(default=None, max_length=1500)
+    github_url: Optional[str] = Field(default=None, max_length=500)
+    portfolio_url: Optional[str] = Field(default=None, max_length=500)
     is_profile_public: Optional[bool] = None
     show_responses: Optional[bool] = None
 
 
 class EmployerProfileUpdate(BaseModel):
-    company_name: Optional[str] = None
-    description: Optional[str] = None
-    industry: Optional[str] = None
-    website: Optional[str] = None
-    social_links: Optional[str] = None
-    city: Optional[str] = None
-    address: Optional[str] = None
+    company_name: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=1500)
+    industry: Optional[str] = Field(default=None, max_length=100)
+    website: Optional[str] = Field(default=None, max_length=500)
+    social_links: Optional[str] = Field(default=None, max_length=1000)
+    city: Optional[str] = Field(default=None, max_length=100)
+    address: Optional[str] = Field(default=None, max_length=300)
 
 
 class EmployerProfileOut(EmployerProfileBase):
@@ -123,13 +123,13 @@ class TagOut(TagBase):
 
 class OpportunityBase(BaseModel):
     title: str = Field(min_length=5, max_length=200)
-    description: str = Field(min_length=20)
+    description: str = Field(min_length=20, max_length=3000)
     type: Literal["internship", "job", "mentorship", "event"]
     work_format: Literal["office", "hybrid", "remote"]
-    location: str
+    location: str = Field(max_length=300)
     lat: Optional[float] = None
     lng: Optional[float] = None
-    salary_range: Optional[str] = None
+    salary_range: Optional[str] = Field(default=None, max_length=100)
     expires_at: Optional[datetime] = None
     event_date: Optional[datetime] = None
     is_active: bool = True
@@ -140,14 +140,14 @@ class OpportunityCreate(OpportunityBase):
 
 
 class OpportunityUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=3000)
     type: Optional[Literal["internship", "job", "mentorship", "event"]] = None
     work_format: Optional[Literal["office", "hybrid", "remote"]] = None
-    location: Optional[str] = None
+    location: Optional[str] = Field(default=None, max_length=300)
     lat: Optional[float] = None
     lng: Optional[float] = None
-    salary_range: Optional[str] = None
+    salary_range: Optional[str] = Field(default=None, max_length=100)
     expires_at: Optional[datetime] = None
     event_date: Optional[datetime] = None
     is_active: Optional[bool] = None
@@ -169,12 +169,12 @@ class CuratorOpportunityOut(OpportunityOut):
 
 
 class CuratorOpportunityUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
+    title: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=3000)
     type: Optional[Literal["internship", "job", "mentorship", "event"]] = None
     work_format: Optional[Literal["office", "hybrid", "remote"]] = None
-    location: Optional[str] = None
-    salary_range: Optional[str] = None
+    location: Optional[str] = Field(default=None, max_length=300)
+    salary_range: Optional[str] = Field(default=None, max_length=100)
     expires_at: Optional[datetime] = None
     event_date: Optional[datetime] = None
     is_active: Optional[bool] = None
@@ -187,7 +187,7 @@ class GeocodeResult(BaseModel):
     precision: Optional[str] = None
 
 class ResponseBase(BaseModel):
-    cover_letter: Optional[str] = None
+    cover_letter: Optional[str] = Field(default=None, max_length=2000)
 
 
 class ResponseCreate(ResponseBase):
@@ -253,7 +253,7 @@ class ContactNetworkOut(ContactBase):
 class RecommendationCreate(BaseModel):
     recommended_user_id: int
     opportunity_id: int
-    message: Optional[str] = None
+    message: Optional[str] = Field(default=None, max_length=500)
 
 
 class RecommendationOpportunitySummary(BaseModel):
@@ -325,5 +325,5 @@ class ApplicantProfileVisibilityOut(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=255)
+    password: str = Field(max_length=255)
