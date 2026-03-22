@@ -108,7 +108,7 @@ def test_auth_and_profile_flow(client):
         display_name="Student One",
         role="applicant",
     )
-    assert register_response.status_code == 200
+    assert register_response.status_code == 201
 
     token = login_user(
         client,
@@ -152,7 +152,7 @@ def test_employer_opportunity_and_response_flow(client, db_session):
         display_name="Employer",
         role="employer",
     )
-    assert employer_register.status_code == 200
+    assert employer_register.status_code == 201
 
     employer = (
         db_session.query(models.User)
@@ -181,7 +181,7 @@ def test_employer_opportunity_and_response_flow(client, db_session):
             "tag_ids": [],
         },
     )
-    assert create_opportunity_response.status_code == 200
+    assert create_opportunity_response.status_code == 201
     opportunity_id = create_opportunity_response.json()["id"]
 
     applicant_register = register_user(
@@ -191,7 +191,7 @@ def test_employer_opportunity_and_response_flow(client, db_session):
         display_name="Applicant",
         role="applicant",
     )
-    assert applicant_register.status_code == 200
+    assert applicant_register.status_code == 201
 
     applicant_token = login_user(
         client,
@@ -240,7 +240,7 @@ def test_employer_can_manage_own_opportunities(client, db_session):
         display_name="Owner Employer",
         role="employer",
     )
-    assert register_response.status_code == 200
+    assert register_response.status_code == 201
 
     employer = (
         db_session.query(models.User)
@@ -271,7 +271,7 @@ def test_employer_can_manage_own_opportunities(client, db_session):
             "tag_ids": [],
         },
     )
-    assert create_response.status_code == 200
+    assert create_response.status_code == 201
     opportunity_id = create_response.json()["id"]
 
     my_response = client.get("/opportunities/my", headers=headers)
@@ -331,8 +331,8 @@ def test_applicants_can_build_network_contacts(client):
         display_name="Network Two",
         role="applicant",
     )
-    assert first_user.status_code == 200
-    assert second_user.status_code == 200
+    assert first_user.status_code == 201
+    assert second_user.status_code == 201
 
     first_token = login_user(
         client,
@@ -440,9 +440,9 @@ def test_applicants_can_recommend_opportunities_to_contacts(client, db_session):
         display_name="Recommend Employer",
         role="employer",
     )
-    assert first_user.status_code == 200
-    assert second_user.status_code == 200
-    assert employer_user.status_code == 200
+    assert first_user.status_code == 201
+    assert second_user.status_code == 201
+    assert employer_user.status_code == 201
 
     first_token = login_user(
         client,
@@ -507,7 +507,7 @@ def test_applicants_can_recommend_opportunities_to_contacts(client, db_session):
             "tag_ids": [],
         },
     )
-    assert create_opportunity.status_code == 200
+    assert create_opportunity.status_code == 201
     opportunity_id = create_opportunity.json()["id"]
 
     create_contact = client.post(
@@ -569,9 +569,9 @@ def test_applicant_profile_privacy_controls_access(client, db_session):
         display_name="Privacy Employer",
         role="employer",
     )
-    assert private_user.status_code == 200
-    assert viewer_user.status_code == 200
-    assert employer_user.status_code == 200
+    assert private_user.status_code == 201
+    assert viewer_user.status_code == 201
+    assert employer_user.status_code == 201
 
     private_token = login_user(
         client,
@@ -626,7 +626,7 @@ def test_applicant_profile_privacy_controls_access(client, db_session):
             "tag_ids": [],
         },
     )
-    assert opportunity.status_code == 200
+    assert opportunity.status_code == 201
 
     response = client.post(
         "/responses/",
@@ -680,7 +680,7 @@ def test_tags_catalog_creation_and_public_filtering(client, db_session):
         display_name="Tag Employer",
         role="employer",
     )
-    assert employer_register.status_code == 200
+    assert employer_register.status_code == 201
 
     employer = (
         db_session.query(models.User)
@@ -719,7 +719,7 @@ def test_tags_catalog_creation_and_public_filtering(client, db_session):
             "tag_ids": [tag_id],
         },
     )
-    assert opportunity_response.status_code == 200
+    assert opportunity_response.status_code == 201
 
     filtered_response = client.get(f"/opportunities/?tag_ids={tag_id}")
     assert filtered_response.status_code == 200
