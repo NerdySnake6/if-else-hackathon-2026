@@ -1,66 +1,45 @@
 import './style.css';
+import {
+    clearToken,
+    getToken,
+    isFavoriteCompany,
+    isFavoriteOpportunity,
+    loadFavoritesState,
+    setToken,
+    state,
+    toggleFavoriteCompany,
+    toggleFavoriteOpportunity,
+} from './state.js';
+import {
+    contactStatusLabel,
+    createEl,
+    currentRoleLabel,
+    curatorRoleLabel,
+    el,
+    formatDate,
+    includesText,
+    normalizeText,
+    normalizeUrl,
+    opportunityTypeLabel,
+    renderAlert,
+    selectedTagIdsFromContainer,
+    showNotice,
+    statusLabel,
+    tagCategoryLabel,
+    toDateTimeLocalValue,
+    workFormatLabel,
+} from './utils.js';
+import { apiFetch } from './api.js';
+import { createMapController, hasCoords } from './map.js';
+import { refreshFieldCounters, setupFieldLimits } from './limits.js';
+import { createHomeController } from './home.js';
+import { createProfileController } from './profile.js';
+import { createApplicantController } from './applicant.js';
+import { createEmployerController } from './employer.js';
+import { createCuratorController } from './curator.js';
 
-const API_BASE = '/api';
 const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
-const TOKEN_KEY = 'tramplin_access_token';
-const FAVORITE_OPPORTUNITIES_KEY = 'tramplin_favorite_opportunities';
-const FAVORITE_COMPANIES_KEY = 'tramplin_favorite_companies';
-const FAVORITE_COMPANY_NAMES_KEY = 'tramplin_favorite_company_names';
 
-const state = {
-    opportunities: [],
-    employerOpportunities: [],
-    currentUser: null,
-    activeView: 'home',
-    selectedOpportunityId: null,
-    pendingApplyId: null,
-    pendingRecommendationPeerId: null,
-    pendingCuratorUserId: null,
-    pendingCuratorUserRole: null,
-    pendingCuratorOpportunityId: null,
-    pendingEmployerOpportunityId: null,
-    responses: [],
-    contacts: [],
-    contactSuggestions: [],
-    recommendations: [],
-    tags: [],
-    employerResponses: [],
-    curatorUsers: [],
-    curatorOpportunities: [],
-    profile: null,
-    favoriteOpportunityIds: [],
-    favoriteCompanyIds: [],
-    favoriteCompanyNames: {},
-    opportunityFilters: {
-        type: '',
-        workFormat: '',
-        location: '',
-        search: '',
-        favorites: '',
-        tagIds: [],
-    },
-    employerResponseFilters: {
-        status: '',
-        search: '',
-    },
-    contactSearch: '',
-    employerOpportunityFilters: {
-        status: '',
-        type: '',
-        search: '',
-    },
-    curatorFilters: {
-        role: 'employer',
-        userSearch: '',
-        verification: '',
-        opportunitySearch: '',
-        opportunityStatus: '',
-    },
-};
-
-let map;
-let ymapsReadyPromise;
-let placemarks = [];
 let loginModal;
 let registerModal;
 let applyModal;
@@ -70,17 +49,131 @@ let curatorUserModal;
 let curatorCreateModal;
 let curatorOpportunityModal;
 let employerOpportunityModal;
+let renderProfileSection;
+let buildProfilePayload;
+let renderResponses;
+let renderContactsSection;
+let openRecommendModal;
+let handleRecommendationSubmit;
+let openApplicantProfileModal;
+let openApplyModal;
+let handleApplySubmit;
+let renderEmployerResponses;
+let renderEmployerOpportunities;
+let applyEmployerResponseFilters;
+let resetEmployerResponseFilters;
+let applyEmployerOpportunityFilters;
+let resetEmployerOpportunityFilters;
+let openEmployerOpportunityModal;
+let syncEmployerOpportunityFieldHints;
+let handleEmployerOpportunitySubmit;
+let renderCuratorSection;
+let openCuratorUserModal;
+let openCuratorOpportunityModal;
+let handleCuratorUserSubmit;
+let handleCuratorCreateSubmit;
+let handleCuratorOpportunitySubmit;
 
-function el(id) {
-    return document.getElementById(id);
-}
+const mapController = createMapController({
+    apiKey: YANDEX_API_KEY,
+    state,
+    isFavoriteOpportunity,
+    isFavoriteCompany,
+    createEl,
+    opportunityTypeLabel,
+    workFormatLabel,
+    onSelectOpportunity(opportunityId) {
+        state.selectedOpportunityId = opportunityId;
+        renderSelectedOpportunity();
+        renderOpportunitiesSection();
+    },
+});
+const initMap = mapController.initMap;
+const renderMap = mapController.renderMap;
+const centerOnOpportunity = mapController.centerOnOpportunity;
 
-function createEl(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-}
+const homeController = createHomeController({
+    state,
+    renderMap,
+    centerOnOpportunity,
+    renderWorkspaceHero,
+    renderContactsSection: (...args) => renderContactsSection(...args),
+    openApplyModal: (...args) => openApplyModal(...args),
+    openEmployerOpportunityModal: (...args) => openEmployerOpportunityModal(...args),
+});
+const getFilteredOpportunities = homeController.getFilteredOpportunities;
+const renderOpportunitiesSection = homeController.renderOpportunitiesSection;
+const applyOpportunityFilters = homeController.applyOpportunityFilters;
+const resetOpportunityFilters = homeController.resetOpportunityFilters;
+const renderFavoritesSummary = homeController.renderFavoritesSummary;
+const renderTagChoices = homeController.renderTagChoices;
+const renderTagLibrary = homeController.renderTagLibrary;
+const renderSelectedOpportunity = homeController.renderSelectedOpportunity;
+
+const profileController = createProfileController({
+    state,
+    renderWorkspaceHero,
+    refreshFieldCounters,
+});
+renderProfileSection = profileController.renderProfileSection;
+buildProfilePayload = profileController.buildProfilePayload;
+
+const applicantController = createApplicantController({
+    state,
+    renderWorkspaceHero,
+    refreshFieldCounters,
+    selectedOpportunity,
+    getRecommendModal: () => recommendModal,
+    getApplicantProfileModal: () => applicantProfileModal,
+    getApplyModal: () => applyModal,
+    loadContacts: () => loadContacts(),
+    loadRecommendations: () => loadRecommendations(),
+    loadResponses: () => loadResponses(),
+});
+renderResponses = applicantController.renderResponses;
+renderContactsSection = applicantController.renderContactsSection;
+openRecommendModal = applicantController.openRecommendModal;
+handleRecommendationSubmit = applicantController.handleRecommendationSubmit;
+openApplicantProfileModal = applicantController.openApplicantProfileModal;
+openApplyModal = applicantController.openApplyModal;
+handleApplySubmit = applicantController.handleApplySubmit;
+
+const employerController = createEmployerController({
+    state,
+    renderWorkspaceHero,
+    refreshFieldCounters,
+    renderTagChoices,
+    loadEmployerResponses: () => loadEmployerResponses(),
+    loadEmployerOpportunities: () => loadEmployerOpportunities(),
+    loadOpportunities: () => loadOpportunities(),
+    getEmployerOpportunityModal: () => employerOpportunityModal,
+});
+renderEmployerResponses = employerController.renderEmployerResponses;
+renderEmployerOpportunities = employerController.renderEmployerOpportunities;
+applyEmployerResponseFilters = employerController.applyEmployerResponseFilters;
+resetEmployerResponseFilters = employerController.resetEmployerResponseFilters;
+applyEmployerOpportunityFilters = employerController.applyEmployerOpportunityFilters;
+resetEmployerOpportunityFilters = employerController.resetEmployerOpportunityFilters;
+openEmployerOpportunityModal = employerController.openEmployerOpportunityModal;
+syncEmployerOpportunityFieldHints = employerController.syncEmployerOpportunityFieldHints;
+handleEmployerOpportunitySubmit = employerController.handleEmployerOpportunitySubmit;
+
+const curatorController = createCuratorController({
+    state,
+    renderWorkspaceHero,
+    refreshFieldCounters,
+    loadCuratorData: () => loadCuratorData(),
+    loadOpportunities: () => loadOpportunities(),
+    getCuratorUserModal: () => curatorUserModal,
+    getCuratorCreateModal: () => curatorCreateModal,
+    getCuratorOpportunityModal: () => curatorOpportunityModal,
+});
+renderCuratorSection = curatorController.renderCuratorSection;
+openCuratorUserModal = curatorController.openCuratorUserModal;
+openCuratorOpportunityModal = curatorController.openCuratorOpportunityModal;
+handleCuratorUserSubmit = curatorController.handleCuratorUserSubmit;
+handleCuratorCreateSubmit = curatorController.handleCuratorCreateSubmit;
+handleCuratorOpportunitySubmit = curatorController.handleCuratorOpportunitySubmit;
 
 function visibleViews() {
     const views = ['home'];
@@ -106,498 +199,8 @@ function setActiveView(view) {
     renderWorkspaceView();
 }
 
-function getToken() {
-    return localStorage.getItem(TOKEN_KEY);
-}
-
-function setToken(token) {
-    localStorage.setItem(TOKEN_KEY, token);
-}
-
-function clearToken() {
-    localStorage.removeItem(TOKEN_KEY);
-}
-
-function loadFavoriteIds(key) {
-    try {
-        const raw = localStorage.getItem(key);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed.filter((value) => Number.isInteger(value)) : [];
-    } catch {
-        return [];
-    }
-}
-
-function saveFavoriteIds(key, ids) {
-    localStorage.setItem(key, JSON.stringify(ids));
-}
-
-function loadFavoriteCompanyNames() {
-    try {
-        const raw = localStorage.getItem(FAVORITE_COMPANY_NAMES_KEY);
-        const parsed = raw ? JSON.parse(raw) : {};
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
-        return Object.fromEntries(
-            Object.entries(parsed)
-                .filter(([key, value]) => Number.isInteger(Number(key)) && typeof value === 'string' && value.trim())
-                .map(([key, value]) => [key, value.trim()])
-        );
-    } catch {
-        return {};
-    }
-}
-
-function saveFavoriteCompanyNames() {
-    localStorage.setItem(FAVORITE_COMPANY_NAMES_KEY, JSON.stringify(state.favoriteCompanyNames));
-}
-
-function loadFavoritesState() {
-    state.favoriteOpportunityIds = loadFavoriteIds(FAVORITE_OPPORTUNITIES_KEY);
-    state.favoriteCompanyIds = loadFavoriteIds(FAVORITE_COMPANIES_KEY);
-    state.favoriteCompanyNames = loadFavoriteCompanyNames();
-}
-
-function isFavoriteOpportunity(opportunityId) {
-    return state.favoriteOpportunityIds.includes(opportunityId);
-}
-
-function isFavoriteCompany(employerId) {
-    return state.favoriteCompanyIds.includes(employerId);
-}
-
-function toggleFavoriteOpportunity(opportunityId) {
-    if (isFavoriteOpportunity(opportunityId)) {
-        state.favoriteOpportunityIds = state.favoriteOpportunityIds.filter((id) => id !== opportunityId);
-    } else {
-        state.favoriteOpportunityIds = [...state.favoriteOpportunityIds, opportunityId];
-    }
-    saveFavoriteIds(FAVORITE_OPPORTUNITIES_KEY, state.favoriteOpportunityIds);
-    renderOpportunitiesSection();
-}
-
-function toggleFavoriteCompany(employerId, employerName = null) {
-    if (isFavoriteCompany(employerId)) {
-        state.favoriteCompanyIds = state.favoriteCompanyIds.filter((id) => id !== employerId);
-        delete state.favoriteCompanyNames[String(employerId)];
-    } else {
-        state.favoriteCompanyIds = [...state.favoriteCompanyIds, employerId];
-        if (employerName) {
-            state.favoriteCompanyNames[String(employerId)] = employerName;
-        }
-    }
-    saveFavoriteIds(FAVORITE_COMPANIES_KEY, state.favoriteCompanyIds);
-    saveFavoriteCompanyNames();
-    renderOpportunitiesSection();
-}
-
-function hasCoords(opportunity) {
-    return Number.isFinite(opportunity.lat) && Number.isFinite(opportunity.lng);
-}
-
 function selectedOpportunity() {
     return state.opportunities.find((item) => item.id === state.selectedOpportunityId) || null;
-}
-
-function apiFetch(path, options = {}) {
-    const headers = new Headers(options.headers || {});
-    const token = getToken();
-    if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
-    }
-    return fetch(`${API_BASE}${path}`, { ...options, headers });
-}
-
-function normalizeText(value) {
-    const text = (value || '').trim();
-    return text || null;
-}
-
-function normalizeUrl(value) {
-    const text = (value || '').trim();
-    return text || null;
-}
-
-function selectedTagIdsFromContainer(containerId) {
-    return Array.from(document.querySelectorAll(`#${containerId} .tag-choice.active`))
-        .map((item) => Number(item.dataset.tagId))
-        .filter((value) => Number.isInteger(value));
-}
-
-function toDateTimeLocalValue(value) {
-    if (!value) return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    const offset = date.getTimezoneOffset();
-    const local = new Date(date.getTime() - offset * 60000);
-    return local.toISOString().slice(0, 16);
-}
-
-function includesText(haystack, needle) {
-    return (haystack || '').toLowerCase().includes((needle || '').toLowerCase());
-}
-
-function tagCategoryLabel(category) {
-    if (category === 'tech') return 'Технология';
-    if (category === 'level') return 'Уровень';
-    if (category === 'employment_type') return 'Занятость';
-    if (category === 'format') return 'Формат';
-    return category;
-}
-
-function formatDate(dateString) {
-    if (!dateString) return 'Без срока';
-    return new Date(dateString).toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-    });
-}
-
-function renderAlert(container, kind, text) {
-    container.innerHTML = '';
-    container.appendChild(createEl('div', `alert alert-${kind} mb-0`, text));
-}
-
-function showNotice(kind, text) {
-    const container = el('app-notice');
-    if (!container) return;
-
-    container.innerHTML = '';
-    const alert = createEl('div', `alert alert-${kind} alert-dismissible fade show`, text);
-    alert.setAttribute('role', 'alert');
-
-    const closeBtn = createEl('button', 'btn-close');
-    closeBtn.type = 'button';
-    closeBtn.setAttribute('data-bs-dismiss', 'alert');
-    closeBtn.setAttribute('aria-label', 'Закрыть');
-    alert.appendChild(closeBtn);
-
-    container.appendChild(alert);
-
-    window.setTimeout(() => {
-        if (!alert.isConnected) return;
-        const instance = window.bootstrap.Alert.getOrCreateInstance(alert);
-        instance.close();
-    }, 3500);
-}
-
-function buildOpportunityPopup(opportunity) {
-    const popup = createEl('div', 'opportunity-popup');
-    popup.appendChild(createEl('h6', '', opportunity.title));
-    popup.appendChild(createEl('div', 'company', opportunity.employer_name || 'Работодатель'));
-    popup.appendChild(createEl('div', 'small text-muted', opportunityTypeLabel(opportunity.type)));
-
-    if (opportunity.salary_range) {
-        popup.appendChild(createEl('div', 'salary', `💰 ${opportunity.salary_range}`));
-    }
-
-    const tags = Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => `#${tag.name}`).join(' ') : '';
-    if (tags) {
-        popup.appendChild(createEl('div', 'tags', tags));
-    }
-    popup.appendChild(createEl('small', '', `${opportunity.location} | ${workFormatLabel(opportunity.work_format)}`));
-    return popup;
-}
-
-function loadYandexMaps() {
-    if (!YANDEX_API_KEY) {
-        return Promise.reject(new Error('Не указан API-ключ Яндекс Карт'));
-    }
-    if (window.ymaps) {
-        return Promise.resolve(window.ymaps);
-    }
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = `https://api-maps.yandex.ru/2.1/?apikey=${YANDEX_API_KEY}&lang=ru_RU`;
-        script.async = true;
-        script.onerror = () => reject(new Error('Не удалось загрузить Яндекс Карты'));
-        script.onload = () => {
-            window.ymaps.ready(() => resolve(window.ymaps));
-        };
-        document.head.appendChild(script);
-    });
-}
-
-async function initMap() {
-    if (!ymapsReadyPromise) {
-        ymapsReadyPromise = loadYandexMaps();
-    }
-    const ymaps = await ymapsReadyPromise;
-    map = new ymaps.Map('map', {
-        center: [55.7558, 37.6176],
-        zoom: 10,
-        controls: ['zoomControl'],
-    });
-}
-
-function renderMap(opportunities) {
-    if (!map || !window.ymaps) return;
-    const ymaps = window.ymaps;
-
-    placemarks.forEach((placemark) => map.geoObjects.remove(placemark));
-    placemarks = [];
-
-    opportunities.forEach((opportunity) => {
-        if (!hasCoords(opportunity)) return;
-
-        const popup = buildOpportunityPopup(opportunity);
-        const placemark = new ymaps.Placemark(
-            [opportunity.lat, opportunity.lng],
-            {
-                balloonContentHeader: opportunity.title,
-                balloonContentBody: popup.outerHTML,
-            },
-            {
-                preset: state.selectedOpportunityId === opportunity.id
-                    ? 'islands#darkBlueCircleDotIcon'
-                    : isFavoriteOpportunity(opportunity.id)
-                        ? 'islands#redCircleDotIcon'
-                        : isFavoriteCompany(opportunity.employer_id)
-                            ? 'islands#orangeCircleDotIcon'
-                            : 'islands#blueCircleDotIcon',
-            }
-        );
-
-        placemark.events.add('click', () => {
-            state.selectedOpportunityId = opportunity.id;
-            renderSelectedOpportunity();
-            renderOpportunitiesSection();
-        });
-
-        map.geoObjects.add(placemark);
-        placemarks.push(placemark);
-    });
-}
-
-function centerOnOpportunity(opportunity) {
-    if (map && hasCoords(opportunity)) {
-        map.setCenter([opportunity.lat, opportunity.lng], 14, { duration: 250 });
-    }
-}
-
-function hasActiveOpportunityFilters() {
-    return Boolean(
-        state.opportunityFilters.type
-        || state.opportunityFilters.workFormat
-        || state.opportunityFilters.location
-        || state.opportunityFilters.search
-        || state.opportunityFilters.favorites
-        || state.opportunityFilters.tagIds.length
-    );
-}
-
-function renderList(opportunities) {
-    const list = el('opportunities-list');
-    const count = el('homeOpportunityCount');
-    list.innerHTML = '';
-    if (count) {
-        count.textContent = `${opportunities.length} ${opportunities.length === 1 ? 'результат' : opportunities.length < 5 ? 'результата' : 'результатов'}`;
-    }
-
-    if (!opportunities.length) {
-        const panel = createEl('div', 'empty-state-panel');
-        panel.appendChild(createEl('div', 'empty-state-icon', '✦'));
-        panel.appendChild(createEl('div', 'fw-semibold', hasActiveOpportunityFilters() ? 'По текущим фильтрам ничего не найдено' : 'Пока нет опубликованных возможностей'));
-        panel.appendChild(
-            createEl(
-                'div',
-                'text-muted small',
-                hasActiveOpportunityFilters()
-                    ? 'Попробуй убрать часть фильтров или выбрать другие теги, чтобы расширить поиск.'
-                    : 'Когда работодатели и организаторы добавят карточки, они появятся здесь и на карте.'
-            )
-        );
-        if (hasActiveOpportunityFilters()) {
-            const resetBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Сбросить фильтры');
-            resetBtn.type = 'button';
-            resetBtn.addEventListener('click', resetOpportunityFilters);
-            panel.appendChild(resetBtn);
-        } else {
-            const hint = createEl('div', 'small text-muted', 'Начать можно с регистрации или изучения карты.');
-            panel.appendChild(hint);
-        }
-        list.appendChild(panel);
-        return;
-    }
-
-    opportunities.forEach((opportunity) => {
-        const favoriteOpportunity = isFavoriteOpportunity(opportunity.id);
-        const favoriteCompany = isFavoriteCompany(opportunity.employer_id);
-        const item = createEl(
-            'a',
-            `list-group-item list-group-item-action opportunity-item${state.selectedOpportunityId === opportunity.id ? ' active' : ''}${favoriteOpportunity ? ' favorite-opportunity' : ''}${!favoriteOpportunity && favoriteCompany ? ' favorite-company' : ''}`
-        );
-        item.href = '#';
-
-        const shortDesc = opportunity.description.length > 120
-            ? `${opportunity.description.slice(0, 120)}...`
-            : opportunity.description;
-
-        const header = createEl('div', 'd-flex w-100 justify-content-between gap-2');
-        const titleWrap = createEl('div');
-        titleWrap.appendChild(createEl('h6', 'mb-1', opportunity.title));
-        titleWrap.appendChild(createEl('div', 'small text-muted', opportunity.employer_name || 'Работодатель'));
-        header.appendChild(titleWrap);
-
-        const badges = createEl('div', 'd-flex flex-wrap gap-1 justify-content-end');
-        badges.appendChild(createEl('small', 'badge bg-secondary', opportunityTypeLabel(opportunity.type)));
-        if (favoriteOpportunity) {
-            badges.appendChild(createEl('small', 'badge text-bg-danger', 'Избр. вакансия'));
-        } else if (favoriteCompany) {
-            badges.appendChild(createEl('small', 'badge text-bg-warning', 'Избр. компания'));
-        }
-        header.appendChild(badges);
-
-        const desc = createEl('p', 'mb-1', shortDesc);
-        const meta = createEl('small');
-        const icon = createEl('i', 'bi bi-geo-alt');
-        meta.appendChild(icon);
-        meta.append(` ${opportunity.location} | ${workFormatLabel(opportunity.work_format)}`);
-        if (opportunity.salary_range) {
-            meta.append(` | ${opportunity.salary_range}`);
-        }
-
-        item.appendChild(header);
-        item.appendChild(desc);
-        item.appendChild(meta);
-
-        item.addEventListener('click', (event) => {
-            event.preventDefault();
-            state.selectedOpportunityId = opportunity.id;
-            renderSelectedOpportunity();
-            renderList(opportunities);
-            centerOnOpportunity(opportunity);
-            renderMap(opportunities);
-        });
-
-        list.appendChild(item);
-    });
-}
-
-function getFilteredOpportunities() {
-    const filters = state.opportunityFilters;
-    return state.opportunities.filter((opportunity) => {
-        if (filters.type && opportunity.type !== filters.type) return false;
-        if (filters.workFormat && opportunity.work_format !== filters.workFormat) return false;
-        if (filters.location && !includesText(opportunity.location, filters.location)) return false;
-        if (filters.favorites === 'vacancies' && !isFavoriteOpportunity(opportunity.id)) return false;
-        if (filters.favorites === 'companies' && !isFavoriteCompany(opportunity.employer_id)) return false;
-        if (filters.favorites === 'all' && !isFavoriteOpportunity(opportunity.id) && !isFavoriteCompany(opportunity.employer_id)) return false;
-        if (filters.tagIds.length) {
-            const opportunityTagIds = Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.id) : [];
-            if (!filters.tagIds.every((tagId) => opportunityTagIds.includes(tagId))) return false;
-        }
-        if (filters.search) {
-            const tags = Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.name).join(' ') : '';
-            const text = [
-                opportunity.title,
-                opportunity.employer_name,
-                opportunity.description,
-                opportunity.location,
-                opportunity.type,
-                opportunity.work_format,
-                tags,
-            ].join(' ');
-            if (!includesText(text, filters.search)) return false;
-        }
-        return true;
-    });
-}
-
-function syncSelectedOpportunity(filteredOpportunities) {
-    if (!filteredOpportunities.length) {
-        state.selectedOpportunityId = null;
-        return;
-    }
-    const selectedStillVisible = filteredOpportunities.some((item) => item.id === state.selectedOpportunityId);
-    if (!selectedStillVisible && state.activeView !== 'home') {
-        state.selectedOpportunityId = filteredOpportunities[0].id;
-    } else if (!selectedStillVisible) {
-        state.selectedOpportunityId = null;
-    }
-}
-
-function renderOpportunitiesSection() {
-    const filtered = getFilteredOpportunities();
-    syncSelectedOpportunity(filtered);
-    renderList(filtered);
-    renderSelectedOpportunity();
-    renderMap(filtered);
-    renderFavoritesSummary();
-    renderWorkspaceHero();
-}
-
-function applyOpportunityFilters() {
-    state.opportunityFilters.type = el('filterType').value;
-    state.opportunityFilters.workFormat = el('filterWorkFormat').value;
-    state.opportunityFilters.location = el('filterLocation').value.trim();
-    state.opportunityFilters.search = el('filterSearch').value.trim();
-    state.opportunityFilters.favorites = el('filterFavorites').value;
-    state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
-    renderOpportunitiesSection();
-}
-
-function resetOpportunityFilters() {
-    el('filterType').value = '';
-    el('filterWorkFormat').value = '';
-    el('filterLocation').value = '';
-    el('filterSearch').value = '';
-    el('filterFavorites').value = '';
-    state.opportunityFilters.tagIds = [];
-    renderTagChoices('filterTagOptions', []);
-    applyOpportunityFilters();
-}
-
-function renderFavoritesSummary() {
-    const container = el('favorites-summary');
-    const badge = el('favoriteSummaryBadge');
-    container.innerHTML = '';
-
-    const favoriteOpportunities = state.opportunities.filter((item) => isFavoriteOpportunity(item.id));
-    const favoriteCompanies = state.favoriteCompanyIds
-        .map((companyId) => {
-            const currentOpportunity = state.opportunities.find((item) => item.employer_id === companyId) || null;
-            return {
-                companyId,
-                companyName: currentOpportunity?.employer_name || state.favoriteCompanyNames[String(companyId)] || 'Компания',
-                currentOpportunity,
-            };
-        });
-
-    badge.textContent = String(favoriteOpportunities.length + favoriteCompanies.length);
-
-    if (!favoriteOpportunities.length && !favoriteCompanies.length) {
-        container.appendChild(createEl('p', 'text-muted mb-0', 'Пока ничего не добавлено в избранное.'));
-        return;
-    }
-
-    favoriteCompanies.forEach((company) => {
-        const chip = createEl('button', 'favorite-chip company', company.companyName);
-        chip.type = 'button';
-        chip.addEventListener('click', () => {
-            el('filterFavorites').value = 'companies';
-            state.opportunityFilters.favorites = 'companies';
-            if (company.currentOpportunity) {
-                state.selectedOpportunityId = company.currentOpportunity.id;
-            }
-            renderOpportunitiesSection();
-            if (company.currentOpportunity) {
-                centerOnOpportunity(company.currentOpportunity);
-            }
-        });
-        container.appendChild(chip);
-    });
-
-    favoriteOpportunities.forEach((opportunity) => {
-        const chip = createEl('button', 'favorite-chip opportunity', opportunity.title);
-        chip.type = 'button';
-        chip.addEventListener('click', () => {
-            state.selectedOpportunityId = opportunity.id;
-            renderOpportunitiesSection();
-            centerOnOpportunity(opportunity);
-        });
-        container.appendChild(chip);
-    });
 }
 
 function workspaceMetaForView() {
@@ -727,309 +330,6 @@ function renderWorkspaceHero() {
     }
 }
 
-function renderTagChoices(containerId, selectedIds = [], { toggleable = true } = {}) {
-    const container = el(containerId);
-    if (!container) return;
-    container.innerHTML = '';
-
-    if (!state.tags.length) {
-        container.appendChild(createEl('span', 'text-muted small', 'Теги пока не загружены.'));
-        return;
-    }
-
-    state.tags.forEach((tag) => {
-        const button = createEl('button', `tag-choice${selectedIds.includes(tag.id) ? ' active' : ''}`, tag.name);
-        button.type = 'button';
-        button.dataset.tagId = String(tag.id);
-        button.title = tagCategoryLabel(tag.category);
-        if (toggleable) {
-            button.addEventListener('click', () => {
-                button.classList.toggle('active');
-                if (containerId === 'filterTagOptions') {
-                    state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
-                    renderOpportunitiesSection();
-                }
-            });
-        }
-        container.appendChild(button);
-    });
-}
-
-function renderTagLibrary() {
-    ['tag-library', 'curator-tag-library'].forEach((containerId) => {
-        const container = el(containerId);
-        if (!container) return;
-        container.innerHTML = '';
-        if (!state.tags.length) {
-            container.appendChild(createEl('p', 'text-muted mb-0', 'Теги пока не загружены.'));
-            return;
-        }
-
-        state.tags.forEach((tag) => {
-            const item = createEl('span', 'tag-library-item');
-            item.textContent = tag.name;
-            item.appendChild(createEl('small', 'ms-2', tagCategoryLabel(tag.category)));
-            container.appendChild(item);
-        });
-    });
-}
-
-function renderSelectedOpportunity() {
-    const container = el('opportunity-details');
-    const detailsCard = el('homeDetailsCard');
-    const opportunity = selectedOpportunity();
-    container.innerHTML = '';
-
-    if (!opportunity) {
-        detailsCard.classList.add('d-none');
-        container.appendChild(createEl('h5', 'card-title', 'Выбери возможность'));
-        container.appendChild(createEl('p', 'text-muted mb-0', 'Здесь появятся детали вакансии и кнопка отклика.'));
-        return;
-    }
-
-    detailsCard.classList.remove('d-none');
-    container.appendChild(createEl('h5', 'card-title', opportunity.title));
-    container.appendChild(createEl('p', 'detail-meta mb-1', opportunity.employer_name || 'Работодатель'));
-    container.appendChild(createEl('p', 'detail-meta mb-2', `${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
-    container.appendChild(createEl('p', 'mb-3', opportunity.description));
-
-    const metaList = createEl('div', 'small text-muted mb-3');
-    metaList.appendChild(createEl('div', '', `Публикация: ${formatDate(opportunity.published_at)}`));
-    metaList.appendChild(createEl('div', '', `Срок отклика: ${formatDate(opportunity.expires_at)}`));
-    if (opportunity.salary_range) {
-        metaList.appendChild(createEl('div', '', `Вознаграждение: ${opportunity.salary_range}`));
-    }
-    container.appendChild(metaList);
-
-    if (Array.isArray(opportunity.tags) && opportunity.tags.length) {
-        const tagsRow = createEl('div', 'd-flex flex-wrap gap-2 mb-3');
-        opportunity.tags.forEach((tag) => {
-            tagsRow.appendChild(createEl('span', 'badge text-bg-light', `#${tag.name}`));
-        });
-        container.appendChild(tagsRow);
-    }
-
-    const actionWrap = createEl('div', 'd-flex flex-wrap gap-2 align-items-center detail-actions');
-
-    const favoriteOpportunityBtn = createEl(
-        'button',
-        isFavoriteOpportunity(opportunity.id) ? 'btn btn-danger' : 'btn btn-outline-danger',
-        isFavoriteOpportunity(opportunity.id) ? 'Убрать вакансию из избранного' : 'В избранное: вакансия'
-    );
-    favoriteOpportunityBtn.type = 'button';
-    favoriteOpportunityBtn.addEventListener('click', () => toggleFavoriteOpportunity(opportunity.id));
-    actionWrap.appendChild(favoriteOpportunityBtn);
-
-    const favoriteCompanyBtn = createEl(
-        'button',
-        isFavoriteCompany(opportunity.employer_id) ? 'btn btn-warning' : 'btn btn-outline-warning',
-        isFavoriteCompany(opportunity.employer_id) ? 'Убрать компанию из избранного' : 'В избранное: компания'
-    );
-    favoriteCompanyBtn.type = 'button';
-    favoriteCompanyBtn.addEventListener('click', () => toggleFavoriteCompany(opportunity.employer_id, opportunity.employer_name));
-    actionWrap.appendChild(favoriteCompanyBtn);
-
-    if (!state.currentUser) {
-        actionWrap.appendChild(createEl('span', 'text-muted small', 'Войди как соискатель, чтобы откликнуться.'));
-    } else if (state.currentUser.role !== 'applicant') {
-        actionWrap.appendChild(createEl('span', 'text-muted small', 'Отклик доступен только для аккаунта соискателя.'));
-    } else {
-        const applyBtn = createEl('button', 'btn btn-primary', 'Откликнуться');
-        applyBtn.type = 'button';
-        applyBtn.addEventListener('click', () => openApplyModal(opportunity.id));
-        actionWrap.appendChild(applyBtn);
-    }
-
-    const focusBtn = createEl('button', 'btn btn-outline-secondary', 'Показать на карте');
-    focusBtn.type = 'button';
-    focusBtn.disabled = !hasCoords(opportunity);
-    focusBtn.addEventListener('click', () => centerOnOpportunity(opportunity));
-    actionWrap.appendChild(focusBtn);
-
-    if (state.currentUser?.role === 'employer' && state.currentUser.id === opportunity.employer_id) {
-        const editBtn = createEl('button', 'btn btn-outline-primary', 'Редактировать мою карточку');
-        editBtn.type = 'button';
-        editBtn.addEventListener('click', () => openEmployerOpportunityModal(opportunity.id));
-        actionWrap.appendChild(editBtn);
-    }
-
-    container.appendChild(actionWrap);
-    renderContactsSection();
-}
-
-function statusLabel(status) {
-    if (status === 'accepted') return 'Принят';
-    if (status === 'rejected') return 'Отклонен';
-    if (status === 'reserve') return 'В резерве';
-    return 'На рассмотрении';
-}
-
-function contactStatusLabel(status) {
-    if (status === 'accepted') return 'Контакт подтвержден';
-    if (status === 'declined') return 'Заявка отклонена';
-    return 'Заявка отправлена';
-}
-
-function curatorRoleLabel(role) {
-    if (role === 'employer') return 'Работодатель';
-    if (role === 'applicant') return 'Соискатель';
-    if (role === 'curator') return 'Куратор';
-    if (role === 'admin') return 'Администратор';
-    return role;
-}
-
-function currentRoleLabel(role) {
-    if (role === 'applicant') return 'Соискатель';
-    if (role === 'employer') return 'Работодатель';
-    if (role === 'curator') return 'Куратор';
-    if (role === 'admin') return 'Администратор';
-    return role;
-}
-
-function opportunityTypeLabel(type) {
-    if (type === 'internship') return 'Стажировка';
-    if (type === 'job') return 'Работа';
-    if (type === 'mentorship') return 'Менторство';
-    if (type === 'event') return 'Событие';
-    return type;
-}
-
-function workFormatLabel(workFormat) {
-    if (workFormat === 'office') return 'Офис';
-    if (workFormat === 'hybrid') return 'Гибрид';
-    if (workFormat === 'remote') return 'Удаленно';
-    return workFormat;
-}
-
-function renderResponses() {
-    const container = el('responses-list');
-    const refreshBtn = el('refreshResponsesBtn');
-    container.innerHTML = '';
-
-    if (!state.currentUser || state.currentUser.role !== 'applicant') {
-        refreshBtn.classList.add('d-none');
-        container.appendChild(createEl('p', 'text-muted mb-0', 'Войди как соискатель, чтобы видеть свои отклики.'));
-        return;
-    }
-
-    refreshBtn.classList.remove('d-none');
-
-    if (!state.responses.length) {
-        container.appendChild(createEl('p', 'text-muted mb-0', 'Откликов пока нет.'));
-        return;
-    }
-
-    state.responses.forEach((response) => {
-        const item = createEl('div', 'response-item py-2');
-        const title = state.opportunities.find((opportunity) => opportunity.id === response.opportunity_id)?.title
-            || `Вакансия #${response.opportunity_id}`;
-
-        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
-        top.appendChild(createEl('div', 'fw-semibold', title));
-        top.appendChild(createEl('span', `status-pill ${response.status}`, statusLabel(response.status)));
-
-        item.appendChild(top);
-        item.appendChild(createEl('div', 'small text-muted mt-1', `Отправлен: ${formatDate(response.created_at)}`));
-
-        if (response.cover_letter) {
-            item.appendChild(createEl('div', 'small mt-2', response.cover_letter));
-        }
-
-        container.appendChild(item);
-    });
-    renderWorkspaceHero();
-}
-
-async function sendContactRequest(addresseeId) {
-    const response = await apiFetch('/contacts/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ addressee_id: addresseeId }),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось отправить заявку в контакты.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось отправить заявку в контакты.');
-        return;
-    }
-
-    await loadContacts();
-    showNotice('success', 'Заявка в контакты отправлена.');
-}
-
-async function updateContactStatus(contactId, status) {
-    const response = await apiFetch(`/contacts/${contactId}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status }),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось обновить статус контакта.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось обновить статус контакта.');
-        return;
-    }
-
-    await loadContacts();
-    showNotice('success', status === 'accepted' ? 'Контакт подтвержден.' : 'Заявка отклонена.');
-}
-
-function openRecommendModal(peerId) {
-    const contact = state.contacts.find((item) => item.peer.id === peerId && item.status === 'accepted');
-    const opportunity = selectedOpportunity();
-    if (!contact) {
-        showNotice('danger', 'Сначала нужен подтвержденный контакт.');
-        return;
-    }
-    if (!opportunity) {
-        showNotice('danger', 'Сначала выбери вакансию или мероприятие на главной.');
-        return;
-    }
-
-    state.pendingRecommendationPeerId = peerId;
-    el('recommendPeerMeta').textContent = `Кому: ${contact.peer.applicant_profile?.full_name || contact.peer.display_name}`;
-    el('recommendOpportunityMeta').textContent = `Что рекомендуешь: ${opportunity.title} | ${opportunity.employer_name}`;
-    el('recommendMessage').value = '';
-    recommendModal.show();
-}
-
-async function handleRecommendationSubmit(event) {
-    event.preventDefault();
-    const opportunity = selectedOpportunity();
-    if (!state.pendingRecommendationPeerId || !opportunity) {
-        showNotice('danger', 'Не удалось определить контакт или выбранную возможность.');
-        return;
-    }
-
-    const response = await apiFetch('/recommendations/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            recommended_user_id: state.pendingRecommendationPeerId,
-            opportunity_id: opportunity.id,
-            message: normalizeText(el('recommendMessage').value),
-        }),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось отправить рекомендацию.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось отправить рекомендацию.');
-        return;
-    }
-
-    recommendModal.hide();
-    event.target.reset();
-    state.pendingRecommendationPeerId = null;
-    await loadRecommendations();
-    showNotice('success', 'Рекомендация отправлена контакту.');
-}
-
 async function submitTagForm(nameInputId, categoryInputId, formElement) {
     const response = await apiFetch('/tags/', {
         method: 'POST',
@@ -1061,1047 +361,6 @@ async function handleTagSubmit(event) {
 async function handleCuratorTagSubmit(event) {
     event.preventDefault();
     await submitTagForm('curatorTagNameInput', 'curatorTagCategoryInput', event.target);
-}
-
-async function openApplicantProfileModal(userId) {
-    const container = el('applicantProfileDetails');
-    container.innerHTML = '<p class="text-muted mb-0">Загрузка профиля...</p>';
-    applicantProfileModal.show();
-
-    const response = await apiFetch(`/profiles/applicants/${userId}`);
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось загрузить профиль.' }));
-        container.innerHTML = '';
-        container.appendChild(createEl('div', 'alert alert-warning mb-0', typeof error.detail === 'string' ? error.detail : 'Не удалось загрузить профиль.'));
-        return;
-    }
-
-    const data = await response.json();
-    const profile = data.applicant_profile;
-    container.innerHTML = '';
-    container.appendChild(createEl('h5', 'mb-1', profile.full_name || data.display_name));
-    container.appendChild(createEl('div', 'small text-muted mb-3', data.is_contact ? 'Контакт в твоей сети' : 'Открытый профиль'));
-
-    const meta = [
-        profile.university,
-        profile.course_or_year,
-    ].filter(Boolean);
-    if (meta.length) {
-        container.appendChild(createEl('div', 'small text-muted mb-2', meta.join(' | ')));
-    }
-    if (profile.skills) {
-        container.appendChild(createEl('div', 'mb-2', `Навыки: ${profile.skills}`));
-    }
-    if (profile.experience) {
-        container.appendChild(createEl('div', 'mb-2', `Опыт: ${profile.experience}`));
-    }
-    if (profile.bio) {
-        container.appendChild(createEl('div', 'mb-3', profile.bio));
-    }
-
-    if (!data.visible_responses.length) {
-        container.appendChild(createEl('div', 'small text-muted', 'Отклики скрыты настройками приватности или пока отсутствуют.'));
-        return;
-    }
-
-    container.appendChild(createEl('h6', 'small text-uppercase text-muted mt-3 mb-2', 'Видимые отклики'));
-    data.visible_responses.forEach((responseItem) => {
-        const item = createEl('div', 'contact-item py-2');
-        item.appendChild(createEl('div', 'fw-semibold', `Отклик на возможность #${responseItem.opportunity_id}`));
-        item.appendChild(createEl('div', 'small text-muted mt-1', `Статус: ${statusLabel(responseItem.status)}`));
-        if (responseItem.cover_letter) {
-            item.appendChild(createEl('div', 'small mt-2', responseItem.cover_letter));
-        }
-        container.appendChild(item);
-    });
-}
-
-function renderContactsSection() {
-    const suggestionsContainer = el('contact-suggestions-list');
-    const contactsContainer = el('contacts-list');
-    const recommendationsContainer = el('recommendations-list');
-    const refreshBtn = el('refreshContactsBtn');
-    suggestionsContainer.innerHTML = '';
-    contactsContainer.innerHTML = '';
-    recommendationsContainer.innerHTML = '';
-
-    if (!state.currentUser || state.currentUser.role !== 'applicant') {
-        refreshBtn.classList.add('d-none');
-        suggestionsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Войди как соискатель, чтобы расширять сеть контактов.'));
-        contactsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Контакты и заявки в сеть появятся после входа.'));
-        recommendationsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Рекомендации появятся после входа.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    refreshBtn.classList.remove('d-none');
-
-    if (!state.contactSuggestions.length) {
-        suggestionsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Подходящих открытых профилей пока нет или все уже у тебя в сети.'));
-    } else {
-        state.contactSuggestions.forEach((person) => {
-            const item = createEl('div', 'contact-item py-2');
-            const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
-            top.appendChild(createEl('div', 'fw-semibold', person.applicant_profile?.full_name || person.display_name));
-            top.appendChild(createEl('span', 'status-pill pending', 'Открытый профиль'));
-            item.appendChild(top);
-
-            const metaParts = [
-                person.display_name,
-                person.applicant_profile?.university,
-                person.applicant_profile?.course_or_year,
-            ].filter(Boolean);
-            if (metaParts.length) {
-                item.appendChild(createEl('div', 'small text-muted mt-1', metaParts.join(' | ')));
-            }
-            if (person.applicant_profile?.skills) {
-                item.appendChild(createEl('div', 'small mt-1', `Навыки: ${person.applicant_profile.skills}`));
-            }
-            if (person.applicant_profile?.bio) {
-                item.appendChild(createEl('div', 'small text-muted mt-1', person.applicant_profile.bio));
-            }
-
-            const action = createEl('div', 'contact-actions');
-            const profileBtn = createEl('button', 'btn btn-sm btn-outline-secondary', 'Открыть профиль');
-            profileBtn.type = 'button';
-            profileBtn.addEventListener('click', () => {
-                void openApplicantProfileModal(person.id);
-            });
-            action.appendChild(profileBtn);
-
-            const requestBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Добавить в контакты');
-            requestBtn.type = 'button';
-            requestBtn.addEventListener('click', () => {
-                void sendContactRequest(person.id);
-            });
-            action.appendChild(requestBtn);
-            item.appendChild(action);
-            suggestionsContainer.appendChild(item);
-        });
-    }
-
-    if (!state.contacts.length) {
-        contactsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет ни входящих, ни подтвержденных контактов.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    state.contacts.forEach((contact) => {
-        const item = createEl('div', 'contact-item py-2');
-        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
-        top.appendChild(createEl('div', 'fw-semibold', contact.peer.applicant_profile?.full_name || contact.peer.display_name));
-        const pillClass = contact.status === 'accepted' ? 'accepted' : contact.status === 'declined' ? 'rejected' : 'pending';
-        top.appendChild(createEl('span', `status-pill ${pillClass}`, contactStatusLabel(contact.status)));
-        item.appendChild(top);
-
-        const directionText = contact.direction === 'incoming' ? 'Входящая заявка' : 'Исходящая заявка';
-        const metaParts = [
-            directionText,
-            contact.peer.applicant_profile?.university,
-            contact.peer.applicant_profile?.course_or_year,
-        ].filter(Boolean);
-        item.appendChild(createEl('div', 'small text-muted mt-1', metaParts.join(' | ')));
-
-        if (contact.peer.applicant_profile?.skills) {
-            item.appendChild(createEl('div', 'small mt-1', `Навыки: ${contact.peer.applicant_profile.skills}`));
-        }
-        if (contact.peer.applicant_profile?.bio) {
-            item.appendChild(createEl('div', 'small text-muted mt-1', contact.peer.applicant_profile.bio));
-        }
-
-        if (contact.direction === 'incoming' && contact.status === 'pending') {
-            const actions = createEl('div', 'contact-actions');
-            const profileBtn = createEl('button', 'btn btn-sm btn-outline-secondary', 'Открыть профиль');
-            profileBtn.type = 'button';
-            profileBtn.addEventListener('click', () => {
-                void openApplicantProfileModal(contact.peer.id);
-            });
-            actions.appendChild(profileBtn);
-
-            const acceptBtn = createEl('button', 'btn btn-sm btn-outline-success', 'Принять');
-            acceptBtn.type = 'button';
-            acceptBtn.addEventListener('click', () => {
-                void updateContactStatus(contact.id, 'accepted');
-            });
-            actions.appendChild(acceptBtn);
-
-            const declineBtn = createEl('button', 'btn btn-sm btn-outline-danger', 'Отклонить');
-            declineBtn.type = 'button';
-            declineBtn.addEventListener('click', () => {
-                void updateContactStatus(contact.id, 'declined');
-            });
-            actions.appendChild(declineBtn);
-            item.appendChild(actions);
-        } else if (contact.status === 'accepted') {
-            const actions = createEl('div', 'contact-actions');
-            const profileBtn = createEl('button', 'btn btn-sm btn-outline-secondary', 'Открыть профиль');
-            profileBtn.type = 'button';
-            profileBtn.addEventListener('click', () => {
-                void openApplicantProfileModal(contact.peer.id);
-            });
-            actions.appendChild(profileBtn);
-
-            const recommendBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Рекомендовать выбранную карточку');
-            recommendBtn.type = 'button';
-            recommendBtn.disabled = !selectedOpportunity();
-            recommendBtn.addEventListener('click', () => {
-                openRecommendModal(contact.peer.id);
-            });
-            actions.appendChild(recommendBtn);
-            item.appendChild(actions);
-        }
-
-        contactsContainer.appendChild(item);
-    });
-
-    if (!state.recommendations.length) {
-        recommendationsContainer.appendChild(createEl('p', 'text-muted mb-0', 'Ты еще не отправлял и не получал рекомендации.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    state.recommendations.forEach((recommendation) => {
-        const item = createEl('div', 'contact-item py-2');
-        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
-        top.appendChild(createEl('div', 'fw-semibold', recommendation.opportunity.title));
-        top.appendChild(
-            createEl(
-                'span',
-                `status-pill ${recommendation.direction === 'incoming' ? 'accepted' : 'pending'}`,
-                recommendation.direction === 'incoming' ? 'Рекомендовано тебе' : 'Ты рекомендовал'
-            )
-        );
-        item.appendChild(top);
-        item.appendChild(
-            createEl(
-                'div',
-                'small text-muted mt-1',
-                `${recommendation.peer.display_name} | ${opportunityTypeLabel(recommendation.opportunity.type)} | ${recommendation.opportunity.employer_name}`
-            )
-        );
-        item.appendChild(
-            createEl(
-                'div',
-                'small text-muted',
-                `${workFormatLabel(recommendation.opportunity.work_format)} | ${recommendation.opportunity.location}`
-            )
-        );
-        if (recommendation.message) {
-            item.appendChild(createEl('div', 'small mt-2', recommendation.message));
-        }
-        const actions = createEl('div', 'contact-actions');
-        const profileBtn = createEl('button', 'btn btn-sm btn-outline-secondary', 'Открыть профиль');
-        profileBtn.type = 'button';
-        profileBtn.addEventListener('click', () => {
-            void openApplicantProfileModal(recommendation.peer.id);
-        });
-        actions.appendChild(profileBtn);
-        item.appendChild(actions);
-        recommendationsContainer.appendChild(item);
-    });
-    renderWorkspaceHero();
-}
-
-async function updateEmployerResponseStatus(responseId, status) {
-    const response = await apiFetch(`/responses/${responseId}/status`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status }),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось обновить статус.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось обновить статус.');
-        return;
-    }
-
-    await loadEmployerResponses();
-    showNotice('success', 'Статус отклика обновлен.');
-}
-
-function renderEmployerResponses() {
-    const container = el('employer-responses-list');
-    const refreshBtn = el('refreshEmployerResponsesBtn');
-    container.innerHTML = '';
-
-    if (!state.currentUser || state.currentUser.role !== 'employer') {
-        refreshBtn.classList.add('d-none');
-        container.appendChild(createEl('p', 'text-muted mb-0', 'Войди как работодатель, чтобы видеть входящие отклики.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    refreshBtn.classList.remove('d-none');
-
-    const filteredResponses = getFilteredEmployerResponses();
-
-    if (!state.employerResponses.length) {
-        container.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет входящих откликов.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    if (!filteredResponses.length) {
-        container.appendChild(createEl('p', 'text-muted mb-0', 'По текущим фильтрам откликов не найдено.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    filteredResponses.forEach((response) => {
-        const item = createEl('div', 'response-item py-2');
-        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
-        top.appendChild(createEl('div', 'fw-semibold', response.opportunity_title));
-        top.appendChild(createEl('span', `status-pill ${response.status}`, statusLabel(response.status)));
-
-        item.appendChild(top);
-        item.appendChild(createEl('div', 'small text-muted mt-1', `${response.applicant_name} (${response.applicant_email})`));
-        item.appendChild(createEl('div', 'small text-muted', `Отклик: ${formatDate(response.created_at)}`));
-
-        if (response.cover_letter) {
-            item.appendChild(createEl('div', 'small mt-2', response.cover_letter));
-        }
-
-        const actions = createEl('div', 'response-actions');
-        const statuses = [
-            { value: 'pending', label: 'На рассмотрение', style: 'outline-secondary' },
-            { value: 'accepted', label: 'Принять', style: 'outline-success' },
-            { value: 'rejected', label: 'Отклонить', style: 'outline-danger' },
-            { value: 'reserve', label: 'Резерв', style: 'outline-warning' },
-        ];
-
-        statuses.forEach(({ value, label, style }) => {
-            const button = createEl(
-                'button',
-                `btn btn-sm ${response.status === value ? 'btn-' + style.replace('outline-', '') : 'btn-' + style}`,
-                label
-            );
-            button.type = 'button';
-            if (response.status === value) {
-                button.disabled = true;
-            } else {
-                button.addEventListener('click', () => {
-                    void updateEmployerResponseStatus(response.id, value);
-                });
-            }
-            actions.appendChild(button);
-        });
-
-        item.appendChild(actions);
-        container.appendChild(item);
-    });
-    renderWorkspaceHero();
-}
-
-function getFilteredEmployerOpportunities() {
-    const filters = state.employerOpportunityFilters;
-    return state.employerOpportunities.filter((opportunity) => {
-        if (filters.status === 'active' && !opportunity.is_active) return false;
-        if (filters.status === 'inactive' && opportunity.is_active) return false;
-        if (filters.type && opportunity.type !== filters.type) return false;
-        if (filters.search) {
-            const haystack = `${opportunity.title} ${opportunity.description} ${opportunity.location} ${opportunity.salary_range || ''}`;
-            if (!includesText(haystack, filters.search)) return false;
-        }
-        return true;
-    });
-}
-
-function renderEmployerOpportunities() {
-    const container = el('employer-opportunities-list');
-    const refreshBtn = el('refreshEmployerOpportunitiesBtn');
-    const createBtn = el('openEmployerOpportunityCreateBtn');
-    container.innerHTML = '';
-
-    if (!state.currentUser || state.currentUser.role !== 'employer') {
-        refreshBtn.classList.add('d-none');
-        createBtn.classList.add('d-none');
-        container.appendChild(createEl('p', 'text-muted mb-0', 'Войди как работодатель, чтобы создавать и редактировать свои карточки.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    refreshBtn.classList.remove('d-none');
-    createBtn.classList.remove('d-none');
-    createBtn.disabled = !state.currentUser.is_verified;
-
-    if (!state.currentUser.is_verified) {
-        container.appendChild(createEl('p', 'text-muted mb-2', 'После верификации компании куратором здесь станет доступно создание новых карточек.'));
-    }
-
-    if (!state.employerOpportunities.length) {
-        container.appendChild(createEl('p', 'text-muted mb-0', 'Пока нет созданных карточек. Создай первую возможность для студентов и выпускников.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    const filtered = getFilteredEmployerOpportunities();
-    if (!filtered.length) {
-        container.appendChild(createEl('p', 'text-muted mb-0', 'По текущим фильтрам карточки не найдены.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    filtered.forEach((opportunity) => {
-        const item = createEl('div', 'opportunity-manage-item py-2');
-        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
-        top.appendChild(createEl('div', 'fw-semibold', opportunity.title));
-        top.appendChild(createEl('span', `status-pill ${opportunity.is_active ? 'accepted' : 'rejected'}`, opportunity.is_active ? 'Активна' : 'Закрыта'));
-        item.appendChild(top);
-        item.appendChild(createEl('div', 'opportunity-manage-meta mt-1', `${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
-
-        const secondaryMeta = [];
-        if (opportunity.salary_range) secondaryMeta.push(opportunity.salary_range);
-        if (opportunity.expires_at) secondaryMeta.push(`До ${formatDate(opportunity.expires_at)}`);
-        if (opportunity.event_date) secondaryMeta.push(`Событие ${formatDate(opportunity.event_date)}`);
-        if (secondaryMeta.length) {
-            item.appendChild(createEl('div', 'small text-muted mt-1', secondaryMeta.join(' | ')));
-        }
-
-        item.appendChild(
-            createEl(
-                'div',
-                'small mt-1',
-                opportunity.description.length > 140 ? `${opportunity.description.slice(0, 140)}...` : opportunity.description
-            )
-        );
-
-        const actions = createEl('div', 'opportunity-manage-actions');
-        const editBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Редактировать');
-        editBtn.type = 'button';
-        editBtn.addEventListener('click', () => openEmployerOpportunityModal(opportunity.id));
-        actions.appendChild(editBtn);
-
-        const toggleBtn = createEl(
-            'button',
-            `btn btn-sm ${opportunity.is_active ? 'btn-outline-warning' : 'btn-outline-success'}`,
-            opportunity.is_active ? 'Перевести в архив' : 'Опубликовать'
-        );
-        toggleBtn.type = 'button';
-        toggleBtn.addEventListener('click', () => {
-            void saveEmployerOpportunity({
-                id: opportunity.id,
-                payload: { is_active: !opportunity.is_active },
-                successMessage: opportunity.is_active ? 'Карточка переведена в архив.' : 'Карточка снова опубликована.',
-            });
-        });
-        actions.appendChild(toggleBtn);
-
-        const deleteBtn = createEl('button', 'btn btn-sm btn-outline-danger', 'Удалить');
-        deleteBtn.type = 'button';
-        deleteBtn.addEventListener('click', () => {
-            void deleteEmployerOpportunity(opportunity.id);
-        });
-        actions.appendChild(deleteBtn);
-
-        item.appendChild(actions);
-        container.appendChild(item);
-    });
-    renderWorkspaceHero();
-}
-
-async function updateCuratorUser(userId, payload) {
-    const response = await apiFetch(`/curator/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось обновить пользователя.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось обновить пользователя.');
-        return;
-    }
-
-    await loadCuratorData();
-    showNotice('success', 'Пользователь обновлен.');
-}
-
-async function createCuratorAccount(payload) {
-    const response = await apiFetch('/curator/curators', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось создать куратора.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось создать куратора.');
-        return false;
-    }
-
-    await loadCuratorData();
-    showNotice('success', 'Новый куратор создан.');
-    return true;
-}
-
-async function updateCuratorOpportunity(opportunityId, payload) {
-    const response = await apiFetch(`/curator/opportunities/${opportunityId}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось обновить карточку.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось обновить карточку.');
-        return;
-    }
-
-    await loadCuratorData();
-    await loadOpportunities();
-    showNotice('success', 'Карточка обновлена.');
-}
-
-function getFilteredCuratorUsers() {
-    const filters = state.curatorFilters;
-    return state.curatorUsers.filter((user) => {
-        if (filters.role && user.role !== filters.role) return false;
-        if (user.role === 'employer') {
-            if (filters.verification === 'verified' && !user.is_verified) return false;
-            if (filters.verification === 'unverified' && user.is_verified) return false;
-            if (filters.verification === 'pending' && user.is_verified) return false;
-        } else if (filters.verification === 'pending') {
-            return false;
-        }
-        if (filters.userSearch) {
-            const haystack = `${user.display_name} ${user.email}`;
-            if (!includesText(haystack, filters.userSearch)) return false;
-        }
-        return true;
-    });
-}
-
-function getFilteredCuratorOpportunities() {
-    const filters = state.curatorFilters;
-    return state.curatorOpportunities.filter((opportunity) => {
-        if (filters.opportunityStatus === 'active' && !opportunity.is_active) return false;
-        if (filters.opportunityStatus === 'inactive' && opportunity.is_active) return false;
-        if (filters.opportunitySearch) {
-            const haystack = `${opportunity.title} ${opportunity.employer_name} ${opportunity.location} ${opportunity.description}`;
-            if (!includesText(haystack, filters.opportunitySearch)) return false;
-        }
-        return true;
-    });
-}
-
-function curatorActionLabel(role) {
-    if (role === 'employer') return 'Проверить';
-    if (role === 'applicant') return 'Редактировать';
-    if (role === 'curator') return 'Открыть';
-    if (role === 'admin') return 'Открыть';
-    return 'Редактировать';
-}
-
-function resetCuratorUserForm() {
-    state.pendingCuratorUserId = null;
-    state.pendingCuratorUserRole = null;
-    el('curatorUserModalLabel').textContent = 'Модерация пользователя';
-    el('curatorUserModalMeta').textContent = 'Куратор может обновить статус аккаунта и содержимое профиля.';
-    el('curatorUserDisplayName').value = '';
-    el('curatorApplicantFullName').value = '';
-    el('curatorApplicantUniversity').value = '';
-    el('curatorApplicantCourse').value = '';
-    el('curatorApplicantSkills').value = '';
-    el('curatorApplicantExperience').value = '';
-    el('curatorApplicantBio').value = '';
-    el('curatorApplicantGithub').value = '';
-    el('curatorApplicantPortfolio').value = '';
-    el('curatorApplicantPublic').checked = false;
-    el('curatorApplicantShowResponses').checked = false;
-    el('curatorEmployerCompanyName').value = '';
-    el('curatorEmployerIndustry').value = '';
-    el('curatorEmployerDescription').value = '';
-    el('curatorEmployerWebsite').value = '';
-    el('curatorEmployerSocialLinks').value = '';
-    el('curatorEmployerCity').value = '';
-    el('curatorEmployerAddress').value = '';
-    el('curatorEmployerVerified').checked = false;
-    el('curatorUserActive').checked = true;
-    el('curatorApplicantFields').classList.add('d-none');
-    el('curatorEmployerFields').classList.add('d-none');
-}
-
-function syncCuratorUserModal(role) {
-    el('curatorApplicantFields').classList.toggle('d-none', role !== 'applicant');
-    el('curatorEmployerFields').classList.toggle('d-none', role !== 'employer');
-}
-
-function renderCuratorSection() {
-    const refreshBtn = el('refreshCuratorBtn');
-    const createBtn = el('openCuratorCreateBtn');
-    const adminHint = el('curatorAdminHint');
-    const usersContainer = el('curator-users-list');
-    const opportunitiesContainer = el('curator-opportunities-list');
-    usersContainer.innerHTML = '';
-    opportunitiesContainer.innerHTML = '';
-
-    if (!state.currentUser || !['curator', 'admin'].includes(state.currentUser.role)) {
-        refreshBtn.classList.add('d-none');
-        createBtn.classList.add('d-none');
-        adminHint.textContent = 'Здесь можно модерировать пользователей, карточки и справочник тегов.';
-        usersContainer.appendChild(createEl('p', 'text-muted mb-0', 'Войди как куратор, чтобы модерировать пользователей.'));
-        opportunitiesContainer.appendChild(createEl('p', 'text-muted mb-0', 'Карточки для модерации появятся здесь.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    refreshBtn.classList.remove('d-none');
-    createBtn.classList.toggle('d-none', state.currentUser.role !== 'admin');
-    adminHint.textContent = state.currentUser.role === 'admin'
-        ? 'Администратор может управлять всеми аккаунтами и создавать новых кураторов.'
-        : 'Куратор модерирует пользователей, карточки возможностей и справочник тегов.';
-
-    const filteredUsers = getFilteredCuratorUsers();
-    if (!filteredUsers.length) {
-        usersContainer.appendChild(createEl('p', 'text-muted mb-0', 'Пользователи по текущим фильтрам не найдены.'));
-    } else {
-        filteredUsers.forEach((user) => {
-            const item = createEl('div', 'moderation-item py-2');
-            const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
-            top.appendChild(createEl('div', 'fw-semibold', user.display_name));
-            top.appendChild(createEl('span', `status-pill ${user.is_active ? 'accepted' : 'rejected'}`, user.is_active ? 'Активен' : 'Отключен'));
-            item.appendChild(top);
-            item.appendChild(createEl('div', 'moderation-meta mt-1', `${curatorRoleLabel(user.role)} | ${user.email}`));
-
-            if (user.role === 'employer') {
-                const verificationText = user.is_verified ? 'Компания верифицирована' : 'Ожидает верификации';
-                item.appendChild(createEl('div', 'moderation-meta', verificationText));
-                if (user.employer_profile?.company_name) {
-                    item.appendChild(createEl('div', 'small mt-1', user.employer_profile.company_name));
-                }
-            } else if (user.role === 'applicant' && user.applicant_profile) {
-                const profileBits = [
-                    user.applicant_profile.full_name,
-                    user.applicant_profile.university,
-                    user.applicant_profile.course_or_year,
-                ].filter(Boolean);
-                if (profileBits.length) {
-                    item.appendChild(createEl('div', 'moderation-meta', profileBits.join(' | ')));
-                }
-                if (user.applicant_profile.skills) {
-                    item.appendChild(
-                        createEl(
-                            'div',
-                            'small mt-1',
-                            user.applicant_profile.skills.length > 120
-                                ? `${user.applicant_profile.skills.slice(0, 120)}...`
-                                : user.applicant_profile.skills
-                        )
-                    );
-                }
-            }
-
-            const actions = createEl('div', 'moderation-actions');
-            const editBtn = createEl('button', 'btn btn-sm btn-outline-primary', curatorActionLabel(user.role));
-            editBtn.type = 'button';
-            editBtn.disabled = ['curator', 'admin'].includes(user.role) && state.currentUser.role !== 'admin';
-            if (!editBtn.disabled) {
-                editBtn.addEventListener('click', () => openCuratorUserModal(user.id));
-            }
-            actions.appendChild(editBtn);
-
-            const verifyBtn = createEl(
-                'button',
-                `btn btn-sm ${user.is_verified ? 'btn-outline-secondary' : 'btn-outline-success'}`,
-                user.is_verified ? 'Снять верификацию' : 'Верифицировать'
-            );
-            verifyBtn.type = 'button';
-            verifyBtn.disabled = user.role !== 'employer';
-            if (user.role === 'employer') {
-                verifyBtn.addEventListener('click', () => {
-                    void updateCuratorUser(user.id, { is_verified: !user.is_verified });
-                });
-            }
-            actions.appendChild(verifyBtn);
-
-            const activeBtn = createEl(
-                'button',
-                `btn btn-sm ${user.is_active ? 'btn-outline-danger' : 'btn-outline-primary'}`,
-                user.is_active ? 'Отключить' : 'Активировать'
-            );
-            activeBtn.type = 'button';
-            activeBtn.addEventListener('click', () => {
-                void updateCuratorUser(user.id, { is_active: !user.is_active });
-            });
-            actions.appendChild(activeBtn);
-
-            item.appendChild(actions);
-            usersContainer.appendChild(item);
-        });
-    }
-
-    const filteredOpportunities = getFilteredCuratorOpportunities();
-    if (!filteredOpportunities.length) {
-        opportunitiesContainer.appendChild(createEl('p', 'text-muted mb-0', 'Карточки по текущим фильтрам не найдены.'));
-        renderWorkspaceHero();
-        return;
-    }
-
-    filteredOpportunities.forEach((opportunity) => {
-        const item = createEl('div', 'moderation-item py-2');
-        const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2');
-        top.appendChild(createEl('div', 'fw-semibold', opportunity.title));
-        top.appendChild(createEl('span', `status-pill ${opportunity.is_active ? 'accepted' : 'rejected'}`, opportunity.is_active ? 'Активна' : 'Скрыта'));
-        item.appendChild(top);
-        item.appendChild(createEl('div', 'moderation-meta mt-1', `${opportunity.employer_name} | ${opportunity.location}`));
-        item.appendChild(createEl('div', 'small mt-1', opportunity.description.length > 120 ? `${opportunity.description.slice(0, 120)}...` : opportunity.description));
-
-        const actions = createEl('div', 'moderation-actions');
-        const editBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Редактировать');
-        editBtn.type = 'button';
-        editBtn.addEventListener('click', () => openCuratorOpportunityModal(opportunity.id));
-        actions.appendChild(editBtn);
-
-        const toggleBtn = createEl(
-            'button',
-            `btn btn-sm ${opportunity.is_active ? 'btn-outline-danger' : 'btn-outline-success'}`,
-            opportunity.is_active ? 'Скрыть карточку' : 'Опубликовать'
-        );
-        toggleBtn.type = 'button';
-        toggleBtn.addEventListener('click', () => {
-            void updateCuratorOpportunity(opportunity.id, { is_active: !opportunity.is_active });
-        });
-        actions.appendChild(toggleBtn);
-        item.appendChild(actions);
-        opportunitiesContainer.appendChild(item);
-    });
-    renderWorkspaceHero();
-}
-
-function getFilteredEmployerResponses() {
-    const filters = state.employerResponseFilters;
-    return state.employerResponses.filter((response) => {
-        if (filters.status && response.status !== filters.status) return false;
-        if (filters.search) {
-            const combined = `${response.opportunity_title} ${response.applicant_name} ${response.applicant_email} ${response.cover_letter || ''}`;
-            if (!includesText(combined, filters.search)) return false;
-        }
-        return true;
-    });
-}
-
-function applyEmployerResponseFilters() {
-    state.employerResponseFilters.status = el('employerResponseStatusFilter').value;
-    state.employerResponseFilters.search = el('employerResponseSearch').value.trim();
-    renderEmployerResponses();
-}
-
-function resetEmployerResponseFilters() {
-    el('employerResponseStatusFilter').value = '';
-    el('employerResponseSearch').value = '';
-    applyEmployerResponseFilters();
-}
-
-function setEmployerRequired(enabled) {
-    el('profileCompanyName').required = enabled;
-}
-
-function fillApplicantProfile(profile) {
-    el('profileFullName').value = profile?.full_name || '';
-    el('profileUniversity').value = profile?.university || '';
-    el('profileCourse').value = profile?.course_or_year || '';
-    el('profileBio').value = profile?.bio || '';
-    el('profileSkills').value = profile?.skills || '';
-    el('profileExperience').value = profile?.experience || '';
-    el('profileGithub').value = profile?.github_url || '';
-    el('profilePortfolio').value = profile?.portfolio_url || '';
-    el('profilePublic').checked = Boolean(profile?.is_profile_public);
-    el('profileShowResponses').checked = Boolean(profile?.show_responses);
-}
-
-function fillEmployerProfile(profile) {
-    el('profileCompanyName').value = profile?.company_name || '';
-    el('profileCompanyDescription').value = profile?.description || '';
-    el('profileIndustry').value = profile?.industry || '';
-    el('profileWebsite').value = profile?.website || '';
-    el('profileSocialLinks').value = profile?.social_links || '';
-    el('profileCity').value = profile?.city || '';
-    el('profileAddress').value = profile?.address || '';
-}
-
-function renderProfileSection() {
-    const form = el('profileForm');
-    const guestHint = el('profileGuestHint');
-    const status = el('profileStatusText');
-    const applicantFields = el('applicantProfileFields');
-    const employerFields = el('employerProfileFields');
-
-    if (!state.currentUser) {
-        form.classList.add('d-none');
-        guestHint.classList.remove('d-none');
-        status.textContent = 'Гость';
-        setEmployerRequired(false);
-        renderWorkspaceHero();
-        return;
-    }
-
-    form.classList.remove('d-none');
-    guestHint.classList.add('d-none');
-    status.textContent = currentRoleLabel(state.currentUser.role);
-    el('profileDisplayName').value = state.currentUser.display_name || '';
-
-    if (state.currentUser.role === 'applicant') {
-        applicantFields.classList.remove('d-none');
-        employerFields.classList.add('d-none');
-        setEmployerRequired(false);
-        fillApplicantProfile(state.profile?.applicant_profile);
-    } else if (state.currentUser.role === 'employer') {
-        employerFields.classList.remove('d-none');
-        applicantFields.classList.add('d-none');
-        setEmployerRequired(true);
-        fillEmployerProfile(state.profile?.employer_profile);
-    } else {
-        applicantFields.classList.add('d-none');
-        employerFields.classList.add('d-none');
-        setEmployerRequired(false);
-    }
-    renderWorkspaceHero();
-}
-
-function openCuratorUserModal(userId) {
-    const user = state.curatorUsers.find((item) => item.id === userId);
-    if (!user) return;
-    if (['curator', 'admin'].includes(user.role) && state.currentUser?.role !== 'admin') return;
-
-    resetCuratorUserForm();
-    state.pendingCuratorUserId = userId;
-    state.pendingCuratorUserRole = user.role;
-    el('curatorUserDisplayName').value = user.display_name || '';
-    el('curatorUserActive').checked = Boolean(user.is_active);
-    syncCuratorUserModal(user.role);
-
-    if (user.role === 'employer') {
-        el('curatorUserModalLabel').textContent = 'Проверка работодателя';
-        el('curatorUserModalMeta').textContent = 'Здесь можно верифицировать компанию и отредактировать данные работодателя.';
-        el('curatorEmployerCompanyName').value = user.employer_profile?.company_name || '';
-        el('curatorEmployerIndustry').value = user.employer_profile?.industry || '';
-        el('curatorEmployerDescription').value = user.employer_profile?.description || '';
-        el('curatorEmployerWebsite').value = user.employer_profile?.website || '';
-        el('curatorEmployerSocialLinks').value = user.employer_profile?.social_links || '';
-        el('curatorEmployerCity').value = user.employer_profile?.city || '';
-        el('curatorEmployerAddress').value = user.employer_profile?.address || '';
-        el('curatorEmployerVerified').checked = Boolean(user.is_verified);
-    } else if (user.role === 'applicant') {
-        el('curatorUserModalLabel').textContent = 'Модерация соискателя';
-        el('curatorUserModalMeta').textContent = 'Куратор может скорректировать профиль соискателя и его настройки приватности.';
-        el('curatorApplicantFullName').value = user.applicant_profile?.full_name || '';
-        el('curatorApplicantUniversity').value = user.applicant_profile?.university || '';
-        el('curatorApplicantCourse').value = user.applicant_profile?.course_or_year || '';
-        el('curatorApplicantSkills').value = user.applicant_profile?.skills || '';
-        el('curatorApplicantExperience').value = user.applicant_profile?.experience || '';
-        el('curatorApplicantBio').value = user.applicant_profile?.bio || '';
-        el('curatorApplicantGithub').value = user.applicant_profile?.github_url || '';
-        el('curatorApplicantPortfolio').value = user.applicant_profile?.portfolio_url || '';
-        el('curatorApplicantPublic').checked = Boolean(user.applicant_profile?.is_profile_public);
-        el('curatorApplicantShowResponses').checked = Boolean(user.applicant_profile?.show_responses);
-    } else {
-        el('curatorUserModalLabel').textContent = user.role === 'admin' ? 'Администратор платформы' : 'Куратор платформы';
-        el('curatorUserModalMeta').textContent = 'Для служебных учетных записей здесь доступно только управление активностью аккаунта.';
-    }
-
-    curatorUserModal.show();
-}
-
-function openCuratorOpportunityModal(opportunityId) {
-    const opportunity = state.curatorOpportunities.find((item) => item.id === opportunityId);
-    if (!opportunity) return;
-
-    state.pendingCuratorOpportunityId = opportunityId;
-    el('curatorOpportunityTitle').value = opportunity.title || '';
-    el('curatorOpportunityType').value = opportunity.type || 'job';
-    el('curatorOpportunityWorkFormat').value = opportunity.work_format || 'office';
-    el('curatorOpportunityLocation').value = opportunity.location || '';
-    el('curatorOpportunitySalary').value = opportunity.salary_range || '';
-    el('curatorOpportunityExpiresAt').value = toDateTimeLocalValue(opportunity.expires_at);
-    el('curatorOpportunityDescription').value = opportunity.description || '';
-    el('curatorOpportunityActive').checked = Boolean(opportunity.is_active);
-    curatorOpportunityModal.show();
-}
-
-function resetEmployerOpportunityForm() {
-    state.pendingEmployerOpportunityId = null;
-    el('employerOpportunityModalLabel').textContent = 'Новая карточка возможности';
-    el('employerOpportunityTitle').value = '';
-    el('employerOpportunityType').value = 'job';
-    el('employerOpportunityWorkFormat').value = 'office';
-    el('employerOpportunityLocation').value = '';
-    el('employerOpportunitySalary').value = '';
-    el('employerOpportunityExpiresAt').value = '';
-    el('employerOpportunityEventDate').value = '';
-    el('employerOpportunityDescription').value = '';
-    el('employerOpportunityActive').checked = true;
-    renderTagChoices('employerOpportunityTagOptions', []);
-    syncEmployerOpportunityFieldHints();
-}
-
-function openEmployerOpportunityModal(opportunityId = null) {
-    if (!opportunityId) {
-        resetEmployerOpportunityForm();
-        const employerProfile = state.profile?.employer_profile;
-        const defaultLocation = employerProfile?.address || employerProfile?.city || '';
-        if (defaultLocation) {
-            el('employerOpportunityLocation').value = defaultLocation;
-        }
-        employerOpportunityModal.show();
-        return;
-    }
-
-    const opportunity = state.employerOpportunities.find((item) => item.id === opportunityId);
-    if (!opportunity) return;
-
-    state.pendingEmployerOpportunityId = opportunityId;
-    el('employerOpportunityModalLabel').textContent = 'Редактирование карточки';
-    el('employerOpportunityTitle').value = opportunity.title || '';
-    el('employerOpportunityType').value = opportunity.type || 'job';
-    el('employerOpportunityWorkFormat').value = opportunity.work_format || 'office';
-    el('employerOpportunityLocation').value = opportunity.location || '';
-    el('employerOpportunitySalary').value = opportunity.salary_range || '';
-    el('employerOpportunityExpiresAt').value = toDateTimeLocalValue(opportunity.expires_at);
-    el('employerOpportunityEventDate').value = toDateTimeLocalValue(opportunity.event_date);
-    el('employerOpportunityDescription').value = opportunity.description || '';
-    el('employerOpportunityActive').checked = Boolean(opportunity.is_active);
-    renderTagChoices(
-        'employerOpportunityTagOptions',
-        Array.isArray(opportunity.tags) ? opportunity.tags.map((tag) => tag.id) : []
-    );
-    syncEmployerOpportunityFieldHints();
-    employerOpportunityModal.show();
-}
-
-function syncEmployerOpportunityFieldHints() {
-    const type = el('employerOpportunityType').value;
-    const workFormat = el('employerOpportunityWorkFormat').value;
-    const locationInput = el('employerOpportunityLocation');
-    const locationHint = el('employerOpportunityLocationHint');
-    const eventDateGroup = el('employerOpportunityEventDateGroup');
-
-    if (type === 'event') {
-        eventDateGroup.classList.remove('d-none');
-    } else {
-        eventDateGroup.classList.add('d-none');
-        el('employerOpportunityEventDate').value = '';
-    }
-
-    if (workFormat === 'remote') {
-        locationInput.placeholder = 'Например: Москва';
-        locationHint.textContent = 'Для удаленного формата укажи город работодателя или организатора.';
-    } else if (type === 'event') {
-        locationInput.placeholder = 'Например: Санкт-Петербург, Кронверкский пр., 49';
-        locationHint.textContent = 'Для офлайн-мероприятия лучше указать точный адрес площадки.';
-    } else {
-        locationInput.placeholder = 'Например: Москва, ул. Льва Толстого, 16';
-        locationHint.textContent = 'Укажи адрес офиса, площадки или город работодателя.';
-    }
-}
-
-function buildEmployerOpportunityPayload() {
-    return {
-        title: (el('employerOpportunityTitle').value || '').trim(),
-        description: (el('employerOpportunityDescription').value || '').trim(),
-        type: el('employerOpportunityType').value,
-        work_format: el('employerOpportunityWorkFormat').value,
-        location: (el('employerOpportunityLocation').value || '').trim(),
-        salary_range: normalizeText(el('employerOpportunitySalary').value),
-        expires_at: el('employerOpportunityExpiresAt').value ? new Date(el('employerOpportunityExpiresAt').value).toISOString() : null,
-        event_date: el('employerOpportunityEventDate').value ? new Date(el('employerOpportunityEventDate').value).toISOString() : null,
-        is_active: el('employerOpportunityActive').checked,
-        tag_ids: selectedTagIdsFromContainer('employerOpportunityTagOptions'),
-    };
-}
-
-async function saveEmployerOpportunity({ id = null, payload, successMessage }) {
-    const path = id ? `/opportunities/${id}` : '/opportunities/';
-    const method = id ? 'PUT' : 'POST';
-    const response = await apiFetch(path, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось сохранить карточку.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось сохранить карточку.');
-        return false;
-    }
-
-    await Promise.all([
-        loadEmployerOpportunities(),
-        loadOpportunities(),
-        loadEmployerResponses(),
-    ]);
-    if (successMessage) {
-        showNotice('success', successMessage);
-    }
-    return true;
-}
-
-async function deleteEmployerOpportunity(opportunityId) {
-    const confirmed = window.confirm('Удалить карточку возможности? Это действие нельзя отменить.');
-    if (!confirmed) return;
-
-    const response = await apiFetch(`/opportunities/${opportunityId}`, {
-        method: 'DELETE',
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось удалить карточку.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось удалить карточку.');
-        return;
-    }
-
-    await Promise.all([
-        loadEmployerOpportunities(),
-        loadOpportunities(),
-        loadEmployerResponses(),
-    ]);
-    showNotice('success', 'Карточка удалена.');
-}
-
-function buildProfilePayload() {
-    const payload = {
-        display_name: normalizeText(el('profileDisplayName').value),
-    };
-
-    if (!state.currentUser) return payload;
-
-    if (state.currentUser.role === 'applicant') {
-        payload.applicant_profile = {
-            full_name: normalizeText(el('profileFullName').value),
-            university: normalizeText(el('profileUniversity').value),
-            course_or_year: normalizeText(el('profileCourse').value),
-            bio: normalizeText(el('profileBio').value),
-            skills: normalizeText(el('profileSkills').value),
-            experience: normalizeText(el('profileExperience').value),
-            github_url: normalizeUrl(el('profileGithub').value),
-            portfolio_url: normalizeUrl(el('profilePortfolio').value),
-            is_profile_public: el('profilePublic').checked,
-            show_responses: el('profileShowResponses').checked,
-        };
-    }
-
-    if (state.currentUser.role === 'employer') {
-        payload.employer_profile = {
-            company_name: normalizeText(el('profileCompanyName').value),
-            description: normalizeText(el('profileCompanyDescription').value),
-            industry: normalizeText(el('profileIndustry').value),
-            website: normalizeUrl(el('profileWebsite').value),
-            social_links: normalizeText(el('profileSocialLinks').value),
-            city: normalizeText(el('profileCity').value),
-            address: normalizeText(el('profileAddress').value),
-        };
-    }
-
-    return payload;
 }
 
 function renderAuthUI() {
@@ -2274,7 +533,7 @@ async function loadCurrentUser() {
 }
 
 async function loadOpportunities() {
-    const response = await fetch(`${API_BASE}/opportunities/`);
+    const response = await apiFetch('/opportunities/');
     if (!response.ok) {
         throw new Error('Не удалось загрузить возможности');
     }
@@ -2287,7 +546,7 @@ async function loadOpportunities() {
 }
 
 async function loadTags() {
-    const response = await fetch(`${API_BASE}/tags/`);
+    const response = await apiFetch('/tags/');
     if (!response.ok) {
         state.tags = [];
         renderTagChoices('filterTagOptions', []);
@@ -2452,7 +711,7 @@ async function handleLoginSubmit(event) {
     formData.set('username', el('loginEmail').value.trim());
     formData.set('password', el('loginPassword').value);
 
-    const response = await fetch(`${API_BASE}/auth/login`, {
+    const response = await apiFetch('/auth/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -2482,7 +741,7 @@ async function handleRegisterSubmit(event) {
         role: el('registerRole').value,
     };
 
-    const response = await fetch(`${API_BASE}/auth/register`, {
+    const response = await apiFetch('/auth/register', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -2528,151 +787,6 @@ async function handleProfileSubmit(event) {
     renderAuthUI();
     renderProfileSection();
     showNotice('success', 'Профиль сохранен.');
-}
-
-function openApplyModal(opportunityId) {
-    const opportunity = state.opportunities.find((item) => item.id === opportunityId);
-    if (!opportunity) return;
-
-    state.pendingApplyId = opportunityId;
-    el('applyOpportunityMeta').textContent = `${opportunity.title} | ${opportunity.location}`;
-    el('coverLetter').value = '';
-    applyModal.show();
-}
-
-async function handleApplySubmit(event) {
-    event.preventDefault();
-
-    if (!state.pendingApplyId) return;
-
-    const response = await apiFetch('/responses/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            opportunity_id: state.pendingApplyId,
-            cover_letter: el('coverLetter').value.trim() || null,
-        }),
-    });
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Не удалось отправить отклик.' }));
-        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось отправить отклик.');
-        return;
-    }
-
-    applyModal.hide();
-    event.target.reset();
-    await loadResponses();
-    showNotice('success', 'Отклик отправлен.');
-}
-
-function applyEmployerOpportunityFilters() {
-    state.employerOpportunityFilters.status = el('employerOpportunityStatusFilter').value;
-    state.employerOpportunityFilters.type = el('employerOpportunityTypeFilter').value;
-    state.employerOpportunityFilters.search = el('employerOpportunitySearch').value.trim();
-    void loadEmployerOpportunities();
-}
-
-function resetEmployerOpportunityFilters() {
-    el('employerOpportunityStatusFilter').value = '';
-    el('employerOpportunityTypeFilter').value = '';
-    el('employerOpportunitySearch').value = '';
-    applyEmployerOpportunityFilters();
-}
-
-async function handleEmployerOpportunitySubmit(event) {
-    event.preventDefault();
-    const payload = buildEmployerOpportunityPayload();
-    const isEdit = Boolean(state.pendingEmployerOpportunityId);
-    const saved = await saveEmployerOpportunity({
-        id: state.pendingEmployerOpportunityId,
-        payload,
-        successMessage: isEdit ? 'Карточка обновлена.' : 'Карточка создана.',
-    });
-
-    if (!saved) {
-        return;
-    }
-
-    employerOpportunityModal.hide();
-    event.target.reset();
-    resetEmployerOpportunityForm();
-}
-
-async function handleCuratorUserSubmit(event) {
-    event.preventDefault();
-    if (!state.pendingCuratorUserId || !state.pendingCuratorUserRole) return;
-
-    const payload = {
-        display_name: normalizeText(el('curatorUserDisplayName').value),
-        is_active: el('curatorUserActive').checked,
-    };
-
-    if (state.pendingCuratorUserRole === 'employer') {
-        payload.is_verified = el('curatorEmployerVerified').checked;
-        payload.employer_profile = {
-            company_name: normalizeText(el('curatorEmployerCompanyName').value),
-            industry: normalizeText(el('curatorEmployerIndustry').value),
-            description: normalizeText(el('curatorEmployerDescription').value),
-            website: normalizeUrl(el('curatorEmployerWebsite').value),
-            social_links: normalizeText(el('curatorEmployerSocialLinks').value),
-            city: normalizeText(el('curatorEmployerCity').value),
-            address: normalizeText(el('curatorEmployerAddress').value),
-        };
-    } else if (state.pendingCuratorUserRole === 'applicant') {
-        payload.applicant_profile = {
-            full_name: normalizeText(el('curatorApplicantFullName').value),
-            university: normalizeText(el('curatorApplicantUniversity').value),
-            course_or_year: normalizeText(el('curatorApplicantCourse').value),
-            skills: normalizeText(el('curatorApplicantSkills').value),
-            experience: normalizeText(el('curatorApplicantExperience').value),
-            bio: normalizeText(el('curatorApplicantBio').value),
-            github_url: normalizeUrl(el('curatorApplicantGithub').value),
-            portfolio_url: normalizeUrl(el('curatorApplicantPortfolio').value),
-            is_profile_public: el('curatorApplicantPublic').checked,
-            show_responses: el('curatorApplicantShowResponses').checked,
-        };
-    }
-
-    await updateCuratorUser(state.pendingCuratorUserId, payload);
-
-    curatorUserModal.hide();
-    resetCuratorUserForm();
-}
-
-async function handleCuratorCreateSubmit(event) {
-    event.preventDefault();
-
-    const success = await createCuratorAccount({
-        display_name: normalizeText(el('curatorCreateName').value),
-        email: el('curatorCreateEmail').value.trim(),
-        password: el('curatorCreatePassword').value,
-    });
-
-    if (!success) return;
-
-    curatorCreateModal.hide();
-    event.target.reset();
-}
-
-async function handleCuratorOpportunitySubmit(event) {
-    event.preventDefault();
-    if (!state.pendingCuratorOpportunityId) return;
-
-    await updateCuratorOpportunity(state.pendingCuratorOpportunityId, {
-        title: normalizeText(el('curatorOpportunityTitle').value),
-        type: el('curatorOpportunityType').value,
-        work_format: el('curatorOpportunityWorkFormat').value,
-        location: normalizeText(el('curatorOpportunityLocation').value),
-        salary_range: normalizeText(el('curatorOpportunitySalary').value),
-        expires_at: el('curatorOpportunityExpiresAt').value ? new Date(el('curatorOpportunityExpiresAt').value).toISOString() : null,
-        description: normalizeText(el('curatorOpportunityDescription').value),
-        is_active: el('curatorOpportunityActive').checked,
-    });
-
-    curatorOpportunityModal.hide();
 }
 
 function handleLogout(event) {
@@ -2835,6 +949,7 @@ function bindEvents() {
 
 async function bootstrap() {
     initModals();
+    setupFieldLimits();
     bindEvents();
     loadFavoritesState();
     renderAuthUI();
@@ -2848,6 +963,7 @@ async function bootstrap() {
     renderFavoritesSummary();
     renderTagLibrary();
     syncEmployerOpportunityFieldHints();
+    refreshFieldCounters();
 
     try {
         await initMap();

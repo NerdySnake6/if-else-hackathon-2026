@@ -81,6 +81,17 @@ body {
     font-weight: 500;
 }
 
+.field-limit-counter {
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    color: #6b7a90;
+}
+
+.field-limit-counter.near-limit {
+    color: #d97706;
+    font-weight: 600;
+}
+
 .workspace-meta {
     display: flex;
     flex-wrap: wrap;
