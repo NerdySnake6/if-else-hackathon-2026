@@ -129,7 +129,7 @@ def create_contact_request(
         .first()
     )
     if existing:
-        raise HTTPException(status_code=400, detail="Contact already exists")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Contact already exists")
 
     contact = models.Contact(
         requester_id=current_user.id,

@@ -33,7 +33,7 @@ def create_tag(
     """Добавляет новый тег в общий справочник платформы."""
     existing_tag = db.query(models.Tag).filter(models.Tag.name.ilike(payload.name.strip())).first()
     if existing_tag:
-        raise HTTPException(status_code=400, detail="Tag already exists")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Tag already exists")
 
     tag = models.Tag(name=payload.name.strip(), category=payload.category)
     db.add(tag)

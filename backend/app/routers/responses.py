@@ -36,7 +36,7 @@ def create_response(
         .first()
     )
     if existing_response:
-        raise HTTPException(status_code=400, detail="Response already exists")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Response already exists")
 
     db_response = models.Response(
         applicant_id=current_user.id,

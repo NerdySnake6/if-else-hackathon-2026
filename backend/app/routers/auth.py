@@ -12,12 +12,12 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-@router.post("/register", response_model=schemas.UserOut)
+@router.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     """Регистрирует пользователя и создает пустой профиль по его роли."""
     db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
     hashed_password = auth.get_password_hash(user_data.password)
     db_user = models.User(
@@ -48,10 +48,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     """Проверяет учетные данные и возвращает bearer-токен."""
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
     if not user:
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
 
     if not auth.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
 
     access_token = auth.create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer"}

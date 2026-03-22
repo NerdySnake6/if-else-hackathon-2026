@@ -48,7 +48,7 @@ def resolve_coordinates(
 
     return result["lat"], result["lng"]
 
-@router.post("/", response_model=schemas.OpportunityOut)
+@router.post("/", response_model=schemas.OpportunityOut, status_code=201)
 def create_opportunity(
     opp_data: schemas.OpportunityCreate,
     db: Session = Depends(get_db),
