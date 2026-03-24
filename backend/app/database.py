@@ -1,15 +1,24 @@
 """Настройка подключения к базе данных и фабрики сессий."""
 
 import os
+from functools import lru_cache
+from pathlib import Path
 
-from sqlalchemy import create_engine
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from sqlalchemy import create_engine, inspect
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker, Session
 
 from app import models
 from app.auth import get_password_hash
 from app.models import Base
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./tramplin.db"
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+ALEMBIC_CONFIG_PATH = BACKEND_DIR / "alembic.ini"
+DATABASE_PATH = (BACKEND_DIR / "tramplin.db").resolve()
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
@@ -33,6 +42,33 @@ DEFAULT_TAGS = [
     {"name": "Проектная работа", "category": "employment_type"},
 ]
 
+REQUIRED_TABLES = {
+    "users",
+    "applicant_profiles",
+    "employer_profiles",
+    "tags",
+    "opportunities",
+    "responses",
+    "contacts",
+    "recommendations",
+    "opportunity_tag",
+}
+
+
+@lru_cache(maxsize=1)
+def get_expected_alembic_revisions() -> set[str]:
+    """Возвращает актуальные head-ревизии из локального каталога миграций."""
+    config = Config(str(ALEMBIC_CONFIG_PATH))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    return set(ScriptDirectory.from_config(config).get_heads())
+
+
+def get_current_alembic_revisions() -> set[str]:
+    """Читает примененные Alembic-ревизии из таблицы alembic_version."""
+    with engine.connect() as connection:
+        rows = connection.execute(text("SELECT version_num FROM alembic_version")).all()
+    return {row[0] for row in rows}
+
 
 def get_db() -> Session:
     """Предоставляет SQLAlchemy-сессию на время текущего запроса."""
@@ -44,8 +80,36 @@ def get_db() -> Session:
 
 
 def init_db():
-    """Создает таблицы на основе текущих моделей SQLAlchemy."""
-    Base.metadata.create_all(bind=engine)
+    """Проверяет схему и ревизию БД, затем добавляет стартовые данные."""
+    existing_tables = set(inspect(engine).get_table_names())
+    missing_tables = REQUIRED_TABLES - existing_tables
+    if missing_tables:
+        missing = ", ".join(sorted(missing_tables))
+        raise RuntimeError(
+            "Схема базы данных не инициализирована. "
+            "Сначала примени миграции Alembic командой "
+            "`cd backend && source venv/bin/activate && python3 -m alembic upgrade head`. "
+            f"Отсутствуют таблицы: {missing}."
+        )
+    if "alembic_version" not in existing_tables:
+        raise RuntimeError(
+            "Схема базы данных создана без Alembic-метаданных. "
+            "Похоже, таблицы были подняты напрямую через create_all(). "
+            "Сначала пересоздай базу или примени миграции командой "
+            "`cd backend && source venv/bin/activate && python3 -m alembic upgrade head`."
+        )
+
+    expected_revisions = get_expected_alembic_revisions()
+    current_revisions = get_current_alembic_revisions()
+    if current_revisions != expected_revisions:
+        raise RuntimeError(
+            "Схема базы данных не соответствует актуальной ревизии Alembic. "
+            "Сначала примени миграции командой "
+            "`cd backend && source venv/bin/activate && python3 -m alembic upgrade head`. "
+            f"Ожидались ревизии: {', '.join(sorted(expected_revisions))}; "
+            f"найдены: {', '.join(sorted(current_revisions)) or 'нет данных'}."
+        )
+
     seed_default_tags()
     seed_default_admin()
 
@@ -65,7 +129,10 @@ def seed_default_tags():
         ]
         if missing_tags:
             db.add_all(missing_tags)
-            db.commit()
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
     finally:
         db.close()
 
@@ -95,6 +162,9 @@ def seed_default_admin():
             is_verified=True,
         )
         db.add(admin_user)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
     finally:
         db.close()

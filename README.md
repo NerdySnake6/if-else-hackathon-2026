@@ -56,6 +56,7 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+python3 -m alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
@@ -66,10 +67,31 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+python3 -m alembic upgrade head
 python3 -m app.main
 ```
 
 Backend будет доступен по адресу `http://127.0.0.1:8000`.
+
+### Миграции базы данных
+
+После изменения SQLAlchemy-моделей схему базы нужно обновлять через Alembic.
+
+Создать новую миграцию:
+
+```bash
+cd backend
+source venv/bin/activate
+python3 -m alembic revision --autogenerate -m "описание изменения"
+```
+
+Применить миграции:
+
+```bash
+cd backend
+source venv/bin/activate
+python3 -m alembic upgrade head
+```
 
 ### 2. Frontend
 
