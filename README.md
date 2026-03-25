@@ -32,28 +32,42 @@
 
 В проекте используется один и тот же ключ для frontend и backend.
 
-### Backend
+До запуска проекта нужно вручную создать 2 файла:
 
-Создай файл `backend/.env` по примеру `backend/.env.example`.
+1. `backend/.env`
+2. `frontend/.env.local`
 
-Обязательные переменные:
+Файлы `backend/.env.example` и `frontend/.env.example` уже лежат в репозитории и нужны только как шаблоны. Они не создаются автоматически.
 
-- `TRAMPLIN_SECRET_KEY` — секрет для подписи JWT-токенов
-- `YANDEX_GEOCODER_API_KEY` — тот же ключ Яндекс Карт, который используется для пакета `JavaScript API и HTTP Геокодер`
+### Что указать в `backend/.env`
 
-Если не задать `TRAMPLIN_SECRET_KEY`, сервер сам сгенерирует временный секрет при запуске. Проект будет работать, но после перезапуска старые токены станут невалидными.
+Создай файл `backend/.env` со следующим содержимым:
+
+```env
+YANDEX_GEOCODER_API_KEY=твой_ключ_яндекс_карт
+```
+
+Где:
+- `YANDEX_GEOCODER_API_KEY` — твой ключ Яндекс Карт для пакета `JavaScript API и HTTP Геокодер`
+
+### Что указать в `frontend/.env.local`
+
+Создай файл `frontend/.env.local` со следующим содержимым:
+
+```env
+VITE_YANDEX_MAPS_API_KEY=твой_ключ_яндекс_карт
+```
+
+Где:
+- `VITE_YANDEX_MAPS_API_KEY` — тот же самый ключ Яндекс Карт, что и в `backend/.env`
+
+Итого:
+- в `backend/.env`:
+  - `YANDEX_GEOCODER_API_KEY` = ключ Яндекс Карт
+- в `frontend/.env.local`:
+  - `VITE_YANDEX_MAPS_API_KEY` = тот же ключ Яндекс Карт
 
 Backend автоматически читает `backend/.env` при запуске, поэтому ручной `export` не обязателен.
-
-### Frontend
-
-Создай файл `frontend/.env.local` по примеру `frontend/.env.example`.
-
-Обязательная переменная:
-
-- `VITE_YANDEX_MAPS_API_KEY` — тот же ключ Яндекс Карт для пакета `JavaScript API и HTTP Геокодер`
-
-В проекте используется один ключ Яндекс Карт. Он был запрошен для пакета `JavaScript API и HTTP Геокодер`, поэтому одно и то же значение можно указать и в `backend/.env`, и в `frontend/.env.local`.
 
 После изменения `backend/.env` или `frontend/.env.local` нужно перезапустить backend и frontend, чтобы новые значения подхватились.
 
