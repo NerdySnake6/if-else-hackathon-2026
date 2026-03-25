@@ -17,6 +17,14 @@ body {
     display: flex;
 }
 
+#workspaceContentColumn {
+    flex-direction: column;
+}
+
+#workspaceContentColumn > .card {
+    width: 100%;
+}
+
 #app-notice .alert {
     border: 0;
     border-radius: 14px;

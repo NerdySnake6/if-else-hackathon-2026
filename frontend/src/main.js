@@ -429,7 +429,6 @@ function renderWorkspaceView() {
     const workspaceContentColumn = el('workspaceContentColumn');
     const homeBlocks = [
         'homeExplorerCard',
-        'homeDetailsCard',
         'homeBoardRow',
         'homeListHeader',
         'guestGuideCard',
@@ -462,6 +461,10 @@ function renderWorkspaceView() {
     Object.values(roleBlocks).flat().forEach((id) => {
         el(id).classList.add('d-none');
     });
+
+    if (!isHome) {
+        el('homeDetailsCard').classList.add('d-none');
+    }
 
     if (!isHome) {
         (roleBlocks[state.activeView] || []).forEach((id) => {
