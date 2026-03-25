@@ -26,6 +26,11 @@
 brew install python@3.11
 ```
 
+Команда для скачивания репозитория
+```bash
+git clone https://github.com/NerdySnake6/if-else-hackathon-2026
+```
+
 ## Переменные окружения
 
 Перед настройкой `.env` получи ключ Яндекс Карт:
