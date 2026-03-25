@@ -727,6 +727,60 @@ def test_tags_catalog_creation_and_public_filtering(client, db_session):
     assert filtered_response.json()[0]["tags"][0]["name"] == "Data Science"
 
 
+def test_curator_can_delete_unused_tags_and_cannot_delete_used_tags(client, db_session):
+    """Проверяет удаление тегов куратором и защиту от удаления используемых тегов."""
+    curator_user = models.User(
+        email="tag-curator@example.com",
+        hashed_password="hash",
+        display_name="Tag Curator",
+        role="curator",
+        is_active=True,
+        is_verified=True,
+    )
+    employer_user = models.User(
+        email="tag-owner@example.com",
+        hashed_password="hash",
+        display_name="Tag Owner",
+        role="employer",
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add_all([curator_user, employer_user])
+    db_session.commit()
+    db_session.refresh(curator_user)
+    db_session.refresh(employer_user)
+
+    unused_tag = models.Tag(name="Delete Me", category="tech")
+    used_tag = models.Tag(name="In Use", category="tech")
+    db_session.add_all([unused_tag, used_tag])
+    db_session.commit()
+    db_session.refresh(unused_tag)
+    db_session.refresh(used_tag)
+
+    opportunity = models.Opportunity(
+        employer_id=employer_user.id,
+        title="Tagged opportunity",
+        description="Карточка с тегом, который нельзя удалять.",
+        type="job",
+        work_format="office",
+        location="Москва",
+        is_active=True,
+        tags=[used_tag],
+    )
+    db_session.add(opportunity)
+    db_session.commit()
+
+    curator_token = create_access_token({"sub": curator_user.email})
+
+    delete_unused = client.delete(f"/tags/{unused_tag.id}", headers=auth_headers(curator_token))
+    assert delete_unused.status_code == 204
+    assert db_session.query(models.Tag).filter(models.Tag.id == unused_tag.id).first() is None
+
+    delete_used = client.delete(f"/tags/{used_tag.id}", headers=auth_headers(curator_token))
+    assert delete_used.status_code == 409
+    assert delete_used.json()["detail"] == "Нельзя удалить тег, пока он используется в карточках возможностей."
+
+
 def test_curator_can_verify_employers_and_moderate_opportunities(client, db_session):
     """Проверяет основные сценарии кабинета куратора."""
     curator_user = models.User(

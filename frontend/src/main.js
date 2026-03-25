@@ -100,6 +100,7 @@ const homeController = createHomeController({
     renderContactsSection: (...args) => renderContactsSection(...args),
     openApplyModal: (...args) => openApplyModal(...args),
     openEmployerOpportunityModal: (...args) => openEmployerOpportunityModal(...args),
+    deleteTagFromLibrary: (...args) => deleteTagFromLibrary(...args),
 });
 const getFilteredOpportunities = homeController.getFilteredOpportunities;
 const renderOpportunitiesSection = homeController.renderOpportunitiesSection;
@@ -355,6 +356,26 @@ async function submitTagForm(nameInputId, categoryInputId, formElement) {
     showNotice('success', 'Тег добавлен в справочник.');
 }
 
+async function deleteTagFromLibrary(tag) {
+    if (!tag) return;
+
+    const confirmed = window.confirm(`Удалить тег "${tag.name}" из справочника?`);
+    if (!confirmed) return;
+
+    const response = await apiFetch(`/tags/${tag.id}`, {
+        method: 'DELETE',
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось удалить тег.' }));
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось удалить тег.');
+        return;
+    }
+
+    await loadTags();
+    showNotice('success', `Тег "${tag.name}" удален из справочника.`);
+}
+
 async function handleTagSubmit(event) {
     event.preventDefault();
     await submitTagForm('tagNameInput', 'tagCategoryInput', event.target);
@@ -537,11 +558,13 @@ async function loadCurrentUser() {
         renderProfileSection();
         renderCuratorSection();
         renderSelectedOpportunity();
+        renderTagLibrary();
         return;
     }
 
     state.currentUser = await response.json();
     renderAuthUI();
+    renderTagLibrary();
     await loadProfile();
     await loadResponses();
     await loadContacts();
@@ -569,6 +592,7 @@ async function loadTags() {
     const response = await apiFetch('/tags/');
     if (!response.ok) {
         state.tags = [];
+        state.opportunityFilters.tagIds = [];
         renderTagChoices('filterTagOptions', []);
         renderTagChoices('employerOpportunityTagOptions', []);
         renderTagLibrary();
@@ -576,6 +600,8 @@ async function loadTags() {
     }
 
     state.tags = await response.json();
+    const availableTagIds = new Set(state.tags.map((tag) => tag.id));
+    state.opportunityFilters.tagIds = state.opportunityFilters.tagIds.filter((tagId) => availableTagIds.has(tagId));
     renderTagChoices('filterTagOptions', state.opportunityFilters.tagIds);
     renderTagChoices('employerOpportunityTagOptions', selectedTagIdsFromContainer('employerOpportunityTagOptions'));
     renderTagLibrary();
@@ -687,7 +713,9 @@ async function loadEmployerOpportunities() {
     renderEmployerOpportunities();
 }
 
-async function loadCuratorData() {
+async function loadCuratorData(options = {}) {
+    const { notify = false } = options;
+
     if (!state.currentUser || !['curator', 'admin'].includes(state.currentUser.role)) {
         state.curatorUsers = [];
         state.curatorOpportunities = [];
@@ -714,14 +742,33 @@ async function loadCuratorData() {
     const userPath = `/curator/users${userParams.toString() ? `?${userParams.toString()}` : ''}`;
     const opportunitiesPath = `/curator/opportunities${opportunitiesParams.toString() ? `?${opportunitiesParams.toString()}` : ''}`;
 
-    const [usersResponse, opportunitiesResponse] = await Promise.all([
-        apiFetch(userPath),
-        apiFetch(opportunitiesPath),
-    ]);
+    const refreshBtn = el('refreshCuratorBtn');
+    const previousLabel = refreshBtn ? refreshBtn.textContent : '';
 
-    state.curatorUsers = usersResponse.ok ? await usersResponse.json() : [];
-    state.curatorOpportunities = opportunitiesResponse.ok ? await opportunitiesResponse.json() : [];
-    renderCuratorSection();
+    if (refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = 'Обновляется...';
+    }
+
+    try {
+        const [usersResponse, opportunitiesResponse] = await Promise.all([
+            apiFetch(userPath),
+            apiFetch(opportunitiesPath),
+        ]);
+
+        state.curatorUsers = usersResponse.ok ? await usersResponse.json() : [];
+        state.curatorOpportunities = opportunitiesResponse.ok ? await opportunitiesResponse.json() : [];
+        renderCuratorSection();
+
+        if (notify) {
+            showNotice('success', 'Данные кабинета куратора обновлены.');
+        }
+    } finally {
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.textContent = previousLabel || 'Обновить';
+        }
+    }
 }
 
 async function handleLoginSubmit(event) {
@@ -919,7 +966,7 @@ function bindEvents() {
         openEmployerOpportunityModal();
     });
     el('refreshCuratorBtn').addEventListener('click', () => {
-        void loadCuratorData();
+        void loadCuratorData({ notify: true });
     });
     el('filterType').addEventListener('change', applyOpportunityFilters);
     el('filterWorkFormat').addEventListener('change', applyOpportunityFilters);

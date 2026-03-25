@@ -24,6 +24,7 @@ export function createHomeController({
     renderContactsSection,
     openApplyModal,
     openEmployerOpportunityModal,
+    deleteTagFromLibrary,
 }) {
     function selectedOpportunity() {
         return state.opportunities.find((item) => item.id === state.selectedOpportunityId) || null;
@@ -293,8 +294,24 @@ export function createHomeController({
 
             state.tags.forEach((tag) => {
                 const item = createEl('span', 'tag-library-item');
-                item.textContent = tag.name;
+                const title = createEl('span', 'tag-library-label', tag.name);
+                item.appendChild(title);
                 item.appendChild(createEl('small', 'ms-2', tagCategoryLabel(tag.category)));
+
+                const canDeleteTag = containerId === 'curator-tag-library'
+                    && ['curator', 'admin'].includes(state.currentUser?.role || '');
+
+                if (canDeleteTag) {
+                    const deleteBtn = createEl('button', 'tag-library-delete', '×');
+                    deleteBtn.type = 'button';
+                    deleteBtn.title = `Удалить тег "${tag.name}"`;
+                    deleteBtn.setAttribute('aria-label', `Удалить тег ${tag.name}`);
+                    deleteBtn.addEventListener('click', () => {
+                        void deleteTagFromLibrary(tag);
+                    });
+                    item.appendChild(deleteBtn);
+                }
+
                 container.appendChild(item);
             });
         });
