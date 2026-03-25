@@ -82,9 +82,11 @@ Backend автоматически читает `backend/.env` при запус
 
 ## Быстрый старт
 
+## MacOS / Linux
+
 ### 1. Backend
 
-Стандартный запуск через `uvicorn`:
+Стандартный запуск через `uvicorn` (продвинутый вывод в консоль, больше информации):
 
 ```bash
 cd backend
@@ -95,7 +97,7 @@ python3 -m alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Упрощенный запуск через Python:
+Упрощенный запуск через Python (обычный вывод в консоль, понятный любому):
 
 ```bash
 cd backend
@@ -150,3 +152,98 @@ Frontend будет доступен по адресу `http://127.0.0.1:5173`.
 - `VITE_YANDEX_MAPS_API_KEY`
 
 CI использует тестовое значение ключа, потому что для сборки фронта важен сам факт наличия переменной, а не реальный доступ к Яндекс Картам.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Windows
+
+### 1. Backend
+
+Стандартный запуск через `uvicorn` (продвинутый вывод в консоль, больше информации):
+
+```bash
+cd backend
+py -3.11 -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python3 -m alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+Упрощенный запуск через Python (обычный вывод в консоль, понятный любому):
+
+```bash
+cd backend
+py -3.11 -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python3 -m alembic upgrade head
+python3 -m app.main
+```
+
+Backend будет доступен по адресу `http://127.0.0.1:8000`.
+
+### 2. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend будет доступен по адресу `http://127.0.0.1:5173`.
+
+Во время локальной разработки фронтенд отправляет запросы в backend через Vite proxy на `http://localhost:8000`.
+
+## CI/CD
+
+В репозитории настроены GitHub Actions workflow:
+
+- `.github/workflows/ci.yml` — проверка backend и сборка frontend для `push` и `pull_request`
+- `.github/workflows/cd.yml` — сборка артефактов на ветке `main`
+
+### Что проверяет CI
+
+- синтаксис Python-модулей backend
+- интеграционные backend-тесты для основных сценариев:
+  - регистрация и вход
+  - обновление профиля
+  - создание возможности работодателем
+  - отклик соискателя
+  - смена статуса отклика работодателем
+- production-сборка frontend
+
+### Что делает CD
+
+- собирает `frontend/dist`
+- сохраняет frontend и backend как артефакты workflow
+
+### Что нужно добавить в GitHub Secrets
+
+Для workflow `CD` в настройках репозитория нужен секрет:
+
+- `VITE_YANDEX_MAPS_API_KEY`
+
+CI использует тестовое значение ключа, потому что для сборки фронта важен сам факт наличия переменной, а не реальный доступ к Яндекс Картам.
+
+
+
+## Возможные ошибки и их решение
+
+### The system cannot find the path specified.
+Команда: `/opt/homebrew/bin/python3.11 -m venv venv`
+
+Ошибка: `The system cannot find the path specified.`
+
+Решение: 
