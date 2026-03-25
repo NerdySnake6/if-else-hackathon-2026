@@ -423,9 +423,11 @@ function renderWorkspaceView() {
     const homeMapColumn = el('homeMapColumn');
     const workspaceContentColumn = el('workspaceContentColumn');
     const homeBlocks = [
+        'homeBoardRow',
         'homeListHeader',
         'guestGuideCard',
         'homeFiltersCard',
+        'homeOpportunityBlock',
         'homeFavoritesCard',
         'opportunities-list',
     ];

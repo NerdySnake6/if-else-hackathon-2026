@@ -54,7 +54,7 @@
                             <div class="workspace-actions mt-3" id="workspaceHeroActions">
                                 <button type="button" class="btn btn-primary btn-sm" id="heroExploreBtn">Смотреть возможности</button>
                                 <button type="button" class="btn btn-outline-primary btn-sm" id="heroRegisterBtn">Создать аккаунт</button>
-                                <button type="button" class="btn btn-link btn-sm px-0 text-decoration-none d-none" id="heroLoginBtn">Уже есть аккаунт? Войти</button>
+                                <button type="button" class="btn btn-link btn-sm px-0 d-none hero-login-link" id="heroLoginBtn"><span class="hero-login-copy">Уже есть аккаунт?</span> <span class="hero-login-action">Войти</span></button>
                             </div>
                         </div>
                         <div class="workspace-meta" id="workspaceMeta"></div>
@@ -168,25 +168,6 @@
                                     </div>
                                 </div>
                             </details>
-                            </div>
-                            <div class="home-section-block home-list-block">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div class="home-section-title mb-0">Подходящие возможности</div>
-                                    <span class="small text-muted" id="homeOpportunityCount">0 результатов</span>
-                                </div>
-                                <div id="opportunities-list" class="list-group"></div>
-                            </div>
-                            <div class="home-section-block compact-favorites-block mt-3" id="homeFavoritesCard">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <div class="home-section-title mb-0">Избранное</div>
-                                        <div class="small text-muted">Сохраняется в браузере даже без входа.</div>
-                                    </div>
-                                    <span class="badge text-bg-warning text-dark" id="favoriteSummaryBadge">0</span>
-                                </div>
-                                <div id="favorites-summary" class="favorites-summary">
-                                    <p class="text-muted mb-0">Пока ничего не добавлено в избранное.</p>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -485,6 +466,39 @@
                             </form>
                             <div id="curator-tag-library" class="tag-library">
                                 <p class="text-muted mb-0">Теги загружаются...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row home-board-row d-none" id="homeBoardRow">
+                <div class="col-lg-8 mb-3 d-flex">
+                    <div class="card shadow-sm border-0 home-list-card w-100">
+                        <div class="card-body py-3">
+                            <div class="home-section-block home-list-block h-100" id="homeOpportunityBlock">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="home-section-title mb-0">Подходящие возможности</div>
+                                    <span class="small text-muted" id="homeOpportunityCount">0 результатов</span>
+                                </div>
+                                <div id="opportunities-list" class="list-group"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4 mb-3 d-flex">
+                    <div class="card shadow-sm border-0 home-favorites-card w-100">
+                        <div class="card-body py-3">
+                            <div class="home-section-block compact-favorites-block h-100" id="homeFavoritesCard">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <div class="home-section-title mb-0">Избранное</div>
+                                        <div class="small text-muted">Сохраняется в браузере даже без входа.</div>
+                                    </div>
+                                    <span class="badge text-bg-warning text-dark" id="favoriteSummaryBadge">0</span>
+                                </div>
+                                <div id="favorites-summary" class="favorites-summary">
+                                    <p class="text-muted mb-0">Пока ничего не добавлено в избранное.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
