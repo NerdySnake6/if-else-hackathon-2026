@@ -227,14 +227,16 @@ function workspaceMetaForView() {
     }
 
     if (state.activeView === 'profile') {
+        const roleLabel = state.currentUser ? currentRoleLabel(state.currentUser.role) : 'Гость';
+        const profileIdentity = state.profile?.employer_profile?.company_name || state.currentUser?.display_name || 'Без названия';
         return {
             eyebrow: 'Личный кабинет',
             title: 'Профиль',
             description: 'Поддерживай профиль в актуальном состоянии: он влияет на то, как тебя видят работодатели, контакты и кураторы.',
             pills: [
-                state.currentUser ? currentRoleLabel(state.currentUser.role) : 'Гость',
+                roleLabel,
                 state.profile?.applicant_profile?.is_profile_public ? 'Профиль открыт' : 'Профиль скрыт',
-                state.profile?.employer_profile?.company_name || state.currentUser?.display_name || 'Без названия',
+                profileIdentity !== roleLabel ? profileIdentity : null,
             ],
         };
     }
@@ -378,7 +380,10 @@ function renderAuthUI() {
         registerBtn.parentElement.classList.add('d-none');
         logoutNavItem.classList.remove('d-none');
         currentUserNavItem.classList.remove('d-none');
-        currentUserLabel.textContent = `${state.currentUser.display_name} (${currentRoleLabel(state.currentUser.role)})`;
+        const roleLabel = currentRoleLabel(state.currentUser.role);
+        currentUserLabel.textContent = state.currentUser.display_name === roleLabel
+            ? state.currentUser.display_name
+            : `${state.currentUser.display_name} (${roleLabel})`;
         authStatusBadge.textContent = currentRoleLabel(state.currentUser.role);
         authStatusBadge.className = 'badge text-bg-success';
         guestGuideCard?.classList.add('d-none');
