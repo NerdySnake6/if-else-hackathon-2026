@@ -16,9 +16,15 @@
 
 ## Требования
 
-- Python 3.11+
+- Python 3.11
 - Node.js 20+
 - npm
+
+Если на macOS команда `python3.11` не найдена, можно установить ее через Homebrew:
+
+```bash
+brew install python@3.11
+```
 
 ## Переменные окружения
 
@@ -82,7 +88,7 @@ Backend автоматически читает `backend/.env` при запус
 
 ```bash
 cd backend
-python3 -m venv venv
+/opt/homebrew/bin/python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python3 -m alembic upgrade head
@@ -93,7 +99,7 @@ uvicorn app.main:app --reload
 
 ```bash
 cd backend
-python3 -m venv venv
+/opt/homebrew/bin/python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python3 -m alembic upgrade head

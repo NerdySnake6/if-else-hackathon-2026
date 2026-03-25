@@ -17,6 +17,14 @@ body {
     display: flex;
 }
 
+#workspaceContentColumn {
+    flex-direction: column;
+}
+
+#workspaceContentColumn > .card {
+    width: 100%;
+}
+
 #app-notice .alert {
     border: 0;
     border-radius: 14px;
@@ -609,15 +617,50 @@ body {
 }
 
 .tag-library-item {
+    display: inline-flex;
+    align-items: center;
     border: 1px solid #e9ecef;
     border-radius: 999px;
     padding: 0.25rem 0.55rem;
     font-size: 0.82rem;
-    background: #fff;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border-color: #d7e3f7;
+    color: #355070;
+    gap: 0.3rem;
+}
+
+.tag-library-label {
+    font-weight: 500;
 }
 
 .tag-library-item small {
     color: #6c757d;
+}
+
+.tag-library-delete {
+    border: 0;
+    background: transparent;
+    color: #7f8da3;
+    font-size: 1rem;
+    line-height: 1;
+    font-weight: 700;
+    padding: 0;
+    margin-left: 0.15rem;
+    cursor: pointer;
+    width: 1rem;
+    height: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.tag-library-delete:hover,
+.tag-library-delete:focus-visible {
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+    text-decoration: none;
 }
 
 .card.shadow-sm {

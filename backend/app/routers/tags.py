@@ -40,3 +40,25 @@ def create_tag(
     db.commit()
     db.refresh(tag)
     return tag
+
+
+@router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_tag(
+    tag_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(require_roles("curator", "admin")),
+):
+    """Удаляет тег из справочника, если он не используется в карточках возможностей."""
+    tag = db.query(models.Tag).filter(models.Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+
+    in_use = db.query(models.Opportunity).filter(models.Opportunity.tags.any(models.Tag.id == tag_id)).first()
+    if in_use:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Нельзя удалить тег, пока он используется в карточках возможностей.",
+        )
+
+    db.delete(tag)
+    db.commit()

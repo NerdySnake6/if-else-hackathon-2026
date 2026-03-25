@@ -100,6 +100,7 @@ const homeController = createHomeController({
     renderContactsSection: (...args) => renderContactsSection(...args),
     openApplyModal: (...args) => openApplyModal(...args),
     openEmployerOpportunityModal: (...args) => openEmployerOpportunityModal(...args),
+    deleteTagFromLibrary: (...args) => deleteTagFromLibrary(...args),
 });
 const getFilteredOpportunities = homeController.getFilteredOpportunities;
 const renderOpportunitiesSection = homeController.renderOpportunitiesSection;
@@ -227,14 +228,16 @@ function workspaceMetaForView() {
     }
 
     if (state.activeView === 'profile') {
+        const roleLabel = state.currentUser ? currentRoleLabel(state.currentUser.role) : 'Гость';
+        const profileIdentity = state.profile?.employer_profile?.company_name || state.currentUser?.display_name || 'Без названия';
         return {
             eyebrow: 'Личный кабинет',
             title: 'Профиль',
             description: 'Поддерживай профиль в актуальном состоянии: он влияет на то, как тебя видят работодатели, контакты и кураторы.',
             pills: [
-                state.currentUser ? currentRoleLabel(state.currentUser.role) : 'Гость',
+                roleLabel,
                 state.profile?.applicant_profile?.is_profile_public ? 'Профиль открыт' : 'Профиль скрыт',
-                state.profile?.employer_profile?.company_name || state.currentUser?.display_name || 'Без названия',
+                profileIdentity !== roleLabel ? profileIdentity : null,
             ],
         };
     }
@@ -353,6 +356,26 @@ async function submitTagForm(nameInputId, categoryInputId, formElement) {
     showNotice('success', 'Тег добавлен в справочник.');
 }
 
+async function deleteTagFromLibrary(tag) {
+    if (!tag) return;
+
+    const confirmed = window.confirm(`Удалить тег "${tag.name}" из справочника?`);
+    if (!confirmed) return;
+
+    const response = await apiFetch(`/tags/${tag.id}`, {
+        method: 'DELETE',
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Не удалось удалить тег.' }));
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось удалить тег.');
+        return;
+    }
+
+    await loadTags();
+    showNotice('success', `Тег "${tag.name}" удален из справочника.`);
+}
+
 async function handleTagSubmit(event) {
     event.preventDefault();
     await submitTagForm('tagNameInput', 'tagCategoryInput', event.target);
@@ -371,16 +394,22 @@ function renderAuthUI() {
     const currentUserLabel = el('currentUserLabel');
     const authStatusBadge = el('authStatusBadge');
     const guestGuideCard = el('guestGuideCard');
+    const guestGuideActions = el('guestGuideActions');
+    const curatorTab = el('tabCurator');
 
     if (state.currentUser) {
         loginBtn.parentElement.classList.add('d-none');
         registerBtn.parentElement.classList.add('d-none');
         logoutNavItem.classList.remove('d-none');
         currentUserNavItem.classList.remove('d-none');
-        currentUserLabel.textContent = `${state.currentUser.display_name} (${currentRoleLabel(state.currentUser.role)})`;
+        const roleLabel = currentRoleLabel(state.currentUser.role);
+        currentUserLabel.textContent = state.currentUser.display_name === roleLabel
+            ? state.currentUser.display_name
+            : `${state.currentUser.display_name} (${roleLabel})`;
         authStatusBadge.textContent = currentRoleLabel(state.currentUser.role);
         authStatusBadge.className = 'badge text-bg-success';
-        guestGuideCard?.classList.add('d-none');
+        guestGuideCard?.classList.remove('d-none');
+        guestGuideActions?.classList.add('d-none');
     } else {
         loginBtn.parentElement.classList.remove('d-none');
         registerBtn.parentElement.classList.remove('d-none');
@@ -390,6 +419,11 @@ function renderAuthUI() {
         authStatusBadge.textContent = 'Гостевой режим';
         authStatusBadge.className = 'badge text-bg-warning text-dark';
         guestGuideCard?.classList.remove('d-none');
+        guestGuideActions?.classList.remove('d-none');
+    }
+
+    if (curatorTab) {
+        curatorTab.textContent = state.currentUser?.role === 'admin' ? 'Админ' : 'Куратор';
     }
 
     if (!visibleViews().includes(state.activeView)) {
@@ -423,6 +457,7 @@ function renderWorkspaceView() {
     const homeMapColumn = el('homeMapColumn');
     const workspaceContentColumn = el('workspaceContentColumn');
     const homeBlocks = [
+        'homeExplorerCard',
         'homeBoardRow',
         'homeListHeader',
         'guestGuideCard',
@@ -439,11 +474,14 @@ function renderWorkspaceView() {
     };
 
     const isHome = state.activeView === 'home';
+    const isCuratorWorkspace = state.activeView === 'curator';
+    const showMapColumn = isHome || isCuratorWorkspace;
+    const useSplitLayout = isHome || isCuratorWorkspace;
 
-    homeMapColumn.classList.toggle('d-none', !isHome);
-    workspaceContentColumn.classList.toggle('col-md-5', isHome);
-    workspaceContentColumn.classList.toggle('col-12', !isHome);
-    workspaceContentColumn.classList.toggle('workspace-wide', !isHome);
+    homeMapColumn.classList.toggle('d-none', !showMapColumn);
+    workspaceContentColumn.classList.toggle('col-md-5', useSplitLayout);
+    workspaceContentColumn.classList.toggle('col-12', !useSplitLayout);
+    workspaceContentColumn.classList.toggle('workspace-wide', !useSplitLayout);
 
     homeBlocks.forEach((id) => {
         el(id).classList.toggle('d-none', !isHome);
@@ -452,6 +490,10 @@ function renderWorkspaceView() {
     Object.values(roleBlocks).flat().forEach((id) => {
         el(id).classList.add('d-none');
     });
+
+    if (!isHome) {
+        el('homeDetailsCard').classList.add('d-none');
+    }
 
     if (!isHome) {
         (roleBlocks[state.activeView] || []).forEach((id) => {
@@ -519,11 +561,13 @@ async function loadCurrentUser() {
         renderProfileSection();
         renderCuratorSection();
         renderSelectedOpportunity();
+        renderTagLibrary();
         return;
     }
 
     state.currentUser = await response.json();
     renderAuthUI();
+    renderTagLibrary();
     await loadProfile();
     await loadResponses();
     await loadContacts();
@@ -551,6 +595,7 @@ async function loadTags() {
     const response = await apiFetch('/tags/');
     if (!response.ok) {
         state.tags = [];
+        state.opportunityFilters.tagIds = [];
         renderTagChoices('filterTagOptions', []);
         renderTagChoices('employerOpportunityTagOptions', []);
         renderTagLibrary();
@@ -558,6 +603,8 @@ async function loadTags() {
     }
 
     state.tags = await response.json();
+    const availableTagIds = new Set(state.tags.map((tag) => tag.id));
+    state.opportunityFilters.tagIds = state.opportunityFilters.tagIds.filter((tagId) => availableTagIds.has(tagId));
     renderTagChoices('filterTagOptions', state.opportunityFilters.tagIds);
     renderTagChoices('employerOpportunityTagOptions', selectedTagIdsFromContainer('employerOpportunityTagOptions'));
     renderTagLibrary();
@@ -669,7 +716,9 @@ async function loadEmployerOpportunities() {
     renderEmployerOpportunities();
 }
 
-async function loadCuratorData() {
+async function loadCuratorData(options = {}) {
+    const { notify = false } = options;
+
     if (!state.currentUser || !['curator', 'admin'].includes(state.currentUser.role)) {
         state.curatorUsers = [];
         state.curatorOpportunities = [];
@@ -696,14 +745,33 @@ async function loadCuratorData() {
     const userPath = `/curator/users${userParams.toString() ? `?${userParams.toString()}` : ''}`;
     const opportunitiesPath = `/curator/opportunities${opportunitiesParams.toString() ? `?${opportunitiesParams.toString()}` : ''}`;
 
-    const [usersResponse, opportunitiesResponse] = await Promise.all([
-        apiFetch(userPath),
-        apiFetch(opportunitiesPath),
-    ]);
+    const refreshBtn = el('refreshCuratorBtn');
+    const previousLabel = refreshBtn ? refreshBtn.textContent : '';
 
-    state.curatorUsers = usersResponse.ok ? await usersResponse.json() : [];
-    state.curatorOpportunities = opportunitiesResponse.ok ? await opportunitiesResponse.json() : [];
-    renderCuratorSection();
+    if (refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = 'Обновляется...';
+    }
+
+    try {
+        const [usersResponse, opportunitiesResponse] = await Promise.all([
+            apiFetch(userPath),
+            apiFetch(opportunitiesPath),
+        ]);
+
+        state.curatorUsers = usersResponse.ok ? await usersResponse.json() : [];
+        state.curatorOpportunities = opportunitiesResponse.ok ? await opportunitiesResponse.json() : [];
+        renderCuratorSection();
+
+        if (notify) {
+            showNotice('success', 'Данные кабинета куратора обновлены.');
+        }
+    } finally {
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.textContent = previousLabel || 'Обновить';
+        }
+    }
 }
 
 async function handleLoginSubmit(event) {
@@ -901,7 +969,7 @@ function bindEvents() {
         openEmployerOpportunityModal();
     });
     el('refreshCuratorBtn').addEventListener('click', () => {
-        void loadCuratorData();
+        void loadCuratorData({ notify: true });
     });
     el('filterType').addEventListener('change', applyOpportunityFilters);
     el('filterWorkFormat').addEventListener('change', applyOpportunityFilters);

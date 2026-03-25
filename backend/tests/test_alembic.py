@@ -106,7 +106,7 @@ def test_alembic_upgrade_head_creates_schema_and_bootstrap_data(tmp_path, monkey
         assert session.query(models.Tag).count() == len(database.DEFAULT_TAGS)
         admins = session.query(models.User).filter(models.User.role == "admin").all()
         assert len(admins) == 1
-        assert admins[0].email == "admin@tramplin.local"
+        assert admins[0].email == "admin@example.com"
     finally:
         session.close()
         engine.dispose()

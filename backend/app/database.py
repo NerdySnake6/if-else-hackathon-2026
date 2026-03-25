@@ -149,7 +149,7 @@ def seed_default_admin():
         if existing_admin:
             return
 
-        admin_email = os.getenv("TRAMPLIN_ADMIN_EMAIL", "admin@tramplin.local")
+        admin_email = os.getenv("TRAMPLIN_ADMIN_EMAIL", "admin@example.com")
         admin_password = os.getenv("TRAMPLIN_ADMIN_PASSWORD", "admin12345")
         admin_name = os.getenv("TRAMPLIN_ADMIN_NAME", "Администратор")
 

@@ -178,6 +178,11 @@ export function createCuratorController({
             ? 'Администратор может управлять всеми аккаунтами и создавать новых кураторов.'
             : 'Куратор модерирует пользователей, карточки возможностей и справочник тегов.';
 
+        if (state.currentUser.role === 'admin' && state.curatorFilters.role === 'employer' && !state.curatorFilters.userSearch) {
+            state.curatorFilters.role = '';
+        }
+        el('curatorUserRoleFilter').value = state.curatorFilters.role;
+
         const filteredUsers = getFilteredCuratorUsers();
         if (!filteredUsers.length) {
             usersContainer.appendChild(createEl('p', 'text-muted mb-0', 'Пользователи по текущим фильтрам не найдены.'));
