@@ -46,7 +46,7 @@ export const state = {
         search: '',
     },
     curatorFilters: {
-        role: 'employer',
+        role: '',
         userSearch: '',
         verification: '',
         opportunitySearch: '',
