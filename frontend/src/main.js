@@ -394,6 +394,7 @@ function renderAuthUI() {
     const currentUserLabel = el('currentUserLabel');
     const authStatusBadge = el('authStatusBadge');
     const guestGuideCard = el('guestGuideCard');
+    const guestGuideActions = el('guestGuideActions');
     const curatorTab = el('tabCurator');
 
     if (state.currentUser) {
@@ -407,7 +408,8 @@ function renderAuthUI() {
             : `${state.currentUser.display_name} (${roleLabel})`;
         authStatusBadge.textContent = currentRoleLabel(state.currentUser.role);
         authStatusBadge.className = 'badge text-bg-success';
-        guestGuideCard?.classList.add('d-none');
+        guestGuideCard?.classList.remove('d-none');
+        guestGuideActions?.classList.add('d-none');
     } else {
         loginBtn.parentElement.classList.remove('d-none');
         registerBtn.parentElement.classList.remove('d-none');
@@ -417,6 +419,7 @@ function renderAuthUI() {
         authStatusBadge.textContent = 'Гостевой режим';
         authStatusBadge.className = 'badge text-bg-warning text-dark';
         guestGuideCard?.classList.remove('d-none');
+        guestGuideActions?.classList.remove('d-none');
     }
 
     if (curatorTab) {
