@@ -371,6 +371,7 @@ function renderAuthUI() {
     const currentUserLabel = el('currentUserLabel');
     const authStatusBadge = el('authStatusBadge');
     const guestGuideCard = el('guestGuideCard');
+    const curatorTab = el('tabCurator');
 
     if (state.currentUser) {
         loginBtn.parentElement.classList.add('d-none');
@@ -390,6 +391,10 @@ function renderAuthUI() {
         authStatusBadge.textContent = 'Гостевой режим';
         authStatusBadge.className = 'badge text-bg-warning text-dark';
         guestGuideCard?.classList.remove('d-none');
+    }
+
+    if (curatorTab) {
+        curatorTab.textContent = state.currentUser?.role === 'admin' ? 'Админ' : 'Куратор';
     }
 
     if (!visibleViews().includes(state.activeView)) {
@@ -423,6 +428,8 @@ function renderWorkspaceView() {
     const homeMapColumn = el('homeMapColumn');
     const workspaceContentColumn = el('workspaceContentColumn');
     const homeBlocks = [
+        'homeExplorerCard',
+        'homeDetailsCard',
         'homeBoardRow',
         'homeListHeader',
         'guestGuideCard',
@@ -439,11 +446,14 @@ function renderWorkspaceView() {
     };
 
     const isHome = state.activeView === 'home';
+    const isCuratorWorkspace = state.activeView === 'curator';
+    const showMapColumn = isHome || isCuratorWorkspace;
+    const useSplitLayout = isHome || isCuratorWorkspace;
 
-    homeMapColumn.classList.toggle('d-none', !isHome);
-    workspaceContentColumn.classList.toggle('col-md-5', isHome);
-    workspaceContentColumn.classList.toggle('col-12', !isHome);
-    workspaceContentColumn.classList.toggle('workspace-wide', !isHome);
+    homeMapColumn.classList.toggle('d-none', !showMapColumn);
+    workspaceContentColumn.classList.toggle('col-md-5', useSplitLayout);
+    workspaceContentColumn.classList.toggle('col-12', !useSplitLayout);
+    workspaceContentColumn.classList.toggle('workspace-wide', !useSplitLayout);
 
     homeBlocks.forEach((id) => {
         el(id).classList.toggle('d-none', !isHome);
