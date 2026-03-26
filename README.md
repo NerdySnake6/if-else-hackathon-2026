@@ -19,6 +19,8 @@
 - Python 3.11
 - Node.js 20+
 - npm
+- pip
+- git
 
 Если на macOS команда `python3.11` не найдена, можно установить ее через Homebrew:
 
@@ -28,6 +30,11 @@ brew install python@3.11
 
 Команда для скачивания репозитория
 ```bash
+# Установка git
+# Для MacOS / Linux:
+# sudo apt install git -y
+# Для Windows git нужно скачать с интернета
+
 git clone https://github.com/NerdySnake6/if-else-hackathon-2026
 ```
 
@@ -91,34 +98,49 @@ Backend автоматически читает `backend/.env` при запус
 
 ### 1. Backend
 
+Перед установкой убедитесь, что у вас установлен `git`, клонируйте репозиторий и откройте консоль `cmd`. Через `cmd` зайдите в корневую директорию репозитория и введите эти команды:
+
+```bash
+# Установка pip и python3.11
+sudo apt install python3-pip -y
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt install python3.11 python3.11-venv -y
+sudo apt update
+sudo apt upgrade -y
+
+# Создание и активация виртуального окружения и запуск проекта
+cd backend
+python3.11 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3.11 -m alembic upgrade head
+```
+
+
 Стандартный запуск через `uvicorn` (продвинутый вывод в консоль, больше информации):
 
 ```bash
-cd backend
-/opt/homebrew/bin/python3.11 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python3 -m alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
 Упрощенный запуск через Python (обычный вывод в консоль, понятный любому):
 
 ```bash
-cd backend
-/opt/homebrew/bin/python3.11 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python3 -m alembic upgrade head
-python3 -m app.main
+python3.11 -m app.main
 ```
 
 Backend будет доступен по адресу `http://127.0.0.1:8000`.
 
 ### 2. Frontend
 
+Установка npm, curl, nodejs, nvm
+
 ```bash
 cd frontend
+sudo apt install npm -y
+sudo apt install curl
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
 npm install
 npm run dev
 ```
