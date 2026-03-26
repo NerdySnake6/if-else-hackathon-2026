@@ -135,9 +135,10 @@ Backend будет доступен по адресу `http://127.0.0.1:8000`.
 
 ### 2. Frontend
 
-Установка npm, curl, nodejs, nvm
+Перед установкой убедитесь, что у вас установлен `git`, клонируйте репозиторий и откройте консоль `cmd`. Через `cmd` зайдите в корневую директорию репозитория и введите эти команды:
 
 ```bash
+# Установка npm, curl, nodejs, nvm
 cd frontend
 sudo apt install npm -y
 sudo apt install curl
