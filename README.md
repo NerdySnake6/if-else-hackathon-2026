@@ -17,10 +17,12 @@
 ## Требования
 
 - Python 3.11
-- Node.js 20+
-- npm
 - pip
 - git
+- Node.js 20+
+- npm
+- nvm
+- curl
 
 Если на macOS команда `python3.11` не найдена, можно установить ее через Homebrew:
 
