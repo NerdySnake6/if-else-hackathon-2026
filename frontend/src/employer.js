@@ -146,9 +146,18 @@ export function createEmployerController({
         refreshBtn.classList.remove('d-none');
         createBtn.classList.remove('d-none');
         createBtn.disabled = !state.currentUser.is_verified;
+        createBtn.title = state.currentUser.is_verified
+            ? 'Создать новую карточку возможности'
+            : 'Сначала пройди верификацию у администратора или куратора платформы';
 
         if (!state.currentUser.is_verified) {
-            container.appendChild(createEl('p', 'text-muted mb-2', 'После верификации компании куратором здесь станет доступно создание новых карточек.'));
+            container.appendChild(
+                createEl(
+                    'div',
+                    'alert alert-warning py-2 px-3 mb-3',
+                    'Создание карточек пока недоступно. Сначала пройди верификацию у администратора или куратора платформы, после этого сможешь публиковать стажировки, вакансии и события на карте.'
+                )
+            );
         }
 
         if (!state.employerOpportunities.length) {

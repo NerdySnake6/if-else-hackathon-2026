@@ -44,6 +44,7 @@ export function createHomeController({
     function renderList(opportunities) {
         const list = el('opportunities-list');
         const count = el('homeOpportunityCount');
+        const canUseFavorites = !state.currentUser || state.currentUser.role === 'applicant';
         list.innerHTML = '';
         if (count) {
             count.textContent = `${opportunities.length} ${opportunities.length === 1 ? 'результат' : opportunities.length < 5 ? 'результата' : 'результатов'}`;
@@ -75,13 +76,13 @@ export function createHomeController({
         }
 
         opportunities.forEach((opportunity) => {
-            const favoriteOpportunity = isFavoriteOpportunity(opportunity.id);
-            const favoriteCompany = isFavoriteCompany(opportunity.employer_id);
+            const favoriteOpportunity = canUseFavorites && isFavoriteOpportunity(opportunity.id);
+            const favoriteCompany = canUseFavorites && isFavoriteCompany(opportunity.employer_id);
+            const isSelected = state.selectedOpportunityId === opportunity.id;
             const item = createEl(
-                'a',
-                `list-group-item list-group-item-action opportunity-item${state.selectedOpportunityId === opportunity.id ? ' active' : ''}${favoriteOpportunity ? ' favorite-opportunity' : ''}${!favoriteOpportunity && favoriteCompany ? ' favorite-company' : ''}`
+                'div',
+                `list-group-item opportunity-item${isSelected ? ' active selected' : ''}${favoriteOpportunity ? ' favorite-opportunity' : ''}${!favoriteOpportunity && favoriteCompany ? ' favorite-company' : ''}`
             );
-            item.href = '#';
 
             const shortDesc = opportunity.description.length > 120
                 ? `${opportunity.description.slice(0, 120)}...`
@@ -93,8 +94,11 @@ export function createHomeController({
             titleWrap.appendChild(createEl('div', 'small text-muted', opportunity.employer_name || 'Работодатель'));
             header.appendChild(titleWrap);
 
-            const badges = createEl('div', 'd-flex flex-wrap gap-1 justify-content-end');
+            const badges = createEl('div', 'd-flex flex-wrap gap-1 justify-content-end align-items-start');
             badges.appendChild(createEl('small', 'badge bg-secondary', opportunityTypeLabel(opportunity.type)));
+            if (isSelected) {
+                badges.appendChild(createEl('small', 'badge map-focus-badge', 'На карте'));
+            }
             if (favoriteOpportunity) {
                 badges.appendChild(createEl('small', 'badge text-bg-danger', 'Избр. вакансия'));
             } else if (favoriteCompany) {
@@ -115,8 +119,7 @@ export function createHomeController({
             item.appendChild(desc);
             item.appendChild(meta);
 
-            item.addEventListener('click', (event) => {
-                event.preventDefault();
+            item.addEventListener('click', () => {
                 state.selectedOpportunityId = opportunity.id;
                 renderSelectedOpportunity();
                 renderList(opportunities);
@@ -205,7 +208,13 @@ export function createHomeController({
     function renderFavoritesSummary() {
         const container = el('favorites-summary');
         const badge = el('favoriteSummaryBadge');
+        const canUseFavorites = !state.currentUser || state.currentUser.role === 'applicant';
         container.innerHTML = '';
+
+        if (!canUseFavorites) {
+            badge.textContent = '0';
+            return;
+        }
 
         const favoriteOpportunities = state.opportunities.filter((item) => isFavoriteOpportunity(item.id));
         const favoriteCompanies = state.favoriteCompanyIds
@@ -321,6 +330,7 @@ export function createHomeController({
         const container = el('opportunity-details');
         const detailsCard = el('homeDetailsCard');
         const opportunity = selectedOpportunity();
+        const canUseFavorites = !state.currentUser || state.currentUser.role === 'applicant';
         container.innerHTML = '';
 
         if (!opportunity) {
@@ -354,29 +364,31 @@ export function createHomeController({
 
         const actionWrap = createEl('div', 'd-flex flex-wrap gap-2 align-items-center detail-actions');
 
-        const favoriteOpportunityBtn = createEl(
-            'button',
-            isFavoriteOpportunity(opportunity.id) ? 'btn btn-danger' : 'btn btn-outline-danger',
-            isFavoriteOpportunity(opportunity.id) ? 'Убрать вакансию из избранного' : 'В избранное: вакансия'
-        );
-        favoriteOpportunityBtn.type = 'button';
-        favoriteOpportunityBtn.addEventListener('click', () => {
-            toggleFavoriteOpportunity(opportunity.id);
-            renderOpportunitiesSection();
-        });
-        actionWrap.appendChild(favoriteOpportunityBtn);
+        if (canUseFavorites) {
+            const favoriteOpportunityBtn = createEl(
+                'button',
+                isFavoriteOpportunity(opportunity.id) ? 'btn btn-danger' : 'btn btn-outline-danger',
+                isFavoriteOpportunity(opportunity.id) ? 'Убрать вакансию из избранного' : 'В избранное: вакансия'
+            );
+            favoriteOpportunityBtn.type = 'button';
+            favoriteOpportunityBtn.addEventListener('click', () => {
+                toggleFavoriteOpportunity(opportunity.id);
+                renderOpportunitiesSection();
+            });
+            actionWrap.appendChild(favoriteOpportunityBtn);
 
-        const favoriteCompanyBtn = createEl(
-            'button',
-            isFavoriteCompany(opportunity.employer_id) ? 'btn btn-warning' : 'btn btn-outline-warning',
-            isFavoriteCompany(opportunity.employer_id) ? 'Убрать компанию из избранного' : 'В избранное: компания'
-        );
-        favoriteCompanyBtn.type = 'button';
-        favoriteCompanyBtn.addEventListener('click', () => {
-            toggleFavoriteCompany(opportunity.employer_id, opportunity.employer_name);
-            renderOpportunitiesSection();
-        });
-        actionWrap.appendChild(favoriteCompanyBtn);
+            const favoriteCompanyBtn = createEl(
+                'button',
+                isFavoriteCompany(opportunity.employer_id) ? 'btn btn-warning' : 'btn btn-outline-warning',
+                isFavoriteCompany(opportunity.employer_id) ? 'Убрать компанию из избранного' : 'В избранное: компания'
+            );
+            favoriteCompanyBtn.type = 'button';
+            favoriteCompanyBtn.addEventListener('click', () => {
+                toggleFavoriteCompany(opportunity.employer_id, opportunity.employer_name);
+                renderOpportunitiesSection();
+            });
+            actionWrap.appendChild(favoriteCompanyBtn);
+        }
 
         if (!state.currentUser) {
             actionWrap.appendChild(createEl('span', 'text-muted small', 'Войди как соискатель, чтобы откликнуться.'));

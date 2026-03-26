@@ -258,11 +258,17 @@ function workspaceMetaForView() {
 
     if (state.activeView === 'employer') {
         const activeOpportunities = state.employerOpportunities.filter((item) => item.is_active).length;
+        const verificationLabel = state.currentUser?.is_verified
+            ? 'Компания верифицирована'
+            : 'Нужна верификация';
         return {
             eyebrow: 'Кабинет работодателя',
             title: 'Работодатель',
-            description: 'Управляй карточками возможностей, поддерживай витрину компании в актуальном состоянии и обрабатывай отклики.',
+            description: state.currentUser?.is_verified
+                ? 'Управляй карточками возможностей, поддерживай витрину компании в актуальном состоянии и обрабатывай отклики.'
+                : 'Чтобы публиковать стажировки, вакансии и события, сначала пройди верификацию у администратора или куратора платформы.',
             pills: [
+                verificationLabel,
                 `${state.employerOpportunities.length} карточек`,
                 `${activeOpportunities} активных`,
                 `${state.employerResponses.length} откликов`,
@@ -396,6 +402,10 @@ function renderAuthUI() {
     const guestGuideCard = el('guestGuideCard');
     const guestGuideActions = el('guestGuideActions');
     const curatorTab = el('tabCurator');
+    const canUseFavorites = !state.currentUser || state.currentUser.role === 'applicant';
+    const favoritesFilterField = el('filterFavorites')?.closest('.col-md-6');
+    const favoritesCardColumn = el('homeFavoritesCard')?.closest('.col-lg-4');
+    const opportunitiesBoardColumn = el('homeOpportunityBlock')?.closest('.col-lg-8');
 
     if (state.currentUser) {
         loginBtn.parentElement.classList.add('d-none');
@@ -421,6 +431,17 @@ function renderAuthUI() {
         guestGuideCard?.classList.remove('d-none');
         guestGuideActions?.classList.remove('d-none');
     }
+
+    if (!canUseFavorites) {
+        state.opportunityFilters.favorites = '';
+        if (el('filterFavorites')) {
+            el('filterFavorites').value = '';
+        }
+    }
+    favoritesFilterField?.classList.toggle('d-none', !canUseFavorites);
+    favoritesCardColumn?.classList.toggle('d-none', !canUseFavorites);
+    opportunitiesBoardColumn?.classList.toggle('col-lg-8', canUseFavorites);
+    opportunitiesBoardColumn?.classList.toggle('col-12', !canUseFavorites);
 
     if (curatorTab) {
         curatorTab.textContent = state.currentUser?.role === 'admin' ? 'Админ' : 'Куратор';
@@ -475,8 +496,9 @@ function renderWorkspaceView() {
 
     const isHome = state.activeView === 'home';
     const isCuratorWorkspace = state.activeView === 'curator';
-    const showMapColumn = isHome || isCuratorWorkspace;
-    const useSplitLayout = isHome || isCuratorWorkspace;
+    const isEmployerWorkspace = state.activeView === 'employer';
+    const showMapColumn = isHome || isCuratorWorkspace || isEmployerWorkspace;
+    const useSplitLayout = isHome || isCuratorWorkspace || isEmployerWorkspace;
 
     homeMapColumn.classList.toggle('d-none', !showMapColumn);
     workspaceContentColumn.classList.toggle('col-md-5', useSplitLayout);
