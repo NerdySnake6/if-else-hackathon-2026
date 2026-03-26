@@ -60,7 +60,6 @@ let openApplyModal;
 let handleApplySubmit;
 let renderEmployerResponses;
 let renderEmployerOpportunities;
-let renderEmployerHomeDeck;
 let applyEmployerResponseFilters;
 let resetEmployerResponseFilters;
 let applyEmployerOpportunityFilters;
@@ -85,7 +84,6 @@ const mapController = createMapController({
     workFormatLabel,
     onSelectOpportunity(opportunityId) {
         state.selectedOpportunityId = opportunityId;
-        renderSelectedOpportunity();
         renderOpportunitiesSection();
     },
 });
@@ -111,7 +109,6 @@ const resetOpportunityFilters = homeController.resetOpportunityFilters;
 const renderFavoritesSummary = homeController.renderFavoritesSummary;
 const renderTagChoices = homeController.renderTagChoices;
 const renderTagLibrary = homeController.renderTagLibrary;
-const renderSelectedOpportunity = homeController.renderSelectedOpportunity;
 
 const profileController = createProfileController({
     state,
@@ -145,7 +142,6 @@ const employerController = createEmployerController({
     state,
     renderWorkspaceHero,
     renderOpportunitiesSection: () => renderOpportunitiesSection(),
-    centerOnOpportunity,
     refreshFieldCounters,
     renderTagChoices,
     loadEmployerResponses: () => loadEmployerResponses(),
@@ -153,7 +149,6 @@ const employerController = createEmployerController({
     loadOpportunities: () => loadOpportunities(),
     getEmployerOpportunityModal: () => employerOpportunityModal,
 });
-renderEmployerHomeDeck = employerController.renderEmployerHomeDeck;
 renderEmployerResponses = employerController.renderEmployerResponses;
 renderEmployerOpportunities = employerController.renderEmployerOpportunities;
 applyEmployerResponseFilters = employerController.applyEmployerResponseFilters;
@@ -522,10 +517,6 @@ function renderWorkspaceView() {
         el(id).classList.add('d-none');
     });
 
-    if (showTopDeck) {
-        el('homeDetailsCard').classList.add('d-none');
-    }
-
     if (!isHome) {
         (roleBlocks[state.activeView] || []).forEach((id) => {
             el(id).classList.remove('d-none');
@@ -722,7 +713,6 @@ async function loadEmployerOpportunities() {
     if (!state.currentUser || state.currentUser.role !== 'employer') {
         state.employerOpportunities = [];
         renderEmployerOpportunities();
-        renderEmployerHomeDeck();
         return;
     }
 
@@ -741,13 +731,11 @@ async function loadEmployerOpportunities() {
     if (!response.ok) {
         state.employerOpportunities = [];
         renderEmployerOpportunities();
-        renderEmployerHomeDeck();
         return;
     }
 
     state.employerOpportunities = await response.json();
     renderEmployerOpportunities();
-    renderEmployerHomeDeck();
 }
 
 async function loadCuratorData(options = {}) {
@@ -1063,7 +1051,6 @@ async function bootstrap() {
     renderEmployerOpportunities();
     renderCuratorSection();
     renderProfileSection();
-    renderSelectedOpportunity();
     renderFavoritesSummary();
     renderTagLibrary();
     syncEmployerOpportunityFieldHints();

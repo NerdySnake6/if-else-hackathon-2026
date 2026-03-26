@@ -38,8 +38,7 @@ body {
 }
 
 .workspace-hero-card .card-body,
-.home-explorer-card .card-body,
-.home-details-card .card-body {
+.home-explorer-card .card-body {
     padding-inline: 1.35rem;
 }
 
@@ -629,10 +628,6 @@ body {
 .home-favorites-card {
     background: linear-gradient(180deg, #ffffff, #fbfcff);
     height: 100%;
-}
-
-.home-details-card {
-    background: linear-gradient(180deg, #ffffff, #fcfdff);
 }
 
 #homeFavoritesCard {

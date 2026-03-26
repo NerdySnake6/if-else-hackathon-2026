@@ -26,10 +26,6 @@ export function createHomeController({
     openEmployerOpportunityModal,
     deleteTagFromLibrary,
 }) {
-    function selectedOpportunity() {
-        return state.opportunities.find((item) => item.id === state.selectedOpportunityId) || null;
-    }
-
     function hasActiveOpportunityFilters() {
         return Boolean(
             state.opportunityFilters.type
@@ -255,10 +251,8 @@ export function createHomeController({
 
             item.addEventListener('click', () => {
                 state.selectedOpportunityId = opportunity.id;
-                renderSelectedOpportunity();
-                renderList(opportunities);
+                renderOpportunitiesSection();
                 centerOnOpportunity(opportunity);
-                renderMap(opportunities);
             });
 
             list.appendChild(item);
@@ -313,7 +307,6 @@ export function createHomeController({
         syncSelectedOpportunity(filtered);
         renderHomeDeck(filtered);
         renderList(filtered);
-        renderSelectedOpportunity();
         renderMap(filtered);
         renderFavoritesSummary();
         renderWorkspaceHero();
@@ -461,105 +454,6 @@ export function createHomeController({
         });
     }
 
-    function renderSelectedOpportunity() {
-        const container = el('opportunity-details');
-        const detailsCard = el('homeDetailsCard');
-        const opportunity = selectedOpportunity();
-        const canUseFavorites = !state.currentUser || state.currentUser.role === 'applicant';
-        const useTopDeck = state.activeView === 'home'
-            || (state.activeView === 'employer' && state.currentUser?.role === 'employer');
-        container.innerHTML = '';
-
-        if (useTopDeck) {
-            detailsCard.classList.add('d-none');
-            return;
-        }
-
-        if (!opportunity) {
-            detailsCard.classList.add('d-none');
-            container.appendChild(createEl('h5', 'card-title', 'Выбери возможность'));
-            container.appendChild(createEl('p', 'text-muted mb-0', 'Здесь появятся детали вакансии и кнопка отклика.'));
-            return;
-        }
-
-        detailsCard.classList.remove('d-none');
-        container.appendChild(createEl('h5', 'card-title', opportunity.title));
-        container.appendChild(createEl('p', 'detail-meta mb-1', opportunity.employer_name || 'Работодатель'));
-        container.appendChild(createEl('p', 'detail-meta mb-2', `${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
-        container.appendChild(createEl('p', 'mb-3', opportunity.description));
-
-        const metaList = createEl('div', 'small text-muted mb-3');
-        metaList.appendChild(createEl('div', '', `Публикация: ${formatDate(opportunity.published_at)}`));
-        metaList.appendChild(createEl('div', '', `Срок отклика: ${formatDate(opportunity.expires_at)}`));
-        if (opportunity.salary_range) {
-            metaList.appendChild(createEl('div', '', `Вознаграждение: ${opportunity.salary_range}`));
-        }
-        container.appendChild(metaList);
-
-        if (Array.isArray(opportunity.tags) && opportunity.tags.length) {
-            const tagsRow = createEl('div', 'd-flex flex-wrap gap-2 mb-3');
-            opportunity.tags.forEach((tag) => {
-                tagsRow.appendChild(createEl('span', 'badge text-bg-light', `#${tag.name}`));
-            });
-            container.appendChild(tagsRow);
-        }
-
-        const actionWrap = createEl('div', 'd-flex flex-wrap gap-2 align-items-center detail-actions');
-
-        if (canUseFavorites) {
-            const favoriteOpportunityBtn = createEl(
-                'button',
-                isFavoriteOpportunity(opportunity.id) ? 'btn btn-danger' : 'btn btn-outline-danger',
-                isFavoriteOpportunity(opportunity.id) ? 'Убрать вакансию из избранного' : 'В избранное: вакансия'
-            );
-            favoriteOpportunityBtn.type = 'button';
-            favoriteOpportunityBtn.addEventListener('click', () => {
-                toggleFavoriteOpportunity(opportunity.id);
-                renderOpportunitiesSection();
-            });
-            actionWrap.appendChild(favoriteOpportunityBtn);
-
-            const favoriteCompanyBtn = createEl(
-                'button',
-                isFavoriteCompany(opportunity.employer_id) ? 'btn btn-warning' : 'btn btn-outline-warning',
-                isFavoriteCompany(opportunity.employer_id) ? 'Убрать компанию из избранного' : 'В избранное: компания'
-            );
-            favoriteCompanyBtn.type = 'button';
-            favoriteCompanyBtn.addEventListener('click', () => {
-                toggleFavoriteCompany(opportunity.employer_id, opportunity.employer_name);
-                renderOpportunitiesSection();
-            });
-            actionWrap.appendChild(favoriteCompanyBtn);
-        }
-
-        if (!state.currentUser) {
-            actionWrap.appendChild(createEl('span', 'text-muted small', 'Войди как соискатель, чтобы откликнуться.'));
-        } else if (state.currentUser.role !== 'applicant') {
-            actionWrap.appendChild(createEl('span', 'text-muted small', 'Отклик доступен только для аккаунта соискателя.'));
-        } else {
-            const applyBtn = createEl('button', 'btn btn-primary', 'Откликнуться');
-            applyBtn.type = 'button';
-            applyBtn.addEventListener('click', () => openApplyModal(opportunity.id));
-            actionWrap.appendChild(applyBtn);
-        }
-
-        const focusBtn = createEl('button', 'btn btn-outline-secondary', 'Показать на карте');
-        focusBtn.type = 'button';
-        focusBtn.disabled = !hasCoords(opportunity);
-        focusBtn.addEventListener('click', () => centerOnOpportunity(opportunity));
-        actionWrap.appendChild(focusBtn);
-
-        if (state.currentUser?.role === 'employer' && state.currentUser.id === opportunity.employer_id) {
-            const editBtn = createEl('button', 'btn btn-outline-primary', 'Редактировать мою карточку');
-            editBtn.type = 'button';
-            editBtn.addEventListener('click', () => openEmployerOpportunityModal(opportunity.id));
-            actionWrap.appendChild(editBtn);
-        }
-
-        container.appendChild(actionWrap);
-        renderContactsSection();
-    }
-
     return {
         getFilteredOpportunities,
         renderHomeDeck,
@@ -569,6 +463,5 @@ export function createHomeController({
         renderFavoritesSummary,
         renderTagChoices,
         renderTagLibrary,
-        renderSelectedOpportunity,
     };
 }

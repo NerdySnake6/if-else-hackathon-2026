@@ -17,7 +17,6 @@ export function createEmployerController({
     state,
     renderWorkspaceHero,
     renderOpportunitiesSection,
-    centerOnOpportunity,
     refreshFieldCounters,
     renderTagChoices,
     loadEmployerResponses,
@@ -129,114 +128,6 @@ export function createEmployerController({
             container.appendChild(item);
         });
         renderWorkspaceHero();
-    }
-
-    function getEmployerHomeDeckOpportunities() {
-        return [...state.employerOpportunities].sort((left, right) => {
-            const leftPublishedAt = left.published_at ? new Date(left.published_at).getTime() : 0;
-            const rightPublishedAt = right.published_at ? new Date(right.published_at).getTime() : 0;
-            if (rightPublishedAt !== leftPublishedAt) {
-                return rightPublishedAt - leftPublishedAt;
-            }
-            return (Number(right.id) || 0) - (Number(left.id) || 0);
-        });
-    }
-
-    function renderEmployerHomeDeck() {
-        const row = el('employerHomeDeckRow');
-        const container = el('employerHomeDeck');
-        if (!row || !container) return;
-
-        if (state.currentUser?.role !== 'employer') {
-            return;
-        }
-
-        const shouldShow = state.activeView === 'employer';
-        row.classList.toggle('d-none', !shouldShow);
-        container.innerHTML = '';
-
-        if (!shouldShow) {
-            return;
-        }
-
-        const opportunities = getEmployerHomeDeckOpportunities();
-        if (!opportunities.length) {
-            const emptyState = createEl('div', 'card shadow-sm border-0 employer-home-empty');
-            const body = createEl('div', 'card-body py-3');
-            body.appendChild(createEl('div', 'home-section-title mb-2', 'Мои карточки'));
-            body.appendChild(createEl('p', 'text-muted mb-0', 'После создания вакансий, стажировок и событий они появятся здесь в отдельной сетке.'));
-            emptyState.appendChild(body);
-            container.appendChild(emptyState);
-            return;
-        }
-
-        opportunities.forEach((opportunity) => {
-            const card = createEl('div', `card shadow-sm border-0 employer-home-opportunity-card${state.selectedOpportunityId === opportunity.id ? ' active' : ''}`);
-            const body = createEl('div', 'card-body py-3');
-
-            const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2 mb-2');
-            const titleWrap = createEl('div');
-            titleWrap.appendChild(createEl('h5', 'card-title mb-1', opportunity.title));
-            titleWrap.appendChild(createEl('div', 'detail-meta', state.profile?.employer_profile?.company_name || state.currentUser?.display_name || 'Работодатель'));
-            top.appendChild(titleWrap);
-
-            const badges = createEl('div', 'd-flex flex-wrap justify-content-end gap-1');
-            badges.appendChild(createEl('small', 'badge bg-secondary', opportunityTypeLabel(opportunity.type)));
-            if (state.selectedOpportunityId === opportunity.id) {
-                badges.appendChild(createEl('small', 'badge map-focus-badge', 'На карте'));
-            }
-            top.appendChild(badges);
-            body.appendChild(top);
-
-            body.appendChild(createEl('p', 'detail-meta mb-2', `${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
-            body.appendChild(createEl('p', 'mb-3', opportunity.description.length > 170 ? `${opportunity.description.slice(0, 170)}...` : opportunity.description));
-
-            const metaList = createEl('div', 'small text-muted mb-3');
-            metaList.appendChild(createEl('div', '', `Публикация: ${formatDate(opportunity.published_at)}`));
-            metaList.appendChild(createEl('div', '', `Срок отклика: ${formatDate(opportunity.expires_at)}`));
-            if (opportunity.salary_range) {
-                metaList.appendChild(createEl('div', '', `Вознаграждение: ${opportunity.salary_range}`));
-            }
-            body.appendChild(metaList);
-
-            if (Array.isArray(opportunity.tags) && opportunity.tags.length) {
-                const tagsRow = createEl('div', 'd-flex flex-wrap gap-2 mb-3');
-                opportunity.tags.forEach((tag) => {
-                    tagsRow.appendChild(createEl('span', 'badge text-bg-light', `#${tag.name}`));
-                });
-                body.appendChild(tagsRow);
-            }
-
-            const actions = createEl('div', 'd-flex flex-wrap gap-2');
-
-            const mapBtn = createEl('button', 'btn btn-outline-secondary', 'Показать на карте');
-            mapBtn.type = 'button';
-            mapBtn.addEventListener('click', () => {
-                state.selectedOpportunityId = opportunity.id;
-                centerOnOpportunity(opportunity);
-                renderOpportunitiesSection();
-                renderEmployerHomeDeck();
-            });
-            actions.appendChild(mapBtn);
-
-            const editBtn = createEl('button', 'btn btn-outline-primary', 'Редактировать');
-            editBtn.type = 'button';
-            editBtn.addEventListener('click', () => openEmployerOpportunityModal(opportunity.id));
-            actions.appendChild(editBtn);
-
-            body.appendChild(actions);
-            card.appendChild(body);
-
-            card.addEventListener('click', (event) => {
-                if (event.target.closest('button')) return;
-                state.selectedOpportunityId = opportunity.id;
-                centerOnOpportunity(opportunity);
-                renderOpportunitiesSection();
-                renderEmployerHomeDeck();
-            });
-
-            container.appendChild(card);
-        });
     }
 
     function renderEmployerOpportunities() {
@@ -547,8 +438,7 @@ export function createEmployerController({
         resetEmployerOpportunityForm();
     }
 
-        return {
-        renderEmployerHomeDeck,
+    return {
         renderEmployerResponses,
         renderEmployerOpportunities,
         applyEmployerResponseFilters,
