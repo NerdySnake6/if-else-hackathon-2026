@@ -41,6 +41,140 @@ export function createHomeController({
         );
     }
 
+    function renderHomeDeck(opportunities) {
+        const row = el('employerHomeDeckRow');
+        const container = el('employerHomeDeck');
+        const canUseFavorites = !state.currentUser || state.currentUser.role === 'applicant';
+        if (!row || !container) return;
+
+        const shouldShow = state.activeView === 'home';
+        row.classList.toggle('d-none', !shouldShow);
+        container.innerHTML = '';
+
+        if (!shouldShow) {
+            return;
+        }
+
+        if (!opportunities.length) {
+            const emptyState = createEl('div', 'card shadow-sm border-0 employer-home-empty');
+            const body = createEl('div', 'card-body py-3');
+            body.appendChild(createEl('div', 'home-section-title mb-2', 'Карточки возможностей'));
+            body.appendChild(createEl('p', 'text-muted mb-0', hasActiveOpportunityFilters() ? 'По текущим фильтрам карточки не найдены.' : 'Когда появятся новые возможности, они будут показаны здесь в верхней сетке.'));
+            emptyState.appendChild(body);
+            container.appendChild(emptyState);
+            return;
+        }
+
+        opportunities.forEach((opportunity) => {
+            const card = createEl('div', `card shadow-sm border-0 employer-home-opportunity-card${state.selectedOpportunityId === opportunity.id ? ' active' : ''}`);
+            const body = createEl('div', 'card-body py-3');
+
+            const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2 mb-2');
+            const titleWrap = createEl('div');
+            titleWrap.appendChild(createEl('h5', 'card-title mb-1', opportunity.title));
+            titleWrap.appendChild(createEl('div', 'detail-meta', opportunity.employer_name || 'Работодатель'));
+            top.appendChild(titleWrap);
+
+            const badges = createEl('div', 'd-flex flex-wrap justify-content-end gap-1');
+            badges.appendChild(createEl('small', 'badge bg-secondary', opportunityTypeLabel(opportunity.type)));
+            if (state.selectedOpportunityId === opportunity.id) {
+                badges.appendChild(createEl('small', 'badge map-focus-badge', 'На карте'));
+            }
+            top.appendChild(badges);
+            body.appendChild(top);
+
+            body.appendChild(createEl('p', 'detail-meta mb-2', `${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)} | ${opportunity.location}`));
+            body.appendChild(createEl('p', 'mb-3', opportunity.description.length > 170 ? `${opportunity.description.slice(0, 170)}...` : opportunity.description));
+
+            const metaList = createEl('div', 'small text-muted mb-3');
+            metaList.appendChild(createEl('div', '', `Публикация: ${formatDate(opportunity.published_at)}`));
+            metaList.appendChild(createEl('div', '', `Срок отклика: ${formatDate(opportunity.expires_at)}`));
+            if (opportunity.salary_range) {
+                metaList.appendChild(createEl('div', '', `Вознаграждение: ${opportunity.salary_range}`));
+            }
+            body.appendChild(metaList);
+
+            if (Array.isArray(opportunity.tags) && opportunity.tags.length) {
+                const tagsRow = createEl('div', 'd-flex flex-wrap gap-2 mb-3');
+                opportunity.tags.forEach((tag) => {
+                    tagsRow.appendChild(createEl('span', 'badge text-bg-light', `#${tag.name}`));
+                });
+                body.appendChild(tagsRow);
+            }
+
+            const actions = createEl('div', 'd-flex flex-wrap gap-2');
+
+            if (canUseFavorites) {
+                const favoriteOpportunityBtn = createEl(
+                    'button',
+                    isFavoriteOpportunity(opportunity.id) ? 'btn btn-danger' : 'btn btn-outline-danger',
+                    isFavoriteOpportunity(opportunity.id) ? 'В избранном: вакансия' : 'В избранное: вакансия'
+                );
+                favoriteOpportunityBtn.type = 'button';
+                favoriteOpportunityBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    toggleFavoriteOpportunity(opportunity.id);
+                    renderOpportunitiesSection();
+                });
+                actions.appendChild(favoriteOpportunityBtn);
+
+                const favoriteCompanyBtn = createEl(
+                    'button',
+                    isFavoriteCompany(opportunity.employer_id) ? 'btn btn-warning' : 'btn btn-outline-warning',
+                    isFavoriteCompany(opportunity.employer_id) ? 'В избранном: компания' : 'В избранное: компания'
+                );
+                favoriteCompanyBtn.type = 'button';
+                favoriteCompanyBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    toggleFavoriteCompany(opportunity.employer_id, opportunity.employer_name);
+                    renderOpportunitiesSection();
+                });
+                actions.appendChild(favoriteCompanyBtn);
+            }
+
+            if (state.currentUser?.role === 'applicant') {
+                const applyBtn = createEl('button', 'btn btn-primary', 'Откликнуться');
+                applyBtn.type = 'button';
+                applyBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    openApplyModal(opportunity.id);
+                });
+                actions.appendChild(applyBtn);
+            }
+
+            const mapBtn = createEl('button', 'btn btn-outline-secondary', 'Показать на карте');
+            mapBtn.type = 'button';
+            mapBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                state.selectedOpportunityId = opportunity.id;
+                centerOnOpportunity(opportunity);
+                renderOpportunitiesSection();
+            });
+            actions.appendChild(mapBtn);
+
+            if (state.currentUser?.role === 'employer' && state.currentUser.id === opportunity.employer_id) {
+                const editBtn = createEl('button', 'btn btn-outline-primary', 'Редактировать');
+                editBtn.type = 'button';
+                editBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    openEmployerOpportunityModal(opportunity.id);
+                });
+                actions.appendChild(editBtn);
+            }
+
+            body.appendChild(actions);
+            card.appendChild(body);
+
+            card.addEventListener('click', () => {
+                state.selectedOpportunityId = opportunity.id;
+                centerOnOpportunity(opportunity);
+                renderOpportunitiesSection();
+            });
+
+            container.appendChild(card);
+        });
+    }
+
     function renderList(opportunities) {
         const list = el('opportunities-list');
         const count = el('homeOpportunityCount');
@@ -177,6 +311,7 @@ export function createHomeController({
     function renderOpportunitiesSection() {
         const filtered = getFilteredOpportunities();
         syncSelectedOpportunity(filtered);
+        renderHomeDeck(filtered);
         renderList(filtered);
         renderSelectedOpportunity();
         renderMap(filtered);
@@ -331,7 +466,14 @@ export function createHomeController({
         const detailsCard = el('homeDetailsCard');
         const opportunity = selectedOpportunity();
         const canUseFavorites = !state.currentUser || state.currentUser.role === 'applicant';
+        const useTopDeck = state.activeView === 'home'
+            || (state.activeView === 'employer' && state.currentUser?.role === 'employer');
         container.innerHTML = '';
+
+        if (useTopDeck) {
+            detailsCard.classList.add('d-none');
+            return;
+        }
 
         if (!opportunity) {
             detailsCard.classList.add('d-none');
@@ -420,6 +562,7 @@ export function createHomeController({
 
     return {
         getFilteredOpportunities,
+        renderHomeDeck,
         renderOpportunitiesSection,
         applyOpportunityFilters,
         resetOpportunityFilters,

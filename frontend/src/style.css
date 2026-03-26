@@ -231,6 +231,13 @@ body {
 .opportunity-item {
     cursor: pointer;
     transition: background-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 1rem !important;
+    border: 1px solid #e3eaf4 !important;
+    border-radius: 18px !important;
+    background: #fff;
 }
 
 .opportunity-item:hover,
@@ -300,16 +307,22 @@ body {
 }
 
 #opportunities-list {
-    max-height: 340px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+    align-items: stretch;
+    max-height: min(420px, 56vh);
+    min-height: 260px;
     overflow-y: auto;
     border-radius: 16px;
     border: 1px solid #edf2f7;
     background: #fff;
+    padding: 0.2rem;
 }
 
 #opportunities-list .list-group-item {
-    border-left: 0;
-    border-right: 0;
+    border-left: 1px solid #e3eaf4;
+    border-right: 1px solid #e3eaf4;
 }
 
 #opportunities-list .list-group-item:first-child {
@@ -318,6 +331,16 @@ body {
 
 #opportunities-list .list-group-item:last-child {
     border-bottom: 0;
+}
+
+@media (max-width: 1200px) {
+    .employer-home-deck {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #opportunities-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 .responses-list::-webkit-scrollbar,
@@ -449,6 +472,10 @@ body {
     flex-wrap: wrap;
     gap: 0.45rem;
     font-size: 0.9rem;
+    align-content: flex-start;
+    max-height: min(420px, 56vh);
+    overflow-y: auto;
+    padding-right: 0.15rem;
 }
 
 .home-explorer-card {
@@ -563,12 +590,45 @@ body {
 }
 
 .home-board-row {
-    margin-top: 0.15rem;
+    margin-top: 1rem;
+    align-items: stretch;
+}
+
+.employer-home-deck-row {
+    margin-top: 1rem;
+}
+
+.employer-home-deck {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.employer-home-opportunity-card,
+.employer-home-empty {
+    background: linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+.employer-home-opportunity-card {
+    border: 1px solid #e4ecf7;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.employer-home-opportunity-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 32px rgba(31, 42, 55, 0.08) !important;
+}
+
+.employer-home-opportunity-card.active {
+    border-color: #c8daf7;
+    background: linear-gradient(180deg, #f7fbff, #eef5ff);
 }
 
 .home-list-card,
 .home-favorites-card {
     background: linear-gradient(180deg, #ffffff, #fbfcff);
+    height: 100%;
 }
 
 .home-details-card {
@@ -578,6 +638,11 @@ body {
 #homeFavoritesCard {
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
+    min-height: 100%;
+}
+
+#homeOpportunityBlock {
+    min-height: 100%;
 }
 
 .advanced-filters {
@@ -797,6 +862,15 @@ body {
     #map {
         height: 360px;
         min-height: 360px;
+    }
+
+    .employer-home-deck {
+        grid-template-columns: 1fr;
+    }
+
+    #opportunities-list {
+        grid-template-columns: 1fr;
+        max-height: none;
     }
 
     .guest-guide-step {

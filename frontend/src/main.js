@@ -60,6 +60,7 @@ let openApplyModal;
 let handleApplySubmit;
 let renderEmployerResponses;
 let renderEmployerOpportunities;
+let renderEmployerHomeDeck;
 let applyEmployerResponseFilters;
 let resetEmployerResponseFilters;
 let applyEmployerOpportunityFilters;
@@ -103,6 +104,7 @@ const homeController = createHomeController({
     deleteTagFromLibrary: (...args) => deleteTagFromLibrary(...args),
 });
 const getFilteredOpportunities = homeController.getFilteredOpportunities;
+const renderHomeDeck = homeController.renderHomeDeck;
 const renderOpportunitiesSection = homeController.renderOpportunitiesSection;
 const applyOpportunityFilters = homeController.applyOpportunityFilters;
 const resetOpportunityFilters = homeController.resetOpportunityFilters;
@@ -142,6 +144,8 @@ handleApplySubmit = applicantController.handleApplySubmit;
 const employerController = createEmployerController({
     state,
     renderWorkspaceHero,
+    renderOpportunitiesSection: () => renderOpportunitiesSection(),
+    centerOnOpportunity,
     refreshFieldCounters,
     renderTagChoices,
     loadEmployerResponses: () => loadEmployerResponses(),
@@ -149,6 +153,7 @@ const employerController = createEmployerController({
     loadOpportunities: () => loadOpportunities(),
     getEmployerOpportunityModal: () => employerOpportunityModal,
 });
+renderEmployerHomeDeck = employerController.renderEmployerHomeDeck;
 renderEmployerResponses = employerController.renderEmployerResponses;
 renderEmployerOpportunities = employerController.renderEmployerOpportunities;
 applyEmployerResponseFilters = employerController.applyEmployerResponseFilters;
@@ -419,7 +424,8 @@ function renderAuthUI() {
         authStatusBadge.textContent = currentRoleLabel(state.currentUser.role);
         authStatusBadge.className = 'badge text-bg-success';
         guestGuideCard?.classList.remove('d-none');
-        guestGuideActions?.classList.add('d-none');
+        guestGuideActions?.classList.remove('d-none');
+        guestGuideActions?.classList.add('invisible', 'pointer-events-none');
     } else {
         loginBtn.parentElement.classList.remove('d-none');
         registerBtn.parentElement.classList.remove('d-none');
@@ -429,7 +435,7 @@ function renderAuthUI() {
         authStatusBadge.textContent = 'Гостевой режим';
         authStatusBadge.className = 'badge text-bg-warning text-dark';
         guestGuideCard?.classList.remove('d-none');
-        guestGuideActions?.classList.remove('d-none');
+        guestGuideActions?.classList.remove('d-none', 'invisible', 'pointer-events-none');
     }
 
     if (!canUseFavorites) {
@@ -477,6 +483,7 @@ function renderWorkspaceNav() {
 function renderWorkspaceView() {
     const homeMapColumn = el('homeMapColumn');
     const workspaceContentColumn = el('workspaceContentColumn');
+    const employerHomeDeckRow = el('employerHomeDeckRow');
     const homeBlocks = [
         'homeExplorerCard',
         'homeBoardRow',
@@ -497,6 +504,7 @@ function renderWorkspaceView() {
     const isHome = state.activeView === 'home';
     const isCuratorWorkspace = state.activeView === 'curator';
     const isEmployerWorkspace = state.activeView === 'employer';
+    const showTopDeck = isHome || (isEmployerWorkspace && state.currentUser?.role === 'employer');
     const showMapColumn = isHome || isCuratorWorkspace || isEmployerWorkspace;
     const useSplitLayout = isHome || isCuratorWorkspace || isEmployerWorkspace;
 
@@ -508,12 +516,13 @@ function renderWorkspaceView() {
     homeBlocks.forEach((id) => {
         el(id).classList.toggle('d-none', !isHome);
     });
+    employerHomeDeckRow?.classList.toggle('d-none', !showTopDeck);
 
     Object.values(roleBlocks).flat().forEach((id) => {
         el(id).classList.add('d-none');
     });
 
-    if (!isHome) {
+    if (showTopDeck) {
         el('homeDetailsCard').classList.add('d-none');
     }
 
@@ -560,7 +569,7 @@ async function loadCurrentUser() {
         renderEmployerOpportunities();
         renderProfileSection();
         renderCuratorSection();
-        renderSelectedOpportunity();
+        renderOpportunitiesSection();
         return;
     }
 
@@ -582,7 +591,7 @@ async function loadCurrentUser() {
         renderEmployerOpportunities();
         renderProfileSection();
         renderCuratorSection();
-        renderSelectedOpportunity();
+        renderOpportunitiesSection();
         renderTagLibrary();
         return;
     }
@@ -597,7 +606,7 @@ async function loadCurrentUser() {
     await loadEmployerResponses();
     await loadEmployerOpportunities();
     await loadCuratorData();
-    renderSelectedOpportunity();
+    renderOpportunitiesSection();
 }
 
 async function loadOpportunities() {
@@ -713,6 +722,7 @@ async function loadEmployerOpportunities() {
     if (!state.currentUser || state.currentUser.role !== 'employer') {
         state.employerOpportunities = [];
         renderEmployerOpportunities();
+        renderEmployerHomeDeck();
         return;
     }
 
@@ -731,11 +741,13 @@ async function loadEmployerOpportunities() {
     if (!response.ok) {
         state.employerOpportunities = [];
         renderEmployerOpportunities();
+        renderEmployerHomeDeck();
         return;
     }
 
     state.employerOpportunities = await response.json();
     renderEmployerOpportunities();
+    renderEmployerHomeDeck();
 }
 
 async function loadCuratorData(options = {}) {
@@ -905,7 +917,7 @@ function handleLogout(event) {
     renderEmployerOpportunities();
     renderCuratorSection();
     renderProfileSection();
-    renderSelectedOpportunity();
+    renderOpportunitiesSection();
 }
 
 function initModals() {
