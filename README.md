@@ -125,12 +125,6 @@ python3.11 -m alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Упрощенный запуск через Python (обычный вывод в консоль, понятный любому):
-
-```bash
-python3.11 -m app.main
-```
-
 Backend будет доступен по адресу `http://127.0.0.1:8000`.
 
 ### 2. Frontend
@@ -209,17 +203,6 @@ venv\Scripts\activate
 pip install -r requirements.txt
 python3 -m alembic upgrade head
 uvicorn app.main:app --reload
-```
-
-Упрощенный запуск через Python (обычный вывод в консоль, понятный любому):
-
-```bash
-cd backend
-py -3.11 -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python3 -m alembic upgrade head
-python3 -m app.main
 ```
 
 Backend будет доступен по адресу `http://127.0.0.1:8000`.
