@@ -72,10 +72,8 @@ export function createHomeController({
             top.appendChild(titleWrap);
 
             const badges = createEl('div', 'd-flex flex-wrap justify-content-end gap-1');
-            badges.appendChild(createEl('small', 'badge bg-secondary', opportunityTypeLabel(opportunity.type)));
-            if (state.selectedOpportunityId === opportunity.id) {
-                badges.appendChild(createEl('small', 'badge map-focus-badge', 'На карте'));
-            }
+            badges.appendChild(createEl('small', 'opportunity-status-chip opportunity-type-chip', opportunityTypeLabel(opportunity.type)));
+            badges.appendChild(createEl('small', 'opportunity-status-chip map-focus-badge', 'На карте'));
             top.appendChild(badges);
             body.appendChild(top);
 
@@ -225,10 +223,8 @@ export function createHomeController({
             header.appendChild(titleWrap);
 
             const badges = createEl('div', 'd-flex flex-wrap gap-1 justify-content-end align-items-start');
-            badges.appendChild(createEl('small', 'badge bg-secondary', opportunityTypeLabel(opportunity.type)));
-            if (isSelected) {
-                badges.appendChild(createEl('small', 'badge map-focus-badge', 'На карте'));
-            }
+            badges.appendChild(createEl('small', 'opportunity-status-chip opportunity-type-chip', opportunityTypeLabel(opportunity.type)));
+            badges.appendChild(createEl('small', 'opportunity-status-chip map-focus-badge', 'На карте'));
             if (favoriteOpportunity) {
                 badges.appendChild(createEl('small', 'badge text-bg-danger', 'Избр. вакансия'));
             } else if (favoriteCompany) {

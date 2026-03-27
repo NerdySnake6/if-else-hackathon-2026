@@ -286,17 +286,47 @@ body {
     color: inherit !important;
 }
 
-#opportunities-list .opportunity-item.active .badge.bg-secondary {
-    background: #6c757d !important;
-    color: #fff !important;
+.opportunity-status-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2rem;
+    padding: 0.28rem 0.72rem;
+    border-radius: 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    border: 1px solid transparent;
 }
 
-#opportunities-list .opportunity-item .map-focus-badge {
-    background: rgba(255, 255, 255, 0.86);
-    color: #355070;
-    border: 1px solid #cfd9e6;
-    font-weight: 600;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+.opportunity-type-chip {
+    background: #ffffff;
+    color: #22324a;
+    border-color: #d1dbea;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.map-focus-badge {
+    background: #ffffff;
+    color: #22324a;
+    border-color: #d1dbea;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+#opportunities-list .opportunity-type-chip,
+#opportunities-list .map-focus-badge {
+    background: #ffffff;
+    color: #22324a;
+    border-color: #d1dbea;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+#opportunities-list .opportunity-item.active .opportunity-type-chip,
+#opportunities-list .opportunity-item.active .map-focus-badge {
+    background: #ffffff;
+    color: #22324a;
+    border-color: #d1dbea;
 }
 
 .responses-list {
