@@ -4,6 +4,7 @@ import json
 import os
 from typing import Optional
 from urllib.parse import urlencode
+from urllib.error import HTTPError
 from urllib.request import urlopen
 
 
@@ -47,6 +48,17 @@ def geocode_address(address: str) -> Optional[dict]:
     try:
         with urlopen(f"{YANDEX_GEOCODER_URL}?{params}", timeout=5) as response:
             payload = json.load(response)
+    except HTTPError as exc:
+        details = ""
+        try:
+            details = exc.read().decode("utf-8", errors="replace").strip()
+        except Exception:
+            details = ""
+
+        message = f"Yandex Geocoder HTTP {exc.code}"
+        if details:
+            message = f"{message}: {details}"
+        raise GeocodingError(message) from exc
     except Exception as exc:
         raise GeocodingError("Failed to reach Yandex Geocoder") from exc
 

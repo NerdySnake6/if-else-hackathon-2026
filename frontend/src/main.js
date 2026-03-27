@@ -85,6 +85,10 @@ const mapController = createMapController({
     onSelectOpportunity(opportunityId) {
         state.selectedOpportunityId = opportunityId;
         renderOpportunitiesSection();
+        requestAnimationFrame(() => {
+            const target = document.querySelector(`[data-opportunity-id="${opportunityId}"]`);
+            target?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        });
     },
 });
 const initMap = mapController.initMap;

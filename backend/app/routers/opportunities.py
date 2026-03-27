@@ -1,5 +1,6 @@
 """Маршруты для просмотра и управления возможностями на платформе."""
 
+import logging
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,6 +12,7 @@ from app.dependencies import require_roles, get_current_active_user
 from app.geocoder import GeocodingError, geocode_address, geocoder_is_configured
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
+logger = logging.getLogger(__name__)
 
 
 def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
@@ -40,7 +42,8 @@ def resolve_coordinates(
 
     try:
         result = geocode_address(location)
-    except GeocodingError:
+    except GeocodingError as exc:
+        logger.warning("Geocoding failed for '%s': %s", location, exc)
         return lat, lng
 
     if not result:

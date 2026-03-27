@@ -63,6 +63,7 @@ export function createHomeController({
 
         opportunities.forEach((opportunity) => {
             const card = createEl('div', `card shadow-sm border-0 employer-home-opportunity-card${state.selectedOpportunityId === opportunity.id ? ' active' : ''}`);
+            card.dataset.opportunityId = String(opportunity.id);
             const body = createEl('div', 'card-body py-3');
 
             const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2 mb-2');
@@ -211,6 +212,7 @@ export function createHomeController({
                 'div',
                 `list-group-item opportunity-item${isSelected ? ' active selected' : ''}${favoriteOpportunity ? ' favorite-opportunity' : ''}${!favoriteOpportunity && favoriteCompany ? ' favorite-company' : ''}`
             );
+            item.dataset.opportunityId = String(opportunity.id);
 
             const shortDesc = opportunity.description.length > 120
                 ? `${opportunity.description.slice(0, 120)}...`
