@@ -183,13 +183,6 @@ CI использует тестовое значение ключа, потом
 
 
 
-
-
-
-
-
-
-
 ## Windows
 
 ### 1. Backend
@@ -201,7 +194,7 @@ cd backend
 py -3.11 -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
-python3 -m alembic upgrade head
+python -m alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
@@ -251,12 +244,3 @@ Frontend будет доступен по адресу `http://127.0.0.1:5173`.
 CI использует тестовое значение ключа, потому что для сборки фронта важен сам факт наличия переменной, а не реальный доступ к Яндекс Картам.
 
 
-
-## Возможные ошибки и их решение
-
-### The system cannot find the path specified.
-Команда: `/opt/homebrew/bin/python3.11 -m venv venv`
-
-Ошибка: `The system cannot find the path specified.`
-
-Решение: 
