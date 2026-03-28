@@ -965,6 +965,37 @@ async function handleLoginSubmit(event) {
 async function handleRegisterSubmit(event) {
     event.preventDefault();
 
+    const password = el('registerPassword');
+    const passwordConfirm = el('registerPasswordConfirm');
+
+
+    // Если пользователь увидит ошибку, исправит текст, но не уберет фокус с поля — старое сообщение может «залипнуть».
+    // Чтобы этого избежать, нужен сброс кастомной валидации при вводе:
+    password.addEventListener('input', () => {
+        password.setCustomValidity(''); // Сбрасываем ошибку при наборе текста
+    });
+
+    passwordConfirm.addEventListener('input', () => {
+        passwordConfirm.setCustomValidity('');
+    });
+
+
+    // 1. Проверка длины пароля
+    if (password.value.length < 6) {
+        password.setCustomValidity('Пароль должен содержать минимум 6 символов.');
+        password.reportValidity(); 
+        return;
+    }
+
+    // 2. Проверка совпадения паролей
+    if (password.value !== passwordConfirm.value) {
+        passwordConfirm.setCustomValidity('Пароли не совпадают. Проверьте поле подтверждения.');
+        passwordConfirm.reportValidity(); 
+        return;
+    }
+
+
+    // Формируем данные для отправки
     const payload = {
         display_name: el('registerName').value.trim(),
         email: el('registerEmail').value.trim(),
