@@ -75,6 +75,63 @@ body {
     align-items: center;
 }
 
+.workspace-response-highlights {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    align-items: flex-start;
+}
+
+.workspace-response-highlights-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #355070;
+}
+
+.workspace-response-highlights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.workspace-response-highlight {
+    border: 1px solid #dbe4f0;
+    background: rgba(255, 255, 255, 0.9);
+    color: #355070;
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    max-width: min(100%, 38rem);
+    text-align: left;
+}
+
+.workspace-response-highlight:hover,
+.workspace-response-highlight:focus-visible {
+    background: #eef4ff;
+    border-color: #bfd2f1;
+}
+
+.workspace-response-highlight.response-accepted {
+    background: #ecf8f1;
+    border-color: #b7dfc7;
+    color: #166534;
+}
+
+.workspace-response-highlight.response-rejected {
+    background: #fff1f2;
+    border-color: #f2c1c6;
+    color: #b42318;
+}
+
+.workspace-response-highlight.response-reserve {
+    background: #fff8e6;
+    border-color: #f2d48d;
+    color: #9a6700;
+}
+
 .hero-login-link {
     text-decoration: none;
 }
@@ -216,6 +273,18 @@ body {
     font-size: 0.8rem;
     font-weight: 700;
     white-space: nowrap;
+}
+
+.opportunity-details-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.opportunity-details-facts {
+    display: grid;
+    gap: 0.35rem;
+    color: #5b6b7f;
 }
 
 .home-stage-row {

@@ -21,7 +21,12 @@ export function createApplicantController({
     loadContacts,
     loadRecommendations,
     loadResponses,
+    renderOpportunitiesSection,
 }) {
+    function hasApplied(opportunityId) {
+        return state.responses.some((response) => response.opportunity_id === opportunityId);
+    }
+
     function renderResponses() {
         const container = el('responses-list');
         const refreshBtn = el('refreshResponsesBtn');
@@ -394,6 +399,10 @@ export function createApplicantController({
     function openApplyModal(opportunityId) {
         const opportunity = state.opportunities.find((item) => item.id === opportunityId);
         if (!opportunity) return;
+        if (hasApplied(opportunityId)) {
+            showNotice('warning', 'Ты уже откликался на эту возможность.');
+            return;
+        }
 
         state.pendingApplyId = opportunityId;
         el('applyOpportunityMeta').textContent = `${opportunity.title} | ${opportunity.location}`;
@@ -420,13 +429,23 @@ export function createApplicantController({
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({ detail: 'Не удалось отправить отклик.' }));
+            if (response.status === 409) {
+                getApplyModal().hide();
+                state.pendingApplyId = null;
+                await loadResponses();
+                renderOpportunitiesSection();
+                showNotice('warning', 'Ты уже откликался на эту возможность.');
+                return;
+            }
             showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось отправить отклик.');
             return;
         }
 
         getApplyModal().hide();
+        state.pendingApplyId = null;
         event.target.reset();
         await loadResponses();
+        renderOpportunitiesSection();
         showNotice('success', 'Отклик отправлен.');
     }
 

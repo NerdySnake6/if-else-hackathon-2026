@@ -51,6 +51,7 @@
                             <div class="workspace-eyebrow" id="workspaceEyebrow">Публичная витрина</div>
                             <h3 class="workspace-title mb-1" id="workspaceTitle">Главная</h3>
                             <p class="workspace-description mb-0" id="workspaceDescription">Здесь собраны вакансии, стажировки, менторские программы и карьерные события.</p>
+                            <div class="workspace-response-highlights d-none mt-3" id="workspaceResponseHighlights"></div>
                             <div class="workspace-actions mt-3" id="workspaceHeroActions">
                                 <button type="button" class="btn btn-primary btn-sm" id="heroExploreBtn">Смотреть возможности</button>
                                 <button type="button" class="btn btn-outline-primary btn-sm" id="heroRegisterBtn">Создать аккаунт</button>
@@ -571,6 +572,28 @@
                         <button type="submit" class="btn btn-primary">Создать аккаунт</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="opportunityDetailsModal" tabindex="-1" aria-labelledby="opportunityDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="opportunityDetailsModalLabel">Карточка возможности</h5>
+                        <p class="text-muted small mb-0 mt-1" id="opportunityDetailsMeta"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="opportunityDetailsContent">
+                        <p class="text-muted mb-0">Здесь появится полная информация о возможности.</p>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between" id="opportunityDetailsActions">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
             </div>
         </div>
     </div>

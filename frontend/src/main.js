@@ -42,6 +42,7 @@ const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
 
 let loginModal;
 let registerModal;
+let opportunityDetailsModal;
 let applyModal;
 let recommendModal;
 let applicantProfileModal;
@@ -102,6 +103,7 @@ const homeController = createHomeController({
     renderWorkspaceHero,
     renderContactsSection: (...args) => renderContactsSection(...args),
     openApplyModal: (...args) => openApplyModal(...args),
+    openOpportunityDetailsModal: (...args) => openOpportunityDetailsModal(...args),
     openEmployerOpportunityModal: (...args) => openEmployerOpportunityModal(...args),
     deleteTagFromLibrary: (...args) => deleteTagFromLibrary(...args),
 });
@@ -133,6 +135,7 @@ const applicantController = createApplicantController({
     loadContacts: () => loadContacts(),
     loadRecommendations: () => loadRecommendations(),
     loadResponses: () => loadResponses(),
+    renderOpportunitiesSection: () => renderOpportunitiesSection(),
 });
 renderResponses = applicantController.renderResponses;
 renderContactsSection = applicantController.renderContactsSection;
@@ -206,6 +209,101 @@ function setActiveView(view) {
 
 function selectedOpportunity() {
     return state.opportunities.find((item) => item.id === state.selectedOpportunityId) || null;
+}
+
+function buildOpportunityDetailsModal(opportunity) {
+    const container = el('opportunityDetailsContent');
+    const title = el('opportunityDetailsModalLabel');
+    const meta = el('opportunityDetailsMeta');
+    const actions = el('opportunityDetailsActions');
+    if (!container || !title || !meta || !actions) return;
+
+    title.textContent = opportunity.title;
+    meta.textContent = `${opportunity.employer_name || 'Работодатель'} | ${opportunityTypeLabel(opportunity.type)} | ${workFormatLabel(opportunity.work_format)}`;
+
+    container.innerHTML = '';
+    actions.innerHTML = '';
+
+    const summary = createEl('div', 'opportunity-details-summary');
+    summary.appendChild(createEl('div', 'detail-meta mb-2', `${opportunity.location}`));
+    summary.appendChild(createEl('p', 'mb-3', opportunity.description));
+
+    const facts = createEl('div', 'opportunity-details-facts mb-3');
+    facts.appendChild(createEl('div', '', `Публикация: ${formatDate(opportunity.published_at)}`));
+    facts.appendChild(createEl('div', '', `Срок отклика: ${formatDate(opportunity.expires_at)}`));
+    if (opportunity.salary_range) {
+        facts.appendChild(createEl('div', '', `Вознаграждение: ${opportunity.salary_range}`));
+    }
+    summary.appendChild(facts);
+
+    if (Array.isArray(opportunity.tags) && opportunity.tags.length) {
+        const tagsRow = createEl('div', 'd-flex flex-wrap gap-2');
+        opportunity.tags.forEach((tag) => {
+            tagsRow.appendChild(createEl('span', 'badge text-bg-light', `#${tag.name}`));
+        });
+        summary.appendChild(tagsRow);
+    }
+
+    container.appendChild(summary);
+
+    const closeBtn = createEl('button', 'btn btn-outline-secondary', 'Закрыть');
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('data-bs-dismiss', 'modal');
+    actions.appendChild(closeBtn);
+
+    const canUseFavorites = !state.currentUser || state.currentUser.role === 'applicant';
+    if (canUseFavorites) {
+        const favoriteOpportunityBtn = createEl(
+            'button',
+            isFavoriteOpportunity(opportunity.id) ? 'btn btn-danger' : 'btn btn-outline-danger',
+            isFavoriteOpportunity(opportunity.id) ? 'В избранном: вакансия' : 'В избранное: вакансия'
+        );
+        favoriteOpportunityBtn.type = 'button';
+        favoriteOpportunityBtn.addEventListener('click', () => {
+            toggleFavoriteOpportunity(opportunity.id);
+            renderOpportunitiesSection();
+            buildOpportunityDetailsModal(opportunity);
+        });
+        actions.appendChild(favoriteOpportunityBtn);
+
+        const favoriteCompanyBtn = createEl(
+            'button',
+            isFavoriteCompany(opportunity.employer_id) ? 'btn btn-warning' : 'btn btn-outline-warning',
+            isFavoriteCompany(opportunity.employer_id) ? 'В избранном: компания' : 'В избранное: компания'
+        );
+        favoriteCompanyBtn.type = 'button';
+        favoriteCompanyBtn.addEventListener('click', () => {
+            toggleFavoriteCompany(opportunity.employer_id, opportunity.employer_name);
+            renderOpportunitiesSection();
+            buildOpportunityDetailsModal(opportunity);
+        });
+        actions.appendChild(favoriteCompanyBtn);
+    }
+
+    if (state.currentUser?.role === 'applicant') {
+        const alreadyApplied = state.responses.some((response) => response.opportunity_id === opportunity.id);
+        const applyBtn = createEl(
+            'button',
+            alreadyApplied ? 'btn btn-outline-secondary' : 'btn btn-primary',
+            alreadyApplied ? 'Отклик отправлен' : 'Откликнуться'
+        );
+        applyBtn.type = 'button';
+        applyBtn.disabled = alreadyApplied;
+        applyBtn.addEventListener('click', () => {
+            opportunityDetailsModal.hide();
+            openApplyModal(opportunity.id);
+        });
+        actions.appendChild(applyBtn);
+    } else if (!state.currentUser) {
+        actions.appendChild(createEl('div', 'small text-muted ms-auto', 'Войди как соискатель, чтобы откликнуться на эту возможность.'));
+    }
+}
+
+function openOpportunityDetailsModal(opportunityId) {
+    const opportunity = state.opportunities.find((item) => item.id === opportunityId);
+    if (!opportunity || !opportunityDetailsModal) return;
+    buildOpportunityDetailsModal(opportunity);
+    opportunityDetailsModal.show();
 }
 
 function workspaceMetaForView() {
@@ -313,6 +411,43 @@ function renderWorkspaceHero() {
     meta.pills.filter(Boolean).forEach((pill) => {
         metaContainer.appendChild(createEl('span', 'workspace-pill', pill));
     });
+
+    const responseHighlights = el('workspaceResponseHighlights');
+    if (responseHighlights) {
+        responseHighlights.innerHTML = '';
+        const applicantUpdates = state.currentUser?.role === 'applicant'
+            ? state.responses.filter((response) => response.status !== 'pending')
+            : [];
+        responseHighlights.classList.toggle('d-none', !applicantUpdates.length || state.activeView !== 'home');
+
+        if (applicantUpdates.length && state.activeView === 'home') {
+            const title = createEl('div', 'workspace-response-highlights-title', `Обновления по откликам: ${applicantUpdates.length}`);
+            responseHighlights.appendChild(title);
+
+            const list = createEl('div', 'workspace-response-highlights-list');
+            responseHighlights.appendChild(list);
+
+            applicantUpdates
+                .slice()
+                .sort((left, right) => new Date(right.updated_at || right.created_at) - new Date(left.updated_at || left.created_at))
+                .forEach((response) => {
+                    const opportunity = state.opportunities.find((item) => item.id === response.opportunity_id);
+                    const titleText = opportunity?.title || `Вакансия #${response.opportunity_id}`;
+                    const statusText = statusLabel(response.status);
+                    const item = createEl(
+                        'button',
+                        `workspace-response-highlight response-${response.status}`,
+                        `${titleText} — ${statusText}`
+                    );
+                    item.type = 'button';
+                    item.addEventListener('click', () => {
+                        setActiveView('applicant');
+                        el('responsesCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                    list.appendChild(item);
+                });
+        }
+    }
 
     const heroActions = el('workspaceHeroActions');
     const exploreBtn = el('heroExploreBtn');
@@ -946,6 +1081,7 @@ function handleLogout(event) {
 function initModals() {
     loginModal = new window.bootstrap.Modal(el('loginModal'));
     registerModal = new window.bootstrap.Modal(el('registerModal'));
+    opportunityDetailsModal = new window.bootstrap.Modal(el('opportunityDetailsModal'));
     applyModal = new window.bootstrap.Modal(el('applyModal'));
     recommendModal = new window.bootstrap.Modal(el('recommendModal'));
     applicantProfileModal = new window.bootstrap.Modal(el('applicantProfileModal'));
