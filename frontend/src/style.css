@@ -218,6 +218,18 @@ body {
     white-space: nowrap;
 }
 
+.opportunity-details-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.opportunity-details-facts {
+    display: grid;
+    gap: 0.35rem;
+    color: #5b6b7f;
+}
+
 .home-stage-row {
     align-items: flex-start;
 }

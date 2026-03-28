@@ -23,6 +23,7 @@ export function createHomeController({
     renderWorkspaceHero,
     renderContactsSection,
     openApplyModal,
+    openOpportunityDetailsModal,
     openEmployerOpportunityModal,
     deleteTagFromLibrary,
 }) {
@@ -74,7 +75,6 @@ export function createHomeController({
 
             const badges = createEl('div', 'd-flex flex-wrap justify-content-end gap-1');
             badges.appendChild(createEl('small', 'opportunity-status-chip opportunity-type-chip', opportunityTypeLabel(opportunity.type)));
-            badges.appendChild(createEl('small', 'opportunity-status-chip map-focus-badge', 'На карте'));
             top.appendChild(badges);
             body.appendChild(top);
 
@@ -137,16 +137,6 @@ export function createHomeController({
                 actions.appendChild(applyBtn);
             }
 
-            const mapBtn = createEl('button', 'btn btn-outline-secondary', 'Показать на карте');
-            mapBtn.type = 'button';
-            mapBtn.addEventListener('click', (event) => {
-                event.stopPropagation();
-                state.selectedOpportunityId = opportunity.id;
-                centerOnOpportunity(opportunity);
-                renderOpportunitiesSection();
-            });
-            actions.appendChild(mapBtn);
-
             if (state.currentUser?.role === 'employer' && state.currentUser.id === opportunity.employer_id) {
                 const editBtn = createEl('button', 'btn btn-outline-primary', 'Редактировать');
                 editBtn.type = 'button';
@@ -164,6 +154,9 @@ export function createHomeController({
                 state.selectedOpportunityId = opportunity.id;
                 centerOnOpportunity(opportunity);
                 renderOpportunitiesSection();
+                if (!state.currentUser || state.currentUser.role === 'applicant') {
+                    openOpportunityDetailsModal(opportunity.id);
+                }
             });
 
             container.appendChild(card);
@@ -226,7 +219,6 @@ export function createHomeController({
 
             const badges = createEl('div', 'd-flex flex-wrap gap-1 justify-content-end align-items-start');
             badges.appendChild(createEl('small', 'opportunity-status-chip opportunity-type-chip', opportunityTypeLabel(opportunity.type)));
-            badges.appendChild(createEl('small', 'opportunity-status-chip map-focus-badge', 'На карте'));
             if (favoriteOpportunity) {
                 badges.appendChild(createEl('small', 'badge text-bg-danger', 'Избр. вакансия'));
             } else if (favoriteCompany) {
@@ -251,6 +243,9 @@ export function createHomeController({
                 state.selectedOpportunityId = opportunity.id;
                 renderOpportunitiesSection();
                 centerOnOpportunity(opportunity);
+                if (!state.currentUser || state.currentUser.role === 'applicant') {
+                    openOpportunityDetailsModal(opportunity.id);
+                }
             });
 
             list.appendChild(item);
