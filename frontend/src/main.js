@@ -412,6 +412,43 @@ function renderWorkspaceHero() {
         metaContainer.appendChild(createEl('span', 'workspace-pill', pill));
     });
 
+    const responseHighlights = el('workspaceResponseHighlights');
+    if (responseHighlights) {
+        responseHighlights.innerHTML = '';
+        const applicantUpdates = state.currentUser?.role === 'applicant'
+            ? state.responses.filter((response) => response.status !== 'pending')
+            : [];
+        responseHighlights.classList.toggle('d-none', !applicantUpdates.length || state.activeView !== 'home');
+
+        if (applicantUpdates.length && state.activeView === 'home') {
+            const title = createEl('div', 'workspace-response-highlights-title', `Обновления по откликам: ${applicantUpdates.length}`);
+            responseHighlights.appendChild(title);
+
+            const list = createEl('div', 'workspace-response-highlights-list');
+            responseHighlights.appendChild(list);
+
+            applicantUpdates
+                .slice()
+                .sort((left, right) => new Date(right.updated_at || right.created_at) - new Date(left.updated_at || left.created_at))
+                .forEach((response) => {
+                    const opportunity = state.opportunities.find((item) => item.id === response.opportunity_id);
+                    const titleText = opportunity?.title || `Вакансия #${response.opportunity_id}`;
+                    const statusText = statusLabel(response.status);
+                    const item = createEl(
+                        'button',
+                        `workspace-response-highlight response-${response.status}`,
+                        `${titleText} — ${statusText}`
+                    );
+                    item.type = 'button';
+                    item.addEventListener('click', () => {
+                        setActiveView('applicant');
+                        el('responsesCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                    list.appendChild(item);
+                });
+        }
+    }
+
     const heroActions = el('workspaceHeroActions');
     const exploreBtn = el('heroExploreBtn');
     const registerBtn = el('heroRegisterBtn');
