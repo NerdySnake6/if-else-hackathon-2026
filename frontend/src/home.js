@@ -27,6 +27,10 @@ export function createHomeController({
     openEmployerOpportunityModal,
     deleteTagFromLibrary,
 }) {
+    function hasApplied(opportunityId) {
+        return state.responses.some((response) => response.opportunity_id === opportunityId);
+    }
+
     function hasActiveOpportunityFilters() {
         return Boolean(
             state.opportunityFilters.type
@@ -128,8 +132,14 @@ export function createHomeController({
             }
 
             if (state.currentUser?.role === 'applicant') {
-                const applyBtn = createEl('button', 'btn btn-primary', 'Откликнуться');
+                const alreadyApplied = hasApplied(opportunity.id);
+                const applyBtn = createEl(
+                    'button',
+                    alreadyApplied ? 'btn btn-outline-secondary' : 'btn btn-primary',
+                    alreadyApplied ? 'Отклик отправлен' : 'Откликнуться'
+                );
                 applyBtn.type = 'button';
+                applyBtn.disabled = alreadyApplied;
                 applyBtn.addEventListener('click', (event) => {
                     event.stopPropagation();
                     openApplyModal(opportunity.id);

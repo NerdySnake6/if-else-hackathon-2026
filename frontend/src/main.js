@@ -135,6 +135,7 @@ const applicantController = createApplicantController({
     loadContacts: () => loadContacts(),
     loadRecommendations: () => loadRecommendations(),
     loadResponses: () => loadResponses(),
+    renderOpportunitiesSection: () => renderOpportunitiesSection(),
 });
 renderResponses = applicantController.renderResponses;
 renderContactsSection = applicantController.renderContactsSection;
@@ -280,8 +281,14 @@ function buildOpportunityDetailsModal(opportunity) {
     }
 
     if (state.currentUser?.role === 'applicant') {
-        const applyBtn = createEl('button', 'btn btn-primary', 'Откликнуться');
+        const alreadyApplied = state.responses.some((response) => response.opportunity_id === opportunity.id);
+        const applyBtn = createEl(
+            'button',
+            alreadyApplied ? 'btn btn-outline-secondary' : 'btn btn-primary',
+            alreadyApplied ? 'Отклик отправлен' : 'Откликнуться'
+        );
         applyBtn.type = 'button';
+        applyBtn.disabled = alreadyApplied;
         applyBtn.addEventListener('click', () => {
             opportunityDetailsModal.hide();
             openApplyModal(opportunity.id);
