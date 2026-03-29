@@ -230,7 +230,7 @@ function buildOpportunityDetailsModal(opportunity) {
 
     const facts = createEl('div', 'opportunity-details-facts mb-3');
     facts.appendChild(createEl('div', '', `Публикация: ${formatDate(opportunity.published_at)}`));
-    facts.appendChild(createEl('div', '', `Срок отклика: ${formatDate(opportunity.expires_at)}`));
+    facts.appendChild(createEl('div', '', `Дата закрытия: ${formatDate(opportunity.expires_at)}`));
     if (opportunity.salary_range) {
         facts.appendChild(createEl('div', '', `Вознаграждение: ${opportunity.salary_range}`));
     }

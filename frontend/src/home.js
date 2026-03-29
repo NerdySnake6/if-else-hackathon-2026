@@ -87,7 +87,7 @@ export function createHomeController({
 
             const metaList = createEl('div', 'small text-muted mb-3');
             metaList.appendChild(createEl('div', '', `Публикация: ${formatDate(opportunity.published_at)}`));
-            metaList.appendChild(createEl('div', '', `Срок отклика: ${formatDate(opportunity.expires_at)}`));
+            metaList.appendChild(createEl('div', '', `Дата закрытия: ${formatDate(opportunity.expires_at)}`));
             if (opportunity.salary_range) {
                 metaList.appendChild(createEl('div', '', `Вознаграждение: ${opportunity.salary_range}`));
             }
