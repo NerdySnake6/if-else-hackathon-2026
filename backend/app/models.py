@@ -233,6 +233,7 @@ class Recommendation(Base):
     opportunity_id: Mapped[int] = mapped_column(ForeignKey("opportunities.id"))
     message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    verification_token: Mapped[str] = mapped_column(String, nullable=True) # Код подтверждения, который отправляется на почту
 
     recommender: Mapped["User"] = relationship(
         foreign_keys=[recommender_id],

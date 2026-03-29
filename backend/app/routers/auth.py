@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+import secrets
 
 from app import models, schemas, auth
 from app.database import get_db
+
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -15,11 +17,18 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 @router.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     """Регистрирует пользователя и создает пустой профиль по его роли."""
+
+    # Проверка на существующего пользователя
     db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
     if db_user:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
+    # Хэширование пароля
     hashed_password = auth.get_password_hash(user_data.password)
+
+    # Генерация токена подтверждения
+    verification_token = secrets.token_urlsafe(32)
+
     db_user = models.User(
         email=user_data.email,
         hashed_password=hashed_password,

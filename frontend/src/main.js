@@ -28,6 +28,7 @@ import {
     tagCategoryLabel,
     toDateTimeLocalValue,
     workFormatLabel,
+    isValidEmail,
 } from './utils.js';
 import { apiFetch } from './api.js';
 import { createMapController, hasCoords } from './map.js';
@@ -969,6 +970,7 @@ async function handleRegisterSubmit(event) {
 
     const password = el('registerPassword');
     const passwordConfirm = el('registerPasswordConfirm');
+    const email = el('registerEmail').value.trim();
 
 
     // Если пользователь увидит ошибку, исправит текст, но не уберет фокус с поля — старое сообщение может «залипнуть».
@@ -995,6 +997,18 @@ async function handleRegisterSubmit(event) {
         passwordConfirm.reportValidity(); 
         return;
     }
+
+    // 3. Проверка корректности введённой почты    
+    if (!email) {
+        showNotice('danger', 'Введите email.');
+        return;
+    }
+    
+    if (!isValidEmail(email)) {
+        showNotice('danger', 'Некорректный формат email.');
+        return;
+    }
+
 
 
     // Формируем данные для отправки

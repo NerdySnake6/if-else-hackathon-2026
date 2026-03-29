@@ -126,3 +126,9 @@ export function workFormatLabel(workFormat) {
     if (workFormat === 'remote') return 'Удаленно';
     return workFormat;
 }
+
+function isValidEmail(email) {
+    // Регулярное выражение для проверки формата почты
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
