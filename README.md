@@ -75,20 +75,6 @@ YANDEX_GEOCODER_API_KEY=твой_ключ_яндекс_карт
 
 - `YANDEX_GEOCODER_API_KEY` — ключ Яндекс Карт
 
-Если хочешь заранее переопределить данные администратора по умолчанию, можно дополнительно добавить в `backend/.env`:
-
-```env
-TRAMPLIN_ADMIN_EMAIL=admin@example.com
-TRAMPLIN_ADMIN_PASSWORD=admin12345
-TRAMPLIN_ADMIN_NAME=Администратор
-```
-
-Где:
-
-- `TRAMPLIN_ADMIN_EMAIL` — email администратора по умолчанию
-- `TRAMPLIN_ADMIN_PASSWORD` — пароль администратора по умолчанию
-- `TRAMPLIN_ADMIN_NAME` — имя администратора по умолчанию
-
 ### `frontend/.env.local`
 
 Создай файл `frontend/.env.local`:
@@ -181,7 +167,7 @@ python3.11 -m alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Если переменные администратора не заданы в `backend/.env`, используются такие данные по умолчанию:
+По умолчанию создаются такие данные:
 
 - email: `admin@example.com`
 - пароль: `admin12345`
@@ -193,11 +179,7 @@ uvicorn app.main:app --reload
 - в базе хранится не открытый пароль, а его хеш
 - входить нужно обычным паролем, который был задан при инициализации
 
-Если нужны другие данные, задай их заранее в `backend/.env`:
-
-- `TRAMPLIN_ADMIN_EMAIL`
-- `TRAMPLIN_ADMIN_PASSWORD`
-- `TRAMPLIN_ADMIN_NAME`
+При необходимости данные администратора можно переопределить через переменные окружения backend.
 
 ## Что проверить после запуска
 
