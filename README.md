@@ -102,7 +102,7 @@ python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python3.11 -m alembic upgrade head
-uvicorn app.main:app --reload
+uvicorn app.main:app 
 ```
 
 Backend будет доступен по адресу:
