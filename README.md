@@ -1,192 +1,148 @@
 # Трамплин
 
-Трамплин — платформа для студентов и работодателей с картой возможностей, откликами и ролевыми кабинетами.
+Трамплин — интерактивная карьерная платформа для студентов, выпускников, работодателей, кураторов и администратора.  
+В проекте есть:
+
+- главная страница с картой и лентой возможностей
+- карточки вакансий, стажировок, менторских программ и событий
+- роли `applicant`, `employer`, `curator`, `admin`
+- отклики и статусы откликов
+- нетворкинг между соискателями
+- рекомендации контактов на вакансии
+- модерация и верификация работодателей
 
 ## Стек
 
-- Backend: FastAPI, SQLAlchemy, SQLite
-- Frontend: Vite, Bootstrap, JavaScript
-- Карта: Yandex Maps JavaScript API
-- Геокодирование: Yandex HTTP Geocoder
+- Backend: `FastAPI`, `SQLAlchemy`, `Alembic`, `SQLite`
+- Frontend: `JavaScript`, `Node.js`, `Vite`, `Bootstrap`
+- Карта: `Yandex Maps JavaScript API`
+- Геокодирование: `Yandex HTTP Geocoder`
 
 ## Структура проекта
 
-- `backend/` — API, модели, роуты и база данных SQLite
+- `backend/` — API, модели, миграции и база данных SQLite
 - `frontend/` — клиентское приложение на Vite
 
-## Требования
+## Что нужно для запуска
 
-- Python 3.11
-- pip
-- git
-- Node.js 20+
-- npm
-- nvm
-- curl
+- `git`
+- `Python 3.11`
+- `pip`
+- `Node.js 20+`
+- `npm`
 
-Если на macOS команда `python3.11` не найдена, можно установить ее через Homebrew:
+Если на macOS не установлен `python3.11`, можно поставить его через Homebrew:
 
 ```bash
 brew install python@3.11
 ```
 
-Команда для скачивания репозитория
-```bash
-# Установка git
-# Для MacOS / Linux:
-# sudo apt install git -y
-# Для Windows git нужно скачать с интернета
+## Клонирование репозитория
 
-git clone https://github.com/NerdySnake6/if-else-hackathon-2026
+```bash
+git clone https://github.com/NerdySnake6/if-else-hackathon-2026.git
+cd if-else-hackathon-2026
 ```
 
 ## Переменные окружения
 
-Перед настройкой `.env` получи ключ Яндекс Карт:
-
-1. Перейди на сайт [Yandex Maps API](https://yandex.ru/maps-api/).
-2. Зайди в личный кабинет.
-3. Нажми `Подключить API`.
-4. Выбери страну.
-5. Выбери бесплатную версию.
-6. Выбери пакет `JavaScript API и HTTP Геокодер`.
-7. Нажми `Новый ключ`
-8. Скопируй выданный ключ.
-
-В проекте используется один и тот же ключ для frontend и backend.
-
-До запуска проекта нужно вручную создать 2 файла:
+Перед запуском нужны два файла:
 
 1. `backend/.env`
 2. `frontend/.env.local`
 
-Файлы `backend/.env.example` и `frontend/.env.example` уже лежат в репозитории и нужны только как шаблоны. Они не создаются автоматически.
+Файлы `backend/.env.example` и `frontend/.env.example` лежат в репозитории как шаблоны.
 
-### Что указать в `backend/.env`
+### Как получить ключ Яндекс Карт
 
-Создай файл `backend/.env` со следующим содержимым:
+1. Перейди на [Yandex Maps API](https://yandex.ru/maps-api/)
+2. Открой личный кабинет
+3. Нажми `Подключить API`
+4. Выбери пакет `JavaScript API и HTTP Геокодер`
+5. Создай новый ключ
+
+В проекте используется один и тот же ключ для frontend и backend.
+
+### `backend/.env`
+
+Создай файл `backend/.env`:
 
 ```env
 YANDEX_GEOCODER_API_KEY=твой_ключ_яндекс_карт
 ```
 
 Где:
-- `YANDEX_GEOCODER_API_KEY` — твой ключ Яндекс Карт для пакета `JavaScript API и HTTP Геокодер`
 
-### Что указать в `frontend/.env.local`
+- `YANDEX_GEOCODER_API_KEY` — ключ Яндекс Карт
 
-Создай файл `frontend/.env.local` со следующим содержимым:
+Если хочешь заранее переопределить данные администратора по умолчанию, можно дополнительно добавить в `backend/.env`:
+
+```env
+TRAMPLIN_ADMIN_EMAIL=admin@example.com
+TRAMPLIN_ADMIN_PASSWORD=admin12345
+TRAMPLIN_ADMIN_NAME=Администратор
+```
+
+Где:
+
+- `TRAMPLIN_ADMIN_EMAIL` — email администратора по умолчанию
+- `TRAMPLIN_ADMIN_PASSWORD` — пароль администратора по умолчанию
+- `TRAMPLIN_ADMIN_NAME` — имя администратора по умолчанию
+
+### `frontend/.env.local`
+
+Создай файл `frontend/.env.local`:
 
 ```env
 VITE_YANDEX_MAPS_API_KEY=твой_ключ_яндекс_карт
 ```
 
 Где:
-- `VITE_YANDEX_MAPS_API_KEY` — тот же самый ключ Яндекс Карт, что и в `backend/.env`
 
-Итого:
-- в `backend/.env`:
-  - `YANDEX_GEOCODER_API_KEY` = ключ Яндекс Карт
-- в `frontend/.env.local`:
-  - `VITE_YANDEX_MAPS_API_KEY` = тот же ключ Яндекс Карт
+- `VITE_YANDEX_MAPS_API_KEY` — тот же ключ, что и в `backend/.env`
 
-Backend автоматически читает `backend/.env` при запуске, поэтому ручной `export` не обязателен.
+Важно:
 
-После изменения `backend/.env` или `frontend/.env.local` нужно перезапустить backend и frontend, чтобы новые значения подхватились.
+- backend автоматически читает `backend/.env` при запуске
+- после изменения `backend/.env` или `frontend/.env.local` нужно перезапустить backend и frontend
 
-## Быстрый старт
+## Быстрый старт на macOS / Linux
 
-## MacOS / Linux
-
-### 1. Backend
-
-Перед установкой убедитесь, что у вас установлен `git`, клонируйте репозиторий и откройте консоль `cmd`. Через `cmd` зайдите в корневую директорию репозитория и введите эти команды:
+### 1. Запуск backend
 
 ```bash
-# Установка pip и python3.11
-sudo apt install python3-pip -y
-sudo add-apt-repository ppa:deadsnakes/ppa -y
-sudo apt install python3.11 python3.11-venv -y
-sudo apt update
-sudo apt upgrade -y
-
-# Создание и активация виртуального окружения и запуск проекта
 cd backend
 python3.11 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python3.11 -m alembic upgrade head
-```
-
-
-Стандартный запуск через `uvicorn` (продвинутый вывод в консоль, больше информации):
-
-```bash
 uvicorn app.main:app --reload
 ```
 
-Backend будет доступен по адресу `http://127.0.0.1:8000`.
+Backend будет доступен по адресу:
 
-### 2. Frontend
+- [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- Swagger: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-Перед установкой убедитесь, что у вас установлен `git`, клонируйте репозиторий и откройте консоль `cmd`. Через `cmd` зайдите в корневую директорию репозитория и введите эти команды:
+### 2. Запуск frontend
+
+Открой второй терминал:
 
 ```bash
-# Установка npm, curl, nodejs, nvm
 cd frontend
-sudo apt install npm -y
-sudo apt install curl
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
 npm install
 npm run dev
 ```
 
-Frontend будет доступен по адресу `http://127.0.0.1:5173`.
+Frontend будет доступен по адресу:
 
-Во время локальной разработки фронтенд отправляет запросы в backend через Vite proxy на `http://localhost:8000`.
+- [http://127.0.0.1:5173](http://127.0.0.1:5173)
 
-## CI/CD
+Во время локальной разработки frontend отправляет запросы в backend через Vite proxy на `http://localhost:8000`.
 
-В репозитории настроены GitHub Actions workflow:
+## Быстрый старт на Windows
 
-- `.github/workflows/ci.yml` — проверка backend и сборка frontend для `push` и `pull_request`
-- `.github/workflows/cd.yml` — сборка артефактов на ветке `main`
-
-### Что проверяет CI
-
-- синтаксис Python-модулей backend
-- интеграционные backend-тесты для основных сценариев:
-  - регистрация и вход
-  - обновление профиля
-  - создание возможности работодателем
-  - отклик соискателя
-  - смена статуса отклика работодателем
-- production-сборка frontend
-
-### Что делает CD
-
-- собирает `frontend/dist`
-- сохраняет frontend и backend как артефакты workflow
-
-### Что нужно добавить в GitHub Secrets
-
-Для workflow `CD` в настройках репозитория нужен секрет:
-
-- `VITE_YANDEX_MAPS_API_KEY`
-
-CI использует тестовое значение ключа, потому что для сборки фронта важен сам факт наличия переменной, а не реальный доступ к Яндекс Картам.
-
-
-
-
-
-
-## Windows
-
-### 1. Backend
-
-Стандартный запуск через `uvicorn` (продвинутый вывод в консоль, больше информации):
+### 1. Запуск backend
 
 ```bash
 cd backend
@@ -197,9 +153,9 @@ python -m alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Backend будет доступен по адресу `http://127.0.0.1:8000`.
+### 2. Запуск frontend
 
-### 2. Frontend
+Открой второй терминал:
 
 ```bash
 cd frontend
@@ -207,39 +163,68 @@ npm install
 npm run dev
 ```
 
-Frontend будет доступен по адресу `http://127.0.0.1:5173`.
+Адреса останутся теми же:
 
-Во время локальной разработки фронтенд отправляет запросы в backend через Vite proxy на `http://localhost:8000`.
+- backend: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- frontend: [http://127.0.0.1:5173](http://127.0.0.1:5173)
+
+## Администратор по умолчанию
+
+После применения миграций и первого запуска backend в базе автоматически создается один администратор, если пользователя с ролью `admin` еще нет.
+
+Это происходит после выполнения команд:
+
+```bash
+cd backend
+source venv/bin/activate
+python3.11 -m alembic upgrade head
+uvicorn app.main:app --reload
+```
+
+Если переменные администратора не заданы в `backend/.env`, используются такие данные по умолчанию:
+
+- email: `admin@example.com`
+- пароль: `admin12345`
+- имя: `Администратор`
+
+Важно:
+
+- администратор создается только если в БД еще нет роли `admin`
+- в базе хранится не открытый пароль, а его хеш
+- входить нужно обычным паролем, который был задан при инициализации
+
+Если нужны другие данные, задай их заранее в `backend/.env`:
+
+- `TRAMPLIN_ADMIN_EMAIL`
+- `TRAMPLIN_ADMIN_PASSWORD`
+- `TRAMPLIN_ADMIN_NAME`
+
+## Что проверить после запуска
+
+1. Открывается frontend на `http://127.0.0.1:5173`
+2. Открывается backend на `http://127.0.0.1:8000/docs`
+3. На главной странице отображаются карта и карточки возможностей
+4. Можно войти под администратором по умолчанию
 
 ## CI/CD
 
-В репозитории настроены GitHub Actions workflow:
+В репозитории настроены GitHub Actions:
 
 - `.github/workflows/ci.yml` — проверка backend и сборка frontend для `push` и `pull_request`
 - `.github/workflows/cd.yml` — сборка артефактов на ветке `main`
 
-### Что проверяет CI
+CI проверяет:
 
 - синтаксис Python-модулей backend
-- интеграционные backend-тесты для основных сценариев:
-  - регистрация и вход
-  - обновление профиля
-  - создание возможности работодателем
-  - отклик соискателя
-  - смена статуса отклика работодателем
-- production-сборка frontend
+- backend-тесты основных сценариев
+- production-сборку frontend
 
-### Что делает CD
-
-- собирает `frontend/dist`
-- сохраняет frontend и backend как артефакты workflow
-
-### Что нужно добавить в GitHub Secrets
-
-Для workflow `CD` в настройках репозитория нужен секрет:
+Для workflow может понадобиться GitHub Secret:
 
 - `VITE_YANDEX_MAPS_API_KEY`
 
-CI использует тестовое значение ключа, потому что для сборки фронта важен сам факт наличия переменной, а не реальный доступ к Яндекс Картам.
+## Полезные замечания
 
-
+- если маркеры на карте не появляются, сначала проверь `backend/.env` и ключ Яндекс Карт
+- если менялись `.env`-файлы, всегда перезапускай backend и frontend
+- если база не совпадает с миграциями, backend попросит сначала выполнить `alembic upgrade head`
