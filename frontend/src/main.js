@@ -558,8 +558,9 @@ function renderAuthUI() {
         authStatusBadge.textContent = currentRoleLabel(state.currentUser.role);
         authStatusBadge.className = 'badge text-bg-success';
         guestGuideCard?.classList.remove('d-none');
-        guestGuideActions?.classList.remove('d-none');
-        guestGuideActions?.classList.add('invisible', 'pointer-events-none');
+        guestGuideCard?.classList.add('signed-in-guide');
+        guestGuideActions?.classList.add('d-none');
+        guestGuideActions?.classList.remove('invisible', 'pointer-events-none');
     } else {
         loginBtn.parentElement.classList.remove('d-none');
         registerBtn.parentElement.classList.remove('d-none');
@@ -569,6 +570,7 @@ function renderAuthUI() {
         authStatusBadge.textContent = 'Гостевой режим';
         authStatusBadge.className = 'badge text-bg-warning text-dark';
         guestGuideCard?.classList.remove('d-none');
+        guestGuideCard?.classList.remove('signed-in-guide');
         guestGuideActions?.classList.remove('d-none', 'invisible', 'pointer-events-none');
     }
 

@@ -595,6 +595,11 @@ body {
     border-color: #cfe0fb;
 }
 
+.guest-guide-block.signed-in-guide {
+    display: flex;
+    flex-direction: column;
+}
+
 .guest-guide-header {
     display: flex;
     justify-content: space-between;
@@ -625,6 +630,10 @@ body {
     gap: 0.75rem;
 }
 
+.guest-guide-block.signed-in-guide .guest-guide-grid {
+    gap: 1rem;
+}
+
 .guest-guide-step {
     display: grid;
     grid-template-columns: 2rem 1fr;
@@ -635,6 +644,11 @@ body {
     background: rgba(255, 255, 255, 0.94);
     border: 1px solid #cfe0fb;
     box-shadow: 0 10px 22px rgba(13, 110, 253, 0.06);
+}
+
+.guest-guide-block.signed-in-guide .guest-guide-step {
+    min-height: 7.1rem;
+    padding: 1rem 1rem;
 }
 
 .guest-step-number {
@@ -662,6 +676,11 @@ body {
     color: #5b6b7f;
     font-size: 0.86rem;
     line-height: 1.45;
+}
+
+.guest-guide-block.signed-in-guide .guest-step-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
 .guest-guide-actions {
