@@ -136,7 +136,7 @@ py -3.11 -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
 python -m alembic upgrade head
-uvicorn app.main:app --reload
+uvicorn app.main:app 
 ```
 
 ### 2. Запуск frontend
