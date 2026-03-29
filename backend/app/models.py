@@ -36,6 +36,9 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     is_verified: Mapped[bool] = mapped_column(default=False)  # для работодателей
     
+    # Токен подтверждения email:
+    verification_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
     # Метаданные
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     

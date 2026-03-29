@@ -953,8 +953,17 @@ async function handleLoginSubmit(event) {
         body: formData,
     });
 
+
     if (!response.ok) {
-        showNotice('danger', 'Не удалось войти. Проверь email и пароль.');
+        const error = await response.json().catch(() => ({ detail: 'Не удалось войти.' }));
+        
+        // Проверка на неподтверждённый email
+        if (response.status === 403 && error.detail.includes('Подтвердите email')) {
+            showNotice('warning', 'Подтвердите email перед входом. Проверьте почту.');
+            return;
+        }
+        
+        showNotice('danger', typeof error.detail === 'string' ? error.detail : 'Не удалось войти.');
         return;
     }
 
@@ -1036,7 +1045,7 @@ async function handleRegisterSubmit(event) {
     registerModal.hide();
     event.target.reset();
     el('loginEmail').value = payload.email;
-    showNotice('success', 'Аккаунт создан. Теперь войди в систему.');
+    showNotice('success', 'Регистрация успешна! Проверьте почту для подтверждения email.');
 }
 
 async function handleProfileSubmit(event) {

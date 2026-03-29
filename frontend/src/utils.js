@@ -127,7 +127,7 @@ export function workFormatLabel(workFormat) {
     return workFormat;
 }
 
-function isValidEmail(email) {
+export function isValidEmail(email) {
     // Регулярное выражение для проверки формата почты
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);

@@ -8,6 +8,7 @@ import secrets
 
 from app import models, schemas, auth
 from app.database import get_db
+from app.email_service import send_verification_email, check_email_domain
 
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -29,28 +30,54 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     # Генерация токена подтверждения
     verification_token = secrets.token_urlsafe(32)
 
+    # Создание пользователя (is_verified=False)
     db_user = models.User(
         email=user_data.email,
         hashed_password=hashed_password,
         display_name=user_data.display_name,
         role=user_data.role,
         is_active=True,
-        is_verified=False
+        is_verified=False,
+        verification_token=verification_token
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
 
+    # Создание профиля по роли
     if user_data.role == "applicant":
         profile = models.ApplicantProfile(user_id=db_user.id)
         db.add(profile)
-        db.commit()
     elif user_data.role == "employer":
         profile = models.EmployerProfile(user_id=db_user.id, company_name="")
         db.add(profile)
-        db.commit()
-    
+    db.commit()
+
+
+    # ОТПРАВКА ПИСЬМА С ПОДТВЕРЖДЕНИЕМ
+    email_sent = send_verification_email(db_user.email, db_user.display_name, verification_token)
+    if not email_sent:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Can't send email. Check SMTP settings.")
+
     return db_user
+
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    """Подтверждает email по токену из письма."""
+    
+    user = db.query(models.User).filter(models.User.verification_token == token).first()
+    
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный токен подтверждения")
+    
+    if user.is_verified:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email уже подтверждён")
+    
+    user.is_verified = True
+    user.verification_token = None  # Очищаем токен
+    db.commit()
+    
+    return {"message": "Email успешно подтверждён! Теперь войдите в систему."}
 
 @router.post("/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
