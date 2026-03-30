@@ -8,7 +8,7 @@ import secrets
 
 from app import models, schemas, auth
 from app.database import get_db
-from app.email_service import send_verification_email, check_email_domain
+from app.email_service import send_verification_email, check_email_domain, is_valid_email_format
 
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -18,6 +18,29 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 @router.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     """Регистрирует пользователя и создает пустой профиль по его роли."""
+
+    # ПРОВЕРКА 1: Формат email
+    if not is_valid_email_format(user_data.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Некорректный формат email"
+        )
+    
+    # ПРОВЕРКА 2: Существует ли домен (есть ли MX-записи)
+    if not check_email_domain(user_data.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Домен '{user_data.email.split('@')[1]}' не существует или не настроен для приёма почты"
+        )
+
+    # ПРОВЕРКА 3: Пользователь уже зарегистрирован
+    db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
+    if db_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email уже зарегистрирован"
+        )
+    
 
     # Проверка на существующего пользователя
     db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
