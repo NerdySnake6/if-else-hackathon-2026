@@ -9,7 +9,8 @@ SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+FRONTEND_URL = os.getenv("BACKEND_URL", "http://localhost:5173")
 
 
 def check_email_domain(email: str) -> bool:
@@ -65,7 +66,7 @@ def is_valid_email_format(email: str) -> bool:
 def send_verification_email(to_email: str, username: str, token: str) -> bool:
     """Отправляет письмо с подтверждением регистрации"""
     
-    verify_link = f"{FRONTEND_URL}/verify-email?token={token}"
+    verify_link = f"{BACKEND_URL}/auth/verify-email?token={token}&redirect={FRONTEND_URL}/login?verified=1"
     
     # Создаём сообщение с явной кодировкой UTF-8
     msg = MIMEMultipart('alternative', _charset='utf-8')
