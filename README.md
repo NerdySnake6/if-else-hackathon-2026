@@ -154,6 +154,52 @@ npm run dev
 - backend: [http://127.0.0.1:8000](http://127.0.0.1:8000)
 - frontend: [http://127.0.0.1:5173](http://127.0.0.1:5173)
 
+## Запуск через Docker на VPS
+
+В репозитории есть готовая Docker-конфигурация:
+
+- `docker-compose.yml` — поднимает backend и frontend
+- `backend/Dockerfile` — FastAPI, Alembic и SQLite
+- `frontend/Dockerfile` — production-сборка Vite и nginx
+
+### 1. Подготовить переменные окружения
+
+Создай файл `.env` в корне проекта:
+
+```bash
+cp docker.env.example .env
+```
+
+Заполни значения:
+
+```env
+YANDEX_GEOCODER_API_KEY=твой_ключ_яндекс_карт
+VITE_YANDEX_MAPS_API_KEY=твой_ключ_яндекс_карт
+TRAMPLIN_SECRET_KEY=случайная_длинная_строка
+FRONTEND_PORT=80
+```
+
+### 2. Запустить проект
+
+```bash
+docker compose up -d --build
+```
+
+После запуска:
+
+- frontend будет доступен на `http://адрес_сервера`
+- backend будет доступен внутри Docker-сети как `backend:8000`
+- Swagger будет доступен через frontend-прокси: `http://адрес_сервера/api/docs`
+
+### 3. Проверить состояние контейнеров
+
+```bash
+docker compose ps
+docker compose logs -f backend
+```
+
+При старте backend автоматически применяет миграции Alembic, создает SQLite-базу в Docker volume и добавляет администратора по умолчанию, если его еще нет.
+
 ## Администратор по умолчанию
 
 После применения миграций и первого запуска backend в базе автоматически создается один администратор, если пользователя с ролью `admin` еще нет.

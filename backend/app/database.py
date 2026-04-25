@@ -17,7 +17,7 @@ from app.models import Base
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 ALEMBIC_CONFIG_PATH = BACKEND_DIR / "alembic.ini"
-DATABASE_PATH = (BACKEND_DIR / "tramplin.db").resolve()
+DATABASE_PATH = Path(os.getenv("TRAMPLIN_DATABASE_PATH", BACKEND_DIR / "tramplin.db")).resolve()
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 engine = create_engine(
