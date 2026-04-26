@@ -1,7 +1,7 @@
 """Маршруты для просмотра и управления возможностями на платформе."""
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
@@ -13,6 +13,11 @@ from app.geocoder import GeocodingError, geocode_address, geocoder_is_configured
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 logger = logging.getLogger(__name__)
+
+
+def utc_now_naive() -> datetime:
+    """Возвращает текущее время UTC без timezone."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
@@ -98,7 +103,7 @@ def list_opportunities(
     db: Session = Depends(get_db)
 ):
     """Возвращает активные публичные возможности с учетом фильтров."""
-    now = datetime.utcnow()
+    now = utc_now_naive()
     query = (
         db.query(models.Opportunity)
         .options(
@@ -166,6 +171,7 @@ def list_my_opportunities(
 @router.get("/{opp_id}", response_model=schemas.OpportunityOut)
 def get_opportunity(opp_id: int, db: Session = Depends(get_db)):
     """Возвращает одну возможность по ее идентификатору."""
+    now = utc_now_naive()
     opp = (
         db.query(models.Opportunity)
         .options(
@@ -173,6 +179,11 @@ def get_opportunity(opp_id: int, db: Session = Depends(get_db)):
             joinedload(models.Opportunity.employer).joinedload(models.User.employer_profile),
         )
         .filter(models.Opportunity.id == opp_id)
+        .filter(models.Opportunity.is_active.is_(True))
+        .filter(
+            (models.Opportunity.expires_at.is_(None))
+            | (models.Opportunity.expires_at >= now)
+        )
         .first()
     )
     if not opp:

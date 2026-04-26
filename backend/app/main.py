@@ -28,7 +28,18 @@ def load_local_env() -> None:
 load_local_env()
 
 from app.database import init_db
-from app.routers import auth, contacts, curator, map, opportunities, profiles, recommendations, responses, tags
+from app.routers import (
+    auth,
+    contacts,
+    curator,
+    map,
+    opportunities,
+    profiles,
+    recommendations,
+    responses,
+    seo,
+    tags,
+)
 
 
 @asynccontextmanager
@@ -52,6 +63,7 @@ app.include_router(opportunities.router)
 app.include_router(profiles.router)
 app.include_router(recommendations.router)
 app.include_router(responses.router)
+app.include_router(seo.router)
 app.include_router(tags.router)
 
 @app.get("/")

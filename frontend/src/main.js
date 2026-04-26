@@ -37,8 +37,16 @@ import { createProfileController } from './profile.js';
 import { createApplicantController } from './applicant.js';
 import { createEmployerController } from './employer.js';
 import { createCuratorController } from './curator.js';
+import {
+    isAboutRoute,
+    renderPublicSeoSection,
+    resolvePublicRoute,
+    routeViewMeta,
+    updateDocumentSeo,
+} from './seo.js';
 
 const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
+let currentPublicRoute = resolvePublicRoute(window.location.pathname);
 
 let loginModal;
 let registerModal;
@@ -106,6 +114,7 @@ const homeController = createHomeController({
     openOpportunityDetailsModal: (...args) => openOpportunityDetailsModal(...args),
     openEmployerOpportunityModal: (...args) => openEmployerOpportunityModal(...args),
     deleteTagFromLibrary: (...args) => deleteTagFromLibrary(...args),
+    navigateToOpportunity: (...args) => navigateToOpportunity(...args),
 });
 const getFilteredOpportunities = homeController.getFilteredOpportunities;
 const renderHomeDeck = homeController.renderHomeDeck;
@@ -203,12 +212,77 @@ function visibleViews() {
 function setActiveView(view) {
     const allowedViews = visibleViews();
     state.activeView = allowedViews.includes(view) ? view : 'home';
+    currentPublicRoute = resolvePublicRoute('/');
+    if (state.activeView === 'home') {
+        syncPublicRouteFilters();
+    }
+    syncBrowserPath('/');
     renderWorkspaceNav();
     renderWorkspaceView();
+    renderOpportunitiesSection();
 }
 
 function selectedOpportunity() {
     return state.opportunities.find((item) => item.id === state.selectedOpportunityId) || null;
+}
+
+function routedOpportunity() {
+    if (currentPublicRoute.key !== 'opportunity') return null;
+    return state.opportunities.find((item) => item.id === currentPublicRoute.opportunityId) || null;
+}
+
+function syncPublicRouteFilters() {
+    state.opportunityFilters.type = currentPublicRoute.filterType || '';
+    state.opportunityFilters.workFormat = '';
+    state.opportunityFilters.location = '';
+    state.opportunityFilters.search = '';
+    state.opportunityFilters.favorites = '';
+    state.opportunityFilters.tagIds = [];
+
+    if (currentPublicRoute.key === 'opportunity') {
+        state.selectedOpportunityId = currentPublicRoute.opportunityId;
+    } else if (!currentPublicRoute.filterType) {
+        state.selectedOpportunityId = null;
+    }
+
+    const fields = {
+        filterType: state.opportunityFilters.type,
+        filterWorkFormat: state.opportunityFilters.workFormat,
+        filterLocation: state.opportunityFilters.location,
+        filterSearch: state.opportunityFilters.search,
+        filterFavorites: state.opportunityFilters.favorites,
+    };
+
+    Object.entries(fields).forEach(([id, value]) => {
+        const field = el(id);
+        if (field) {
+            field.value = value;
+        }
+    });
+
+    renderTagChoices('filterTagOptions', []);
+}
+
+function syncBrowserPath(path, replace = false) {
+    const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (currentPath === path) return;
+
+    const method = replace ? 'replaceState' : 'pushState';
+    window.history[method]({}, '', path);
+}
+
+function navigateToPublicPath(path, { replace = false } = {}) {
+    currentPublicRoute = resolvePublicRoute(path);
+    state.activeView = 'home';
+    syncPublicRouteFilters();
+    syncBrowserPath(currentPublicRoute.canonicalPath, replace);
+    renderWorkspaceNav();
+    renderWorkspaceView();
+    renderOpportunitiesSection();
+}
+
+function navigateToOpportunity(opportunityId) {
+    navigateToPublicPath(`/opportunities/${opportunityId}`);
 }
 
 function buildOpportunityDetailsModal(opportunity) {
@@ -311,6 +385,15 @@ function workspaceMetaForView() {
     const favoriteCount = state.favoriteOpportunityIds.length + state.favoriteCompanyIds.length;
 
     if (state.activeView === 'home') {
+        const publicMeta = routeViewMeta(currentPublicRoute, routedOpportunity(), {
+            favoriteCount,
+            filteredCount: filteredOpportunities.length,
+            tagCount: state.opportunityFilters.tagIds.length,
+        });
+        if (publicMeta) {
+            return publicMeta;
+        }
+
         const homeTitle = state.currentUser
             ? 'Главная'
             : 'Трамплин для старта в IT';
@@ -476,6 +559,9 @@ function renderWorkspaceHero() {
         exploreBtn.textContent = 'Посмотреть платформу';
         exploreBtn.className = 'btn btn-primary btn-sm';
     }
+
+    renderPublicSeoSection(currentPublicRoute, state, navigateToPublicPath);
+    updateDocumentSeo(currentPublicRoute, routedOpportunity());
 }
 
 async function submitTagForm(nameInputId, categoryInputId, formElement) {
@@ -638,11 +724,13 @@ function renderWorkspaceView() {
     };
 
     const isHome = state.activeView === 'home';
+    const isAboutPublicPage = isHome && isAboutRoute(currentPublicRoute);
     const isCuratorWorkspace = state.activeView === 'curator';
     const isEmployerWorkspace = state.activeView === 'employer';
-    const showTopDeck = isHome || (isEmployerWorkspace && state.currentUser?.role === 'employer');
-    const showMapColumn = isHome || isCuratorWorkspace || isEmployerWorkspace;
-    const useSplitLayout = isHome || isCuratorWorkspace || isEmployerWorkspace;
+    const showTopDeck = (isHome && !isAboutPublicPage) || (isEmployerWorkspace && state.currentUser?.role === 'employer');
+    const showMapColumn = (isHome && !isAboutPublicPage) || isCuratorWorkspace || isEmployerWorkspace;
+    const useSplitLayout = (isHome && !isAboutPublicPage) || isCuratorWorkspace || isEmployerWorkspace;
+    const showHomeBlocks = isHome && !isAboutPublicPage;
 
     homeMapColumn.classList.toggle('d-none', !showMapColumn);
     workspaceContentColumn.classList.toggle('col-md-5', useSplitLayout);
@@ -650,7 +738,7 @@ function renderWorkspaceView() {
     workspaceContentColumn.classList.toggle('workspace-wide', !useSplitLayout);
 
     homeBlocks.forEach((id) => {
-        el(id).classList.toggle('d-none', !isHome);
+        el(id).classList.toggle('d-none', !showHomeBlocks);
     });
     employerHomeDeckRow?.classList.toggle('d-none', !showTopDeck);
 
@@ -748,7 +836,19 @@ async function loadOpportunities() {
     }
 
     state.opportunities = await response.json();
-    if (!state.selectedOpportunityId && state.opportunities.length) {
+    if (
+        currentPublicRoute.key === 'opportunity'
+        && !state.opportunities.some((item) => item.id === currentPublicRoute.opportunityId)
+    ) {
+        const detailResponse = await apiFetch(`/opportunities/${currentPublicRoute.opportunityId}`);
+        if (detailResponse.ok) {
+            state.opportunities = [await detailResponse.json(), ...state.opportunities];
+        }
+    }
+
+    if (currentPublicRoute.key === 'opportunity') {
+        state.selectedOpportunityId = currentPublicRoute.opportunityId;
+    } else if (!state.selectedOpportunityId && state.opportunities.length) {
         state.selectedOpportunityId = state.opportunities[0].id;
     }
     renderOpportunitiesSection();
@@ -1210,6 +1310,10 @@ function bindEvents() {
         state.curatorFilters.opportunitySearch = el('curatorOpportunitySearch').value.trim();
         void loadCuratorData();
     });
+
+    window.addEventListener('popstate', () => {
+        navigateToPublicPath(window.location.pathname, { replace: true });
+    });
 }
 
 async function bootstrap() {
@@ -1217,6 +1321,7 @@ async function bootstrap() {
     setupFieldLimits();
     bindEvents();
     loadFavoritesState();
+    syncPublicRouteFilters();
     renderAuthUI();
     renderResponses();
     renderContactsSection();

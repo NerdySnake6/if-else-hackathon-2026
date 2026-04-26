@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/docs
+Disallow: /api/redoc
+Disallow: /api/openapi.json
+Disallow: /openapi.json
+Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&gclid&fbclid /
+
+Sitemap: https://tramplin.site/sitemap.xml

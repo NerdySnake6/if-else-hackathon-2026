@@ -59,6 +59,11 @@ def test_public_endpoints_and_public_opportunities(client, db_session):
     assert health_response.status_code == 200
     assert health_response.json() == {"status": "ok"}
 
+    robots_response = client.get("/robots.txt")
+    assert robots_response.status_code == 200
+    assert "Sitemap: https://tramplin.site/sitemap.xml" in robots_response.text
+    assert "Disallow: /api/docs" in robots_response.text
+
     employer = models.User(
         email="employer-public@example.com",
         hashed_password="hash",
@@ -111,6 +116,21 @@ def test_public_endpoints_and_public_opportunities(client, db_session):
     assert len(payload) == 1
     assert payload[0]["title"] == "Python Internship"
     assert payload[0]["employer_name"] == "Public employer"
+
+    active_detail_response = client.get(f"/opportunities/{active_opp.id}")
+    assert active_detail_response.status_code == 200
+    assert active_detail_response.json()["title"] == "Python Internship"
+    assert client.get(f"/opportunities/{inactive_opp.id}").status_code == 404
+    assert client.get(f"/opportunities/{expired_opp.id}").status_code == 404
+
+    sitemap_response = client.get("/sitemap.xml")
+    assert sitemap_response.status_code == 200
+    assert sitemap_response.headers["content-type"].startswith("application/xml")
+    assert "<loc>https://tramplin.site/opportunities</loc>" in sitemap_response.text
+    assert "<loc>https://tramplin.site/internships</loc>" in sitemap_response.text
+    assert f"<loc>https://tramplin.site/opportunities/{active_opp.id}</loc>" in sitemap_response.text
+    assert f"<loc>https://tramplin.site/opportunities/{inactive_opp.id}</loc>" not in sitemap_response.text
+    assert f"<loc>https://tramplin.site/opportunities/{expired_opp.id}</loc>" not in sitemap_response.text
 
 
 def test_auth_and_profile_flow(client):

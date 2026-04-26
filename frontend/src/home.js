@@ -26,6 +26,7 @@ export function createHomeController({
     openOpportunityDetailsModal,
     openEmployerOpportunityModal,
     deleteTagFromLibrary,
+    navigateToOpportunity,
 }) {
     function hasApplied(opportunityId) {
         return state.responses.some((response) => response.opportunity_id === opportunityId);
@@ -73,7 +74,16 @@ export function createHomeController({
 
             const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2 mb-2');
             const titleWrap = createEl('div');
-            titleWrap.appendChild(createEl('h5', 'card-title mb-1', opportunity.title));
+            const title = createEl('h5', 'card-title mb-1');
+            const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
+            titleLink.href = `/opportunities/${opportunity.id}`;
+            titleLink.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                navigateToOpportunity(opportunity.id);
+            });
+            title.appendChild(titleLink);
+            titleWrap.appendChild(title);
             titleWrap.appendChild(createEl('div', 'detail-meta', opportunity.employer_name || 'Работодатель'));
             top.appendChild(titleWrap);
 
@@ -223,7 +233,16 @@ export function createHomeController({
 
             const header = createEl('div', 'd-flex w-100 justify-content-between gap-2');
             const titleWrap = createEl('div');
-            titleWrap.appendChild(createEl('h6', 'mb-1', opportunity.title));
+            const title = createEl('h6', 'mb-1');
+            const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
+            titleLink.href = `/opportunities/${opportunity.id}`;
+            titleLink.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                navigateToOpportunity(opportunity.id);
+            });
+            title.appendChild(titleLink);
+            titleWrap.appendChild(title);
             titleWrap.appendChild(createEl('div', 'small text-muted', opportunity.employer_name || 'Работодатель'));
             header.appendChild(titleWrap);
 
