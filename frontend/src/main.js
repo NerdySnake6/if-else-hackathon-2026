@@ -378,6 +378,12 @@ function openOpportunityDetailsModal(opportunityId) {
     if (!opportunity || !opportunityDetailsModal) return;
     buildOpportunityDetailsModal(opportunity);
     opportunityDetailsModal.show();
+    
+    if (currentPublicRoute.key !== 'opportunity' || currentPublicRoute.opportunityId !== opportunityId) {
+        syncBrowserPath(`/opportunities/${opportunityId}`);
+        currentPublicRoute = resolvePublicRoute(`/opportunities/${opportunityId}`);
+        updateDocumentSeo(currentPublicRoute, opportunity);
+    }
 }
 
 function workspaceMetaForView() {
@@ -1191,6 +1197,14 @@ function initModals() {
     curatorCreateModal = new window.bootstrap.Modal(el('curatorCreateModal'));
     curatorOpportunityModal = new window.bootstrap.Modal(el('curatorOpportunityModal'));
     employerOpportunityModal = new window.bootstrap.Modal(el('employerOpportunityModal'));
+
+    el('opportunityDetailsModal').addEventListener('hidden.bs.modal', () => {
+        if (currentPublicRoute.key === 'opportunity') {
+            syncBrowserPath('/');
+            currentPublicRoute = resolvePublicRoute('/');
+            updateDocumentSeo(currentPublicRoute, null);
+        }
+    });
 }
 
 function bindEvents() {
@@ -1339,6 +1353,10 @@ async function bootstrap() {
         await loadTags();
         await loadOpportunities();
         await loadCurrentUser();
+
+        if (currentPublicRoute.key === 'opportunity') {
+            openOpportunityDetailsModal(currentPublicRoute.opportunityId);
+        }
     } catch (error) {
         console.error(error);
         renderAlert(el('opportunities-list'), 'danger', 'Не удалось загрузить проект. Проверь API и ключ Яндекс Карт.');

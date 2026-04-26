@@ -3,9 +3,10 @@
 from datetime import UTC, datetime
 from html import escape
 from typing import Optional
+import json
 
-from fastapi import APIRouter, Depends, Response
-from fastapi.responses import PlainTextResponse
+from fastapi import APIRouter, Depends, Response, HTTPException
+from fastapi.responses import PlainTextResponse, HTMLResponse
 from sqlalchemy.orm import Session
 
 from app import models
@@ -120,3 +121,90 @@ def sitemap_xml(db: Session = Depends(get_db)) -> Response:
         ]
     )
     return Response(content=content, media_type="application/xml; charset=utf-8")
+
+
+@router.get("/seo/opportunities/{opp_id}", include_in_schema=False)
+def seo_opportunity_render(opp_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
+    """Рендерит HTML для поисковых ботов (Dynamic Rendering)."""
+    opportunity = db.query(models.Opportunity).filter(models.Opportunity.id == opp_id).first()
+    if not opportunity:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+
+    url = f"{SITE_URL}/opportunities/{opp_id}"
+    employer_name = opportunity.employer_name or "Работодатель"
+    title = f"{opportunity.title} — {employer_name} | Трамплин"
+    desc_text = opportunity.description or ""
+    description = desc_text[:150] + "..." if len(desc_text) > 150 else desc_text
+
+    is_remote = opportunity.work_format == 'remote'
+
+    if opportunity.type == 'event':
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "Event",
+            "name": opportunity.title,
+            "description": desc_text,
+            "startDate": opportunity.event_date.isoformat() if opportunity.event_date else opportunity.published_at.isoformat(),
+            "location": {"@type": "VirtualLocation", "url": url} if is_remote else {
+                "@type": "Place",
+                "name": opportunity.location,
+                "address": opportunity.location
+            },
+            "organizer": {
+                "@type": "Organization",
+                "name": employer_name
+            }
+        }
+    else:
+        schema = {
+            "@context": "https://schema.org",
+            "@type": "JobPosting",
+            "title": opportunity.title,
+            "description": desc_text,
+            "datePosted": opportunity.published_at.isoformat(),
+            "validThrough": opportunity.expires_at.isoformat() if opportunity.expires_at else None,
+            "employmentType": "INTERN" if opportunity.type == 'internship' else "FULL_TIME",
+            "hiringOrganization": {
+                "@type": "Organization",
+                "name": employer_name
+            },
+            "jobLocationType": "TELECOMMUTE" if is_remote else None,
+            "jobLocation": None if is_remote else {
+                "@type": "Place",
+                "address": {
+                    "@type": "PostalAddress",
+                    "streetAddress": opportunity.location,
+                    "addressCountry": "RU"
+                }
+            }
+        }
+
+    schema = {k: v for k, v in schema.items() if v is not None}
+
+    html = f'''<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{escape(title)}</title>
+    <meta name="description" content="{escape(description)}">
+    <meta property="og:title" content="{escape(title)}">
+    <meta property="og:description" content="{escape(description)}">
+    <meta property="og:url" content="{escape(url)}">
+    <meta property="og:type" content="website">
+    <link rel="canonical" href="{escape(url)}">
+    <script type="application/ld+json">
+    {json.dumps(schema, ensure_ascii=False)}
+    </script>
+</head>
+<body>
+    <h1>{escape(opportunity.title)}</h1>
+    <p><strong>Компания:</strong> {escape(employer_name)}</p>
+    <p><strong>Формат:</strong> {escape(opportunity.work_format or "")}</p>
+    <p><strong>Локация:</strong> {escape(opportunity.location or "")}</p>
+    <article>
+        {escape(desc_text)}
+    </article>
+</body>
+</html>'''
+
+    return HTMLResponse(content=html)
