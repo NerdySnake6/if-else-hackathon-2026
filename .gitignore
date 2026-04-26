@@ -5,7 +5,10 @@ __pycache__/
 frontend/node_modules/
 frontend/dist/
 *.db
+*.db.backup*
+*.db.backup-*
 .env
 .env.*
 !.env.example
+.serena/
 .DS_Store
