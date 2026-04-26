@@ -23,6 +23,29 @@
 - `backend/` — API, модели, миграции и база данных SQLite
 - `frontend/` — клиентское приложение на Vite
 
+## Production-архитектура
+
+В production проект запускается через `docker-compose.yml` как два контейнера:
+
+```mermaid
+flowchart LR
+    U["Браузер"] --> D["tramplin.site DNS"]
+    D --> V["VPS: 80/443"]
+    V --> N["frontend container: nginx"]
+    N --> S["static SPA: /usr/share/nginx/html"]
+    N -->|"/api/*"| B["backend container: FastAPI :8000"]
+    B --> DB["SQLite: Docker volume /data/tramplin.db"]
+    B --> YG["Yandex HTTP Geocoder"]
+    U --> YM["Yandex Maps JS API"]
+```
+
+- наружу опубликован только `frontend`-контейнер на портах `80` и `443`
+- nginx внутри `frontend` отдает собранный Vite frontend и проксирует `/api/*` в backend
+- backend доступен только внутри Docker-сети по имени `backend:8000`
+- SQLite-база хранится в named volume `tramplin_backend_data`, а не внутри контейнера
+- TLS-сертификаты Let's Encrypt лежат на VPS в `/etc/letsencrypt` и монтируются в nginx read-only
+- backend при старте применяет Alembic-миграции и затем запускает FastAPI через Uvicorn
+
 ## Что нужно для запуска
 
 - `git`
@@ -176,7 +199,11 @@ cp docker.env.example .env
 YANDEX_GEOCODER_API_KEY=твой_ключ_яндекс_карт
 VITE_YANDEX_MAPS_API_KEY=твой_ключ_яндекс_карт
 TRAMPLIN_SECRET_KEY=случайная_длинная_строка
+TRAMPLIN_ADMIN_EMAIL=admin@example.com
+TRAMPLIN_ADMIN_PASSWORD=надежный_пароль
+TRAMPLIN_ADMIN_NAME=Администратор
 FRONTEND_PORT=80
+FRONTEND_HTTPS_PORT=443
 ```
 
 ### 2. Запустить проект
@@ -189,7 +216,7 @@ docker compose up -d --build
 
 - frontend будет доступен на `http://адрес_сервера`
 - backend будет доступен внутри Docker-сети как `backend:8000`
-- Swagger будет доступен через frontend-прокси: `http://адрес_сервера/api/docs`
+- Swagger и OpenAPI в production закрыты nginx-конфигом
 
 ### 3. Проверить состояние контейнеров
 
@@ -235,7 +262,7 @@ TRAMPLIN_ADMIN_NAME=Администратор
 1. Открывается frontend на `http://127.0.0.1:5173`
 2. Открывается backend на `http://127.0.0.1:8000/docs`
 3. На главной странице отображаются карта и карточки возможностей
-4. Можно войти под администратором по умолчанию
+4. Можно войти под администратором, заданным через переменные окружения
 
 ## CI/CD
 
