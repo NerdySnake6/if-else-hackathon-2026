@@ -105,6 +105,26 @@ def test_alembic_upgrade_head_creates_schema_and_bootstrap_data(tmp_path, monkey
     try:
         assert session.query(models.Tag).count() == len(database.DEFAULT_TAGS)
         admins = session.query(models.User).filter(models.User.role == "admin").all()
+        assert admins == []
+    finally:
+        session.close()
+        engine.dispose()
+
+
+def test_init_db_seeds_admin_only_from_explicit_environment(tmp_path, monkeypatch):
+    """Проверяет, что администратор создается только из явных переменных окружения."""
+    engine, db_url = configure_test_database(tmp_path, monkeypatch)
+    alembic_config = build_alembic_config(db_url)
+    monkeypatch.setenv("TRAMPLIN_ADMIN_EMAIL", "admin@example.com")
+    monkeypatch.setenv("TRAMPLIN_ADMIN_PASSWORD", "supersecret")
+    monkeypatch.setenv("TRAMPLIN_ADMIN_NAME", "Администратор")
+
+    command.upgrade(alembic_config, "head")
+    database.init_db()
+
+    session = database.SessionLocal()
+    try:
+        admins = session.query(models.User).filter(models.User.role == "admin").all()
         assert len(admins) == 1
         assert admins[0].email == "admin@example.com"
     finally:
@@ -153,6 +173,8 @@ def test_seed_default_admin_handles_integrity_error(monkeypatch):
     session.commit.side_effect = make_integrity_error()
 
     monkeypatch.setattr(database, "SessionLocal", lambda: session)
+    monkeypatch.setenv("TRAMPLIN_ADMIN_EMAIL", "admin@example.com")
+    monkeypatch.setenv("TRAMPLIN_ADMIN_PASSWORD", "supersecret")
 
     database.seed_default_admin()
 

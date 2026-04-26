@@ -35,6 +35,20 @@ def auth_headers(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_public_registration_rejects_privileged_roles(client):
+    """Проверяет, что публичная регистрация не выдает служебные роли."""
+    for role in ("curator", "admin"):
+        response = register_user(
+            client,
+            email=f"{role}@example.com",
+            password="supersecret",
+            display_name=f"{role.title()} User",
+            role=role,
+        )
+
+        assert response.status_code == 422
+
+
 def test_public_endpoints_and_public_opportunities(client, db_session):
     """Проверяет публичные маршруты и фильтрацию возможностей."""
     root_response = client.get("/")

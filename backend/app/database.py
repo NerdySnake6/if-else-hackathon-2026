@@ -138,7 +138,7 @@ def seed_default_tags():
 
 
 def seed_default_admin():
-    """Создает администратора по умолчанию, если его еще нет в базе."""
+    """Создает администратора из переменных окружения, если его еще нет в базе."""
     db = SessionLocal()
     try:
         existing_admin = (
@@ -149,9 +149,11 @@ def seed_default_admin():
         if existing_admin:
             return
 
-        admin_email = os.getenv("TRAMPLIN_ADMIN_EMAIL", "admin@example.com")
-        admin_password = os.getenv("TRAMPLIN_ADMIN_PASSWORD", "admin12345")
-        admin_name = os.getenv("TRAMPLIN_ADMIN_NAME", "Администратор")
+        admin_email = (os.getenv("TRAMPLIN_ADMIN_EMAIL") or "").strip()
+        admin_password = os.getenv("TRAMPLIN_ADMIN_PASSWORD")
+        admin_name = (os.getenv("TRAMPLIN_ADMIN_NAME") or "Администратор").strip() or "Администратор"
+        if not admin_email or not admin_password:
+            return
 
         admin_user = models.User(
             email=admin_email,

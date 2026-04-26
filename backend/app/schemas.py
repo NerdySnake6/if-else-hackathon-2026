@@ -11,6 +11,9 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
+    """Данные для публичной регистрации пользователя."""
+
+    role: Literal["applicant", "employer"] = "applicant"
     password: str = Field(min_length=6)
 
 
