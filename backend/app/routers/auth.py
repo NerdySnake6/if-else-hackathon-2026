@@ -26,7 +26,7 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
         display_name=user_data.display_name,
         role=user_data.role,
         is_active=True,
-        is_verified=False
+        is_verified=True
     )
     db.add(db_user)
     db.commit()

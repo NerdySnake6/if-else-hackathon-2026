@@ -34,7 +34,7 @@ class User(Base):
     
     # Статусы
     is_active: Mapped[bool] = mapped_column(default=True)
-    is_verified: Mapped[bool] = mapped_column(default=False)  # для работодателей
+    is_verified: Mapped[bool] = mapped_column(default=True)  # для работодателей
     
     # Метаданные
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
