@@ -185,6 +185,25 @@ npm run dev
 - `backend/Dockerfile` — FastAPI, Alembic и SQLite
 - `frontend/Dockerfile` — production-сборка Vite и nginx
 
+Важно: на VPS используй новый Compose v2 через команду `docker compose`, а не старый `docker-compose`.
+Старый `docker-compose 1.29.2` может ломаться на современных версиях Docker Engine с ошибкой
+`KeyError: 'ContainerConfig'` при пересоздании контейнеров.
+
+Проверить версию:
+
+```bash
+docker compose version
+```
+
+Если команда не найдена, можно установить Compose v2 как CLI-плагин:
+
+```bash
+sudo mkdir -p /usr/local/lib/docker/cli-plugins
+sudo curl -SL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+sudo docker compose version
+```
+
 ### 1. Подготовить переменные окружения
 
 Создай файл `.env` в корне проекта:
@@ -209,7 +228,7 @@ FRONTEND_HTTPS_PORT=443
 ### 2. Запустить проект
 
 ```bash
-docker compose up -d --build
+sudo docker compose up -d --build
 ```
 
 После запуска:
@@ -221,11 +240,31 @@ docker compose up -d --build
 ### 3. Проверить состояние контейнеров
 
 ```bash
-docker compose ps
-docker compose logs -f backend
+sudo docker compose ps
+sudo docker compose logs -f backend
 ```
 
 При старте backend автоматически применяет миграции Alembic и создает SQLite-базу в Docker volume.
+
+### 4. Обновить проект на VPS
+
+После `git pull` пересобери и перезапусти контейнеры:
+
+```bash
+cd ~/if-else-hackathon-2026
+git pull
+sudo docker compose up -d --build
+sudo docker compose ps
+```
+
+Проверь production-SEO:
+
+```bash
+curl https://tramplin.site/robots.txt
+curl https://tramplin.site/sitemap.xml
+```
+
+`robots.txt` должен начинаться с `User-agent: *`, а `sitemap.xml` — с XML-заголовка.
 
 ## Первый администратор
 
