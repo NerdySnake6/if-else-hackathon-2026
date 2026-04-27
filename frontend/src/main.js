@@ -28,6 +28,7 @@ import {
     tagCategoryLabel,
     toDateTimeLocalValue,
     workFormatLabel,
+    showToast,
 } from './utils.js';
 import { apiFetch } from './api.js';
 import { createMapController, hasCoords } from './map.js';
@@ -44,6 +45,16 @@ import {
     routeViewMeta,
     updateDocumentSeo,
 } from './seo.js';
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled Rejection:', event.reason);
+    showToast('danger', 'Ошибка', 'Что-то пошло не так. Попробуйте еще раз.');
+});
+
+window.addEventListener('error', (event) => {
+    console.error('Global Error:', event.error);
+    showToast('danger', 'Системная ошибка', 'Не удалось выполнить действие.');
+});
 
 const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
 let currentPublicRoute = resolvePublicRoute(window.location.pathname);
@@ -1213,6 +1224,14 @@ function bindEvents() {
             setActiveView(button.dataset.view);
         });
     });
+
+    const aboutNavBtn = el('aboutNavBtn');
+    if (aboutNavBtn) {
+        aboutNavBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            navigateToPublicPath('/about');
+        });
+    }
 
     el('loginBtn').addEventListener('click', (event) => {
         event.preventDefault();

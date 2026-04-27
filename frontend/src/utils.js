@@ -126,3 +126,37 @@ export function workFormatLabel(workFormat) {
     if (workFormat === 'remote') return 'Удаленно';
     return workFormat;
 }
+
+export function showToast(kind, title, text) {
+    const container = el('toastContainer');
+    if (!container) return;
+
+    const toastId = `toast-${Date.now()}`;
+    const bgClass = kind === 'danger' ? 'text-bg-danger' : 
+                    kind === 'success' ? 'text-bg-success' : 
+                    kind === 'warning' ? 'text-bg-warning' : 'text-bg-primary';
+
+    const toastEl = createEl('div', `toast ${bgClass} border-0 mb-2`);
+    toastEl.setAttribute('role', 'alert');
+    toastEl.setAttribute('aria-live', 'assertive');
+    toastEl.setAttribute('aria-atomic', 'true');
+    toastEl.id = toastId;
+
+    const header = createEl('div', 'toast-header');
+    header.innerHTML = `<strong class="me-auto">${title}</strong><button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>`;
+    
+    const body = createEl('div', 'toast-body');
+    body.textContent = text;
+
+    toastEl.appendChild(header);
+    toastEl.appendChild(body);
+    container.appendChild(toastEl);
+
+    if (window.bootstrap && window.bootstrap.Toast) {
+        const bsToast = new window.bootstrap.Toast(toastEl, { delay: 5000 });
+        bsToast.show();
+        toastEl.addEventListener('hidden.bs.toast', () => {
+            toastEl.remove();
+        });
+    }
+}
