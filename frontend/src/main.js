@@ -1054,12 +1054,10 @@ async function loadCuratorData(options = {}) {
     }
 }
 
-async function handleLoginSubmit(event) {
-    event.preventDefault();
-
+async function performLogin(email, password) {
     const formData = new URLSearchParams();
-    formData.set('username', el('loginEmail').value.trim());
-    formData.set('password', el('loginPassword').value);
+    formData.set('username', email);
+    formData.set('password', password);
 
     const response = await apiFetch('/auth/login', {
         method: 'POST',
@@ -1069,16 +1067,28 @@ async function handleLoginSubmit(event) {
         body: formData,
     });
 
-    if (!response.ok) {
+    if (!response.ok) return false;
+
+    const data = await response.json();
+    setToken(data.access_token);
+    await loadCurrentUser();
+    return true;
+}
+
+async function handleLoginSubmit(event) {
+    event.preventDefault();
+
+    const email = el('loginEmail').value.trim();
+    const password = el('loginPassword').value;
+    const ok = await performLogin(email, password);
+
+    if (!ok) {
         showNotice('danger', 'Не удалось войти. Проверь email и пароль.');
         return;
     }
 
-    const data = await response.json();
-    setToken(data.access_token);
     loginModal.hide();
     event.target.reset();
-    await loadCurrentUser();
 }
 
 async function handleRegisterSubmit(event) {
@@ -1138,8 +1148,15 @@ async function handleRegisterSubmit(event) {
 
     registerModal.hide();
     event.target.reset();
-    el('loginEmail').value = payload.email;
-    showNotice('success', 'Аккаунт создан. Теперь войди в систему.');
+
+    // Автоматически логиним после регистрации
+    const loggedIn = await performLogin(payload.email, payload.password);
+    if (loggedIn) {
+        showNotice('success', 'Аккаунт создан. Добро пожаловать!');
+    } else {
+        el('loginEmail').value = payload.email;
+        showNotice('success', 'Аккаунт создан. Войди в систему.');
+    }
 }
 
 async function handleProfileSubmit(event) {
