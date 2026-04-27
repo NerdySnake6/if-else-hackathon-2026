@@ -261,34 +261,12 @@ TRAMPLIN_ADMIN_NAME=Администратор
 
 При необходимости данные администратора можно переопределить через переменные окружения backend.
 
-## SEO и индексация
-
-В production nginx проксирует `robots.txt` и `sitemap.xml` в backend, поэтому sitemap собирается динамически и включает только активные, не истекшие карточки возможностей.
-
-Для поисковых и социальных ботов отдельные страницы карточек `/opportunities/{id}` отдаются через backend-render `/seo/opportunities/{id}`. Это дает ботам готовые `title`, `description`, canonical URL и JSON-LD разметку без ожидания JavaScript.
-
-Страницы разделов `/opportunities`, `/internships`, `/jobs`, `/events` и `/about` обслуживаются как SPA. Google обычно умеет рендерить такие страницы с JavaScript, а Яндекс может индексировать их через sitemap и клиентскую разметку, но самые надежные серверные метаданные сейчас есть именно у карточек возможностей.
-
-Верификационные файлы для поисковых кабинетов лежат в `frontend/public/`:
-
-- `googled97190a15f76ecb8.html` — Google Search Console
-- `yandex_d506498d0ef4fa47.html` — Яндекс Вебмастер
-
 ## Что проверить после запуска
 
 1. Открывается frontend на `http://127.0.0.1:5173`
 2. Открывается backend на `http://127.0.0.1:8000/docs`
 3. На главной странице отображаются карта и карточки возможностей
 4. Можно войти под администратором, заданным через переменные окружения
-
-После production-деплоя дополнительно проверь:
-
-1. `https://www.tramplin.site/` редиректит на `https://tramplin.site/`
-2. `https://tramplin.site/api/health` возвращает `{"status":"ok"}`
-3. `https://tramplin.site/robots.txt` содержит ссылку на sitemap
-4. `https://tramplin.site/sitemap.xml` содержит активные карточки
-5. `https://tramplin.site/opportunities/{id}` открывается в браузере
-6. Карта Яндекса отображается после применения CSP
 
 ## CI/CD
 
