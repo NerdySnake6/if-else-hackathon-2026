@@ -1,9 +1,14 @@
 """Интеграционные тесты для основных пользовательских сценариев."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from app import models
 from app.auth import create_access_token
+
+
+def utc_now_naive() -> datetime:
+    """Возвращает текущее UTC-время без timezone для SQLite DateTime."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def register_user(client, *, email, password, display_name, role):
@@ -49,6 +54,22 @@ def test_public_registration_rejects_privileged_roles(client):
         assert response.status_code == 422
 
 
+def test_employer_auto_verification_can_be_disabled(client, monkeypatch):
+    """Проверяет, что демо-верификацию работодателей можно отключить через env."""
+    monkeypatch.setenv("TRAMPLIN_AUTO_VERIFY_EMPLOYERS", "false")
+
+    response = register_user(
+        client,
+        email="manual-verification@example.com",
+        password="supersecret",
+        display_name="Manual Verification Employer",
+        role="employer",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["is_verified"] is False
+
+
 def test_public_endpoints_and_public_opportunities(client, db_session):
     """Проверяет публичные маршруты и фильтрацию возможностей."""
     root_response = client.get("/")
@@ -84,7 +105,7 @@ def test_public_endpoints_and_public_opportunities(client, db_session):
         work_format="office",
         location="Москва",
         is_active=True,
-        expires_at=datetime.utcnow() + timedelta(days=7),
+        expires_at=utc_now_naive() + timedelta(days=7),
     )
     inactive_opp = models.Opportunity(
         employer_id=employer.id,
@@ -103,7 +124,7 @@ def test_public_endpoints_and_public_opportunities(client, db_session):
         work_format="office",
         location="Казань",
         is_active=True,
-        expires_at=datetime.utcnow() - timedelta(days=1),
+        expires_at=utc_now_naive() - timedelta(days=1),
     )
 
     db_session.add_all([active_opp, inactive_opp, expired_opp])
@@ -123,6 +144,12 @@ def test_public_endpoints_and_public_opportunities(client, db_session):
     assert client.get(f"/opportunities/{inactive_opp.id}").status_code == 404
     assert client.get(f"/opportunities/{expired_opp.id}").status_code == 404
 
+    active_seo_response = client.get(f"/seo/opportunities/{active_opp.id}")
+    assert active_seo_response.status_code == 200
+    assert "Python Internship" in active_seo_response.text
+    assert client.get(f"/seo/opportunities/{inactive_opp.id}").status_code == 404
+    assert client.get(f"/seo/opportunities/{expired_opp.id}").status_code == 404
+
     sitemap_response = client.get("/sitemap.xml")
     assert sitemap_response.status_code == 200
     assert sitemap_response.headers["content-type"].startswith("application/xml")
@@ -131,6 +158,67 @@ def test_public_endpoints_and_public_opportunities(client, db_session):
     assert f"<loc>https://tramplin.site/opportunities/{active_opp.id}</loc>" in sitemap_response.text
     assert f"<loc>https://tramplin.site/opportunities/{inactive_opp.id}</loc>" not in sitemap_response.text
     assert f"<loc>https://tramplin.site/opportunities/{expired_opp.id}</loc>" not in sitemap_response.text
+
+
+def test_applicant_cannot_respond_to_non_public_opportunities(client, db_session):
+    """Проверяет запрет отклика на скрытые и истекшие карточки."""
+    employer = models.User(
+        email="employer-hidden@example.com",
+        hashed_password="hash",
+        display_name="Hidden employer",
+        role="employer",
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add(employer)
+    db_session.commit()
+    db_session.refresh(employer)
+
+    inactive_opp = models.Opportunity(
+        employer_id=employer.id,
+        title="Hidden QA Vacancy",
+        description="Скрытая карточка не должна принимать отклики от соискателей.",
+        type="job",
+        work_format="remote",
+        location="Удаленно",
+        is_active=False,
+    )
+    expired_opp = models.Opportunity(
+        employer_id=employer.id,
+        title="Expired QA Event",
+        description="Истекшая карточка не должна принимать отклики от соискателей.",
+        type="event",
+        work_format="office",
+        location="Москва",
+        is_active=True,
+        expires_at=utc_now_naive() - timedelta(days=1),
+    )
+    db_session.add_all([inactive_opp, expired_opp])
+    db_session.commit()
+
+    register_user(
+        client,
+        email="hidden-applicant@example.com",
+        password="supersecret",
+        display_name="Hidden Applicant",
+        role="applicant",
+    )
+    token = login_user(
+        client,
+        email="hidden-applicant@example.com",
+        password="supersecret",
+    )
+
+    for opportunity in (inactive_opp, expired_opp):
+        response = client.post(
+            "/responses/",
+            headers=auth_headers(token),
+            json={
+                "opportunity_id": opportunity.id,
+                "cover_letter": "Хочу откликнуться на эту карточку.",
+            },
+        )
+        assert response.status_code == 404
 
 
 def test_auth_and_profile_flow(client):
@@ -301,7 +389,7 @@ def test_employer_can_manage_own_opportunities(client, db_session):
             "work_format": "office",
             "location": "Москва, ул. Льва Толстого, 16",
             "salary_range": "80 000 - 120 000",
-            "expires_at": (datetime.utcnow() + timedelta(days=14)).isoformat(),
+            "expires_at": (utc_now_naive() + timedelta(days=14)).isoformat(),
             "tag_ids": [],
         },
     )

@@ -1,7 +1,5 @@
 """Маршруты для нетворкинга и профессиональных контактов соискателей."""
 
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
@@ -157,7 +155,7 @@ def update_contact_status(
         raise HTTPException(status_code=403, detail="Only addressee can update contact")
 
     contact.status = payload.status
-    contact.accepted_at = datetime.utcnow() if payload.status == "accepted" else None
+    contact.accepted_at = models.utc_now_naive() if payload.status == "accepted" else None
     db.commit()
     db.refresh(contact)
     return contact

@@ -1,9 +1,15 @@
-# backend/app/models.py
-from datetime import datetime
+"""SQLAlchemy-модели домена платформы «Трамплин»."""
+
+from datetime import UTC, datetime
 from typing import List, Optional
 
 from sqlalchemy import ForeignKey, String, Text, DateTime, Float, Boolean, Table, Column
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+def utc_now_naive() -> datetime:
+    """Возвращает текущее UTC-время без timezone для SQLite DateTime."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class Base(DeclarativeBase):
@@ -37,7 +43,7 @@ class User(Base):
     is_verified: Mapped[bool] = mapped_column(default=True)  # для работодателей
     
     # Метаданные
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
     
     # Связи
     # Профиль соискателя (если роль applicant)
@@ -158,7 +164,7 @@ class Opportunity(Base):
     salary_range: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     
     # Даты
-    published_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    published_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)  # срок действия
     event_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)  # для мероприятий
     
@@ -196,8 +202,8 @@ class Response(Base):
     # Сопроводительное письмо/комментарий
     cover_letter: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
     
     # Связи
     applicant: Mapped["User"] = relationship(back_populates="responses")
@@ -215,7 +221,7 @@ class Contact(Base):
     # Статус: pending, accepted, declined
     status: Mapped[str] = mapped_column(String(20), default="pending")
     
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
     accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     # Связи
@@ -232,7 +238,7 @@ class Recommendation(Base):
     recommended_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     opportunity_id: Mapped[int] = mapped_column(ForeignKey("opportunities.id"))
     message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now_naive)
 
     recommender: Mapped["User"] = relationship(
         foreign_keys=[recommender_id],

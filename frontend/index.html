@@ -71,10 +71,10 @@
             trackLinks:true
         });
     </script>
-    <noscript><div><img src="https://mc.yandex.ru/watch/108773704" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
     <!-- /Yandex.Metrika counter -->
 </head>
 <body>
+    <noscript><div><img src="https://mc.yandex.ru/watch/108773704" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
     <div id="app">
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
@@ -118,7 +118,7 @@
                     <div class="workspace-hero">
                         <div>
                             <div class="workspace-eyebrow" id="workspaceEyebrow">Публичная витрина</div>
-                            <h3 class="workspace-title mb-1" id="workspaceTitle">Главная</h3>
+                            <h1 class="workspace-title mb-1" id="workspaceTitle">Главная</h1>
                             <p class="workspace-description mb-0" id="workspaceDescription">Здесь собраны вакансии, стажировки, менторские программы и карьерные события.</p>
                             <div class="workspace-response-highlights d-none mt-3" id="workspaceResponseHighlights"></div>
                             <div class="workspace-actions mt-3" id="workspaceHeroActions">
@@ -1009,15 +1009,15 @@
     <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 1060"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="/src/main.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('ServiceWorker registered'))
-                    .catch(err => console.log('ServiceWorker registration failed: ', err));
-            });
+            navigator.serviceWorker.getRegistrations()
+                .then((registrations) => {
+                    registrations.forEach((registration) => registration.unregister());
+                })
+                .catch(() => {});
         }
     </script>
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>

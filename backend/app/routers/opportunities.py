@@ -1,8 +1,8 @@
 """Маршруты для просмотра и управления возможностями на платформе."""
 
 import logging
-from datetime import UTC, datetime
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
@@ -10,14 +10,10 @@ from app import models, schemas
 from app.database import get_db
 from app.dependencies import require_roles, get_current_active_user
 from app.geocoder import GeocodingError, geocode_address, geocoder_is_configured
+from app.opportunity_visibility import public_opportunity_filters
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 logger = logging.getLogger(__name__)
-
-
-def utc_now_naive() -> datetime:
-    """Возвращает текущее время UTC без timezone."""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
@@ -56,6 +52,7 @@ def resolve_coordinates(
 
     return result["lat"], result["lng"]
 
+
 @router.post("/", response_model=schemas.OpportunityOut, status_code=201)
 def create_opportunity(
     opp_data: schemas.OpportunityCreate,
@@ -92,10 +89,11 @@ def create_opportunity(
     
     return db_opp
 
+
 @router.get("/", response_model=List[schemas.OpportunityOut])
 def list_opportunities(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=100, description="Maximum number of records to return"),
     type: Optional[str] = Query(None, description="Filter by type"),
     work_format: Optional[str] = Query(None, description="Filter by work format"),
     location: Optional[str] = Query(None, description="Filter by location (city)"),
@@ -103,18 +101,13 @@ def list_opportunities(
     db: Session = Depends(get_db)
 ):
     """Возвращает активные публичные возможности с учетом фильтров."""
-    now = utc_now_naive()
     query = (
         db.query(models.Opportunity)
         .options(
             joinedload(models.Opportunity.tags),
             joinedload(models.Opportunity.employer).joinedload(models.User.employer_profile),
         )
-        .filter(models.Opportunity.is_active.is_(True))
-        .filter(
-            (models.Opportunity.expires_at.is_(None))
-            | (models.Opportunity.expires_at >= now)
-        )
+        .filter(*public_opportunity_filters())
     )
     
     if type:
@@ -133,8 +126,8 @@ def list_opportunities(
 
 @router.get("/my", response_model=List[schemas.OpportunityOut])
 def list_my_opportunities(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=100, description="Maximum number of records to return"),
     query: Optional[str] = Query(None, description="Search by title, description or location"),
     type: Optional[str] = Query(None, description="Filter by type"),
     is_active: Optional[bool] = Query(None, description="Filter by status"),
@@ -171,7 +164,6 @@ def list_my_opportunities(
 @router.get("/{opp_id}", response_model=schemas.OpportunityOut)
 def get_opportunity(opp_id: int, db: Session = Depends(get_db)):
     """Возвращает одну возможность по ее идентификатору."""
-    now = utc_now_naive()
     opp = (
         db.query(models.Opportunity)
         .options(
@@ -179,11 +171,7 @@ def get_opportunity(opp_id: int, db: Session = Depends(get_db)):
             joinedload(models.Opportunity.employer).joinedload(models.User.employer_profile),
         )
         .filter(models.Opportunity.id == opp_id)
-        .filter(models.Opportunity.is_active.is_(True))
-        .filter(
-            (models.Opportunity.expires_at.is_(None))
-            | (models.Opportunity.expires_at >= now)
-        )
+        .filter(*public_opportunity_filters())
         .first()
     )
     if not opp:

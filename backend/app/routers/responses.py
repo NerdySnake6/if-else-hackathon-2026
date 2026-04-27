@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import get_db
 from app.dependencies import get_current_active_user, require_roles
+from app.opportunity_visibility import public_opportunity_filters
 
 router = APIRouter(prefix="/responses", tags=["responses"])
 
@@ -22,6 +23,7 @@ def create_response(
     opportunity = (
         db.query(models.Opportunity)
         .filter(models.Opportunity.id == response_data.opportunity_id)
+        .filter(*public_opportunity_filters())
         .first()
     )
     if not opportunity:

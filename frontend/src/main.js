@@ -15,6 +15,7 @@ import {
     createEl,
     currentRoleLabel,
     curatorRoleLabel,
+    debounce,
     el,
     formatDate,
     includesText,
@@ -1236,6 +1237,19 @@ function initModals() {
 }
 
 function bindEvents() {
+    const debouncedLoadContactsBySearch = debounce(() => {
+        state.contactSearch = el('contactSearchInput').value.trim();
+        void loadContacts();
+    });
+    const debouncedLoadCuratorUsersBySearch = debounce(() => {
+        state.curatorFilters.userSearch = el('curatorSearch').value.trim();
+        void loadCuratorData();
+    });
+    const debouncedLoadCuratorOpportunitiesBySearch = debounce(() => {
+        state.curatorFilters.opportunitySearch = el('curatorOpportunitySearch').value.trim();
+        void loadCuratorData();
+    });
+
     document.querySelectorAll('[data-view]').forEach((button) => {
         button.addEventListener('click', () => {
             setActiveView(button.dataset.view);
@@ -1325,10 +1339,7 @@ function bindEvents() {
     el('employerResponseStatusFilter').addEventListener('change', applyEmployerResponseFilters);
     el('employerResponseSearch').addEventListener('input', applyEmployerResponseFilters);
     el('employerResponseClearBtn').addEventListener('click', resetEmployerResponseFilters);
-    el('contactSearchInput').addEventListener('input', () => {
-        state.contactSearch = el('contactSearchInput').value.trim();
-        void loadContacts();
-    });
+    el('contactSearchInput').addEventListener('input', debouncedLoadContactsBySearch);
     el('contactSearchResetBtn').addEventListener('click', () => {
         el('contactSearchInput').value = '';
         state.contactSearch = '';
@@ -1344,10 +1355,7 @@ function bindEvents() {
         state.curatorFilters.role = el('curatorUserRoleFilter').value;
         void loadCuratorData();
     });
-    el('curatorSearch').addEventListener('input', () => {
-        state.curatorFilters.userSearch = el('curatorSearch').value.trim();
-        void loadCuratorData();
-    });
+    el('curatorSearch').addEventListener('input', debouncedLoadCuratorUsersBySearch);
     el('curatorVerificationFilter').addEventListener('change', () => {
         state.curatorFilters.verification = el('curatorVerificationFilter').value;
         renderCuratorSection();
@@ -1356,10 +1364,7 @@ function bindEvents() {
         state.curatorFilters.opportunityStatus = el('curatorOpportunityStatusFilter').value;
         void loadCuratorData();
     });
-    el('curatorOpportunitySearch').addEventListener('input', () => {
-        state.curatorFilters.opportunitySearch = el('curatorOpportunitySearch').value.trim();
-        void loadCuratorData();
-    });
+    el('curatorOpportunitySearch').addEventListener('input', debouncedLoadCuratorOpportunitiesBySearch);
 
     window.addEventListener('popstate', () => {
         navigateToPublicPath(window.location.pathname, { replace: true });

@@ -1,5 +1,7 @@
 """Маршруты для регистрации, входа и получения текущего пользователя."""
 
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -11,6 +13,13 @@ from app.database import get_db
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+
+def auto_verify_employers_enabled() -> bool:
+    """Возвращает, включена ли автоматическая верификация работодателей."""
+    value = os.getenv("TRAMPLIN_AUTO_VERIFY_EMPLOYERS", "true").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
 
 @router.post("/register", response_model=schemas.UserOut, status_code=status.HTTP_201_CREATED)
 def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -26,7 +35,7 @@ def register(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
         display_name=user_data.display_name,
         role=user_data.role,
         is_active=True,
-        is_verified=True
+        is_verified=user_data.role != "employer" or auto_verify_employers_enabled(),
     )
     db.add(db_user)
     db.commit()

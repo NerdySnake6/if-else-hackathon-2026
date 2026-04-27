@@ -1,6 +1,6 @@
 """SEO-маршруты для robots.txt и динамического sitemap.xml."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from html import escape
 from typing import Optional
 import json
@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app import models
 from app.database import get_db
+from app.opportunity_visibility import public_opportunity_filters, utc_now_naive
 
 
 SITE_URL = "https://tramplin.site"
@@ -39,11 +40,6 @@ STATIC_URLS = (
 )
 
 router = APIRouter(tags=["seo"])
-
-
-def utc_now_naive() -> datetime:
-    """Возвращает текущее время UTC без timezone."""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def xml_escape(value: str) -> str:
@@ -104,11 +100,7 @@ def sitemap_xml(db: Session = Depends(get_db)) -> Response:
 
     opportunities = (
         db.query(models.Opportunity)
-        .filter(models.Opportunity.is_active.is_(True))
-        .filter(
-            (models.Opportunity.expires_at.is_(None))
-            | (models.Opportunity.expires_at >= now)
-        )
+        .filter(*public_opportunity_filters(now))
         .order_by(models.Opportunity.published_at.desc())
         .limit(1000)
         .all()
@@ -139,7 +131,12 @@ def sitemap_xml(db: Session = Depends(get_db)) -> Response:
 @router.get("/seo/opportunities/{opp_id}", include_in_schema=False)
 def seo_opportunity_render(opp_id: int, db: Session = Depends(get_db)) -> HTMLResponse:
     """Рендерит HTML для поисковых ботов (Dynamic Rendering)."""
-    opportunity = db.query(models.Opportunity).filter(models.Opportunity.id == opp_id).first()
+    opportunity = (
+        db.query(models.Opportunity)
+        .filter(models.Opportunity.id == opp_id)
+        .filter(*public_opportunity_filters())
+        .first()
+    )
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
 

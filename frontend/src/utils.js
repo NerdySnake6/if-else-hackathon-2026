@@ -38,6 +38,14 @@ export function includesText(haystack, needle) {
     return (haystack || '').toLowerCase().includes((needle || '').toLowerCase());
 }
 
+export function debounce(callback, delay = 300) {
+    let timeoutId;
+    return (...args) => {
+        window.clearTimeout(timeoutId);
+        timeoutId = window.setTimeout(() => callback(...args), delay);
+    };
+}
+
 export function tagCategoryLabel(category) {
     if (category === 'tech') return 'Технология';
     if (category === 'level') return 'Уровень';

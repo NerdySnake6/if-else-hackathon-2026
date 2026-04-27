@@ -42,6 +42,8 @@ def create_curator_account(
 def list_users(
     role: Optional[str] = Query(default=None),
     query: Optional[str] = Query(default=None, min_length=1),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_roles("curator", "admin")),
 ):
@@ -65,7 +67,7 @@ def list_users(
             | (models.User.display_name.ilike(pattern))
         )
 
-    return users_query.all()
+    return users_query.offset(skip).limit(limit).all()
 
 
 @router.patch("/users/{user_id}", response_model=schemas.CuratorUserOut)
@@ -142,6 +144,8 @@ def update_user(
 def list_opportunities(
     query: Optional[str] = Query(default=None, min_length=1),
     is_active: Optional[bool] = Query(default=None),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(require_roles("curator", "admin")),
 ):
@@ -166,7 +170,7 @@ def list_opportunities(
             | (models.Opportunity.location.ilike(pattern))
         )
 
-    opportunities = opportunities_query.all()
+    opportunities = opportunities_query.offset(skip).limit(limit).all()
     return [
         schemas.CuratorOpportunityOut(
             id=opportunity.id,
