@@ -16,6 +16,19 @@ from app.database import get_db
 SITE_URL = "https://tramplin.site"
 TRACKING_PARAMS = "utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&gclid&fbclid"
 
+WORK_FORMAT_LABELS = {
+    'office': 'Офис',
+    'hybrid': 'Гибрид',
+    'remote': 'Удаленно',
+}
+
+TYPE_LABELS = {
+    'internship': 'Стажировка',
+    'job': 'Работа',
+    'mentorship': 'Менторство',
+    'event': 'Событие',
+}
+
 STATIC_URLS = (
     ("/", "daily", "1.0"),
     ("/opportunities", "daily", "0.9"),
@@ -132,7 +145,7 @@ def seo_opportunity_render(opp_id: int, db: Session = Depends(get_db)) -> HTMLRe
 
     url = f"{SITE_URL}/opportunities/{opp_id}"
     employer_name = opportunity.employer_name or "Работодатель"
-    title = f"{opportunity.title} — {employer_name} | Трамплин"
+    title = f"{opportunity.title} — {employer_name} | Трамплин (Tramplin) карьерная платформа"
     desc_text = opportunity.description or ""
     description = desc_text[:150] + "..." if len(desc_text) > 150 else desc_text
 
@@ -199,8 +212,9 @@ def seo_opportunity_render(opp_id: int, db: Session = Depends(get_db)) -> HTMLRe
 <body>
     <h1>{escape(opportunity.title)}</h1>
     <p><strong>Компания:</strong> {escape(employer_name)}</p>
-    <p><strong>Формат:</strong> {escape(opportunity.work_format or "")}</p>
-    <p><strong>Локация:</strong> {escape(opportunity.location or "")}</p>
+    <p><strong>Тип:</strong> {escape(TYPE_LABELS.get(opportunity.type or '', opportunity.type or ''))}</p>
+    <p><strong>Формат:</strong> {escape(WORK_FORMAT_LABELS.get(opportunity.work_format or '', opportunity.work_format or ''))}</p>
+    <p><strong>Локация:</strong> {escape(opportunity.location or '')}</p>
     <article>
         {escape(desc_text)}
     </article>
