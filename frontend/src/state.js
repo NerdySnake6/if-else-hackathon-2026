@@ -35,6 +35,12 @@ export const state = {
         favorites: '',
         tagIds: [],
     },
+    opportunityPagination: {
+        page: 1,
+        pageSize: 24,
+        hasNext: false,
+        isLoading: false,
+    },
     employerResponseFilters: {
         status: '',
         search: '',

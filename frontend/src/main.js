@@ -127,6 +127,7 @@ const homeController = createHomeController({
     openEmployerOpportunityModal: (...args) => openEmployerOpportunityModal(...args),
     deleteTagFromLibrary: (...args) => deleteTagFromLibrary(...args),
     navigateToOpportunity: (...args) => navigateToOpportunity(...args),
+    loadOpportunities: () => loadOpportunities(),
 });
 const getFilteredOpportunities = homeController.getFilteredOpportunities;
 const renderHomeDeck = homeController.renderHomeDeck;
@@ -250,6 +251,8 @@ function syncPublicRouteFilters() {
     state.opportunityFilters.search = '';
     state.opportunityFilters.favorites = '';
     state.opportunityFilters.tagIds = [];
+    state.opportunityPagination.page = 1;
+    state.opportunityPagination.hasNext = false;
 
     if (currentPublicRoute.key === 'opportunity') {
         state.selectedOpportunityId = currentPublicRoute.opportunityId;
@@ -847,29 +850,56 @@ async function loadCurrentUser() {
     renderOpportunitiesSection();
 }
 
+function buildOpportunityQueryParams() {
+    const params = new URLSearchParams();
+    const filters = state.opportunityFilters;
+    const pagination = state.opportunityPagination;
+
+    params.set('skip', String((pagination.page - 1) * pagination.pageSize));
+    params.set('limit', String(pagination.pageSize + 1));
+
+    if (filters.type) params.set('type', filters.type);
+    if (filters.workFormat) params.set('work_format', filters.workFormat);
+    if (filters.location) params.set('location', filters.location);
+    if (filters.search) params.set('query', filters.search);
+    filters.tagIds.forEach((tagId) => {
+        params.append('tag_ids', String(tagId));
+    });
+
+    return params.toString();
+}
+
 async function loadOpportunities() {
-    const response = await apiFetch('/opportunities/');
-    if (!response.ok) {
-        throw new Error('Не удалось загрузить возможности');
-    }
-
-    state.opportunities = await response.json();
-    if (
-        currentPublicRoute.key === 'opportunity'
-        && !state.opportunities.some((item) => item.id === currentPublicRoute.opportunityId)
-    ) {
-        const detailResponse = await apiFetch(`/opportunities/${currentPublicRoute.opportunityId}`);
-        if (detailResponse.ok) {
-            state.opportunities = [await detailResponse.json(), ...state.opportunities];
+    state.opportunityPagination.isLoading = true;
+    try {
+        const params = buildOpportunityQueryParams();
+        const response = await apiFetch(`/opportunities/?${params}`);
+        if (!response.ok) {
+            throw new Error('Не удалось загрузить возможности');
         }
-    }
 
-    if (currentPublicRoute.key === 'opportunity') {
-        state.selectedOpportunityId = currentPublicRoute.opportunityId;
-    } else if (!state.selectedOpportunityId && state.opportunities.length) {
-        state.selectedOpportunityId = state.opportunities[0].id;
+        const loadedOpportunities = await response.json();
+        state.opportunityPagination.hasNext = loadedOpportunities.length > state.opportunityPagination.pageSize;
+        state.opportunities = loadedOpportunities.slice(0, state.opportunityPagination.pageSize);
+        if (
+            currentPublicRoute.key === 'opportunity'
+            && !state.opportunities.some((item) => item.id === currentPublicRoute.opportunityId)
+        ) {
+            const detailResponse = await apiFetch(`/opportunities/${currentPublicRoute.opportunityId}`);
+            if (detailResponse.ok) {
+                state.opportunities = [await detailResponse.json(), ...state.opportunities];
+            }
+        }
+
+        if (currentPublicRoute.key === 'opportunity') {
+            state.selectedOpportunityId = currentPublicRoute.opportunityId;
+        } else if (!state.selectedOpportunityId && state.opportunities.length) {
+            state.selectedOpportunityId = state.opportunities[0].id;
+        }
+    } finally {
+        state.opportunityPagination.isLoading = false;
+        renderOpportunitiesSection();
     }
-    renderOpportunitiesSection();
 }
 
 async function loadTags() {
@@ -1237,6 +1267,7 @@ function initModals() {
 }
 
 function bindEvents() {
+    const debouncedApplyOpportunityFilters = debounce(applyOpportunityFilters);
     const debouncedLoadContactsBySearch = debounce(() => {
         state.contactSearch = el('contactSearchInput').value.trim();
         void loadContacts();
@@ -1332,8 +1363,8 @@ function bindEvents() {
     });
     el('filterType').addEventListener('change', applyOpportunityFilters);
     el('filterWorkFormat').addEventListener('change', applyOpportunityFilters);
-    el('filterLocation').addEventListener('input', applyOpportunityFilters);
-    el('filterSearch').addEventListener('input', applyOpportunityFilters);
+    el('filterLocation').addEventListener('input', debouncedApplyOpportunityFilters);
+    el('filterSearch').addEventListener('input', debouncedApplyOpportunityFilters);
     el('filterFavorites').addEventListener('change', applyOpportunityFilters);
     el('filterResetBtn').addEventListener('click', resetOpportunityFilters);
     el('employerResponseStatusFilter').addEventListener('change', applyEmployerResponseFilters);

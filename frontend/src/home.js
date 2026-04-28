@@ -27,6 +27,7 @@ export function createHomeController({
     openEmployerOpportunityModal,
     deleteTagFromLibrary,
     navigateToOpportunity,
+    loadOpportunities,
 }) {
     function hasApplied(opportunityId) {
         return state.responses.some((response) => response.opportunity_id === opportunityId);
@@ -73,7 +74,7 @@ export function createHomeController({
             const body = createEl('div', 'card-body py-3');
 
             const top = createEl('div', 'd-flex justify-content-between align-items-start gap-2 mb-2');
-            const titleWrap = createEl('div');
+            const titleWrap = createEl('div', 'opportunity-title-wrap');
             const title = createEl('h5', 'card-title mb-1');
             const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
             titleLink.href = `/opportunities/${opportunity.id}`;
@@ -187,9 +188,17 @@ export function createHomeController({
         const list = el('opportunities-list');
         const count = el('homeOpportunityCount');
         const canUseFavorites = !state.currentUser || state.currentUser.role === 'applicant';
+        const pagination = state.opportunityPagination;
         list.innerHTML = '';
         if (count) {
-            count.textContent = `${opportunities.length} ${opportunities.length === 1 ? 'результат' : opportunities.length < 5 ? 'результата' : 'результатов'}`;
+            const resultLabel = opportunities.length === 1
+                ? 'результат'
+                : opportunities.length < 5
+                    ? 'результата'
+                    : 'результатов';
+            count.textContent = pagination.page > 1 || pagination.hasNext
+                ? `Страница ${pagination.page}: ${opportunities.length} ${resultLabel}`
+                : `${opportunities.length} ${resultLabel}`;
         }
 
         if (!opportunities.length) {
@@ -232,7 +241,7 @@ export function createHomeController({
                 : opportunity.description;
 
             const header = createEl('div', 'd-flex w-100 justify-content-between gap-2');
-            const titleWrap = createEl('div');
+            const titleWrap = createEl('div', 'opportunity-title-wrap');
             const title = createEl('h6', 'mb-1');
             const titleLink = createEl('a', 'opportunity-title-link', opportunity.title);
             titleLink.href = `/opportunities/${opportunity.id}`;
@@ -279,6 +288,41 @@ export function createHomeController({
 
             list.appendChild(item);
         });
+    }
+
+    function renderPaginationControls() {
+        const container = el('homePagination');
+        if (!container) return;
+
+        const pagination = state.opportunityPagination;
+        const hasPagination = pagination.page > 1 || pagination.hasNext || pagination.isLoading;
+        container.innerHTML = '';
+        container.classList.toggle('d-none', !hasPagination);
+        if (!hasPagination) return;
+
+        const prevBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Назад');
+        prevBtn.type = 'button';
+        prevBtn.disabled = pagination.page <= 1 || pagination.isLoading;
+        prevBtn.addEventListener('click', () => {
+            if (state.opportunityPagination.page <= 1) return;
+            state.opportunityPagination.page -= 1;
+            void loadOpportunities();
+        });
+
+        const label = createEl('span', 'home-pagination-label', `Страница ${pagination.page}`);
+
+        const nextBtn = createEl('button', 'btn btn-sm btn-outline-primary', 'Вперед');
+        nextBtn.type = 'button';
+        nextBtn.disabled = !pagination.hasNext || pagination.isLoading;
+        nextBtn.addEventListener('click', () => {
+            if (!state.opportunityPagination.hasNext) return;
+            state.opportunityPagination.page += 1;
+            void loadOpportunities();
+        });
+
+        container.appendChild(prevBtn);
+        container.appendChild(label);
+        container.appendChild(nextBtn);
     }
 
     function getFilteredOpportunities() {
@@ -329,9 +373,15 @@ export function createHomeController({
         syncSelectedOpportunity(filtered);
         renderHomeDeck(filtered);
         renderList(filtered);
+        renderPaginationControls();
         renderMap(filtered);
         renderFavoritesSummary();
         renderWorkspaceHero();
+    }
+
+    function resetOpportunityPage() {
+        state.opportunityPagination.page = 1;
+        state.opportunityPagination.hasNext = false;
     }
 
     function applyOpportunityFilters() {
@@ -341,7 +391,8 @@ export function createHomeController({
         state.opportunityFilters.search = el('filterSearch').value.trim();
         state.opportunityFilters.favorites = el('filterFavorites').value;
         state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
-        renderOpportunitiesSection();
+        resetOpportunityPage();
+        void loadOpportunities();
     }
 
     function resetOpportunityFilters() {
@@ -390,6 +441,7 @@ export function createHomeController({
             chip.addEventListener('click', () => {
                 el('filterFavorites').value = 'companies';
                 state.opportunityFilters.favorites = 'companies';
+                resetOpportunityPage();
                 if (company.currentOpportunity) {
                     state.selectedOpportunityId = company.currentOpportunity.id;
                 }
@@ -433,7 +485,8 @@ export function createHomeController({
                     button.classList.toggle('active');
                     if (containerId === 'filterTagOptions') {
                         state.opportunityFilters.tagIds = selectedTagIdsFromContainer('filterTagOptions');
-                        renderOpportunitiesSection();
+                        resetOpportunityPage();
+                        void loadOpportunities();
                     }
                 });
             }

@@ -4,6 +4,7 @@ import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app import models, schemas
@@ -14,6 +15,7 @@ from app.opportunity_visibility import public_opportunity_filters
 
 router = APIRouter(prefix="/opportunities", tags=["opportunities"])
 logger = logging.getLogger(__name__)
+EMPLOYER_FREE_OPPORTUNITY_LIMIT = 5
 
 
 def should_geocode(location: Optional[str], work_format: Optional[str]) -> bool:
@@ -53,6 +55,26 @@ def resolve_coordinates(
     return result["lat"], result["lng"]
 
 
+def ensure_employer_can_create_opportunity(db: Session, current_user: models.User) -> None:
+    """Проверяет лимит карточек для работодателя до ручной верификации."""
+    if current_user.role != "employer" or current_user.is_verified:
+        return
+
+    created_count = (
+        db.query(models.Opportunity.id)
+        .filter(models.Opportunity.employer_id == current_user.id)
+        .count()
+    )
+    if created_count >= EMPLOYER_FREE_OPPORTUNITY_LIMIT:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"Лимит {EMPLOYER_FREE_OPPORTUNITY_LIMIT} карточек до верификации исчерпан. "
+                "Попроси администратора или куратора подтвердить работодателя."
+            ),
+        )
+
+
 @router.post("/", response_model=schemas.OpportunityOut, status_code=201)
 def create_opportunity(
     opp_data: schemas.OpportunityCreate,
@@ -60,8 +82,7 @@ def create_opportunity(
     current_user: models.User = Depends(require_roles("employer", "curator", "admin"))
 ):
     """Создает возможность и при необходимости автозаполняет координаты."""
-    if current_user.role == "employer" and not current_user.is_verified:
-        raise HTTPException(status_code=403, detail="Employer not verified")
+    ensure_employer_can_create_opportunity(db, current_user)
 
     lat, lng = resolve_coordinates(
         opp_data.location,
@@ -94,6 +115,7 @@ def create_opportunity(
 def list_opportunities(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=100, description="Maximum number of records to return"),
+    search_query: Optional[str] = Query(None, alias="query", description="Search by title, company or location"),
     type: Optional[str] = Query(None, description="Filter by type"),
     work_format: Optional[str] = Query(None, description="Filter by work format"),
     location: Optional[str] = Query(None, description="Filter by location (city)"),
@@ -101,8 +123,10 @@ def list_opportunities(
     db: Session = Depends(get_db)
 ):
     """Возвращает активные публичные возможности с учетом фильтров."""
-    query = (
+    opportunities_query = (
         db.query(models.Opportunity)
+        .join(models.Opportunity.employer)
+        .outerjoin(models.User.employer_profile)
         .options(
             joinedload(models.Opportunity.tags),
             joinedload(models.Opportunity.employer).joinedload(models.User.employer_profile),
@@ -111,16 +135,34 @@ def list_opportunities(
     )
     
     if type:
-        query = query.filter(models.Opportunity.type == type)
+        opportunities_query = opportunities_query.filter(models.Opportunity.type == type)
     if work_format:
-        query = query.filter(models.Opportunity.work_format == work_format)
+        opportunities_query = opportunities_query.filter(models.Opportunity.work_format == work_format)
     if location:
-        query = query.filter(models.Opportunity.location.contains(location))
+        opportunities_query = opportunities_query.filter(models.Opportunity.location.ilike(f"%{location}%"))
     if tag_ids:
         for tag_id in tag_ids:
-            query = query.filter(models.Opportunity.tags.any(id=tag_id))
+            opportunities_query = opportunities_query.filter(models.Opportunity.tags.any(id=tag_id))
+    if search_query and search_query.strip():
+        search = f"%{search_query.strip()}%"
+        opportunities_query = opportunities_query.filter(
+            or_(
+                models.Opportunity.title.ilike(search),
+                models.Opportunity.description.ilike(search),
+                models.Opportunity.location.ilike(search),
+                models.User.display_name.ilike(search),
+                models.EmployerProfile.company_name.ilike(search),
+                models.Opportunity.tags.any(models.Tag.name.ilike(search)),
+            )
+        )
     
-    opportunities = query.offset(skip).limit(limit).all()
+    opportunities = (
+        opportunities_query
+        .order_by(models.Opportunity.published_at.desc(), models.Opportunity.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return opportunities
 
 

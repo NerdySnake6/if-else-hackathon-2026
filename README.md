@@ -10,7 +10,7 @@
 - отклики и статусы откликов
 - нетворкинг между соискателями
 - базовая SEO-подготовка (Sitemap, Robots.txt, Яндекс Метрика, Яндекс Вебмастер, Google Search Console)
-- демо-режим для быстрого тестирования: автоматическая верификация работодателей включена по умолчанию и управляется переменной `TRAMPLIN_AUTO_VERIFY_EMPLOYERS`
+- ручная модерация работодателей: до верификации работодатель может создать до 5 карточек, а демо-автоверификация включается переменной `TRAMPLIN_AUTO_VERIFY_EMPLOYERS`
 
 ## Стек
 
@@ -204,7 +204,7 @@ TRAMPLIN_SECRET_KEY=случайная_длинная_строка
 TRAMPLIN_ADMIN_EMAIL=admin@example.com
 TRAMPLIN_ADMIN_PASSWORD=надежный_пароль
 TRAMPLIN_ADMIN_NAME=Администратор
-TRAMPLIN_AUTO_VERIFY_EMPLOYERS=true
+TRAMPLIN_AUTO_VERIFY_EMPLOYERS=false
 FRONTEND_PORT=80
 FRONTEND_HTTPS_PORT=443
 ```
@@ -257,7 +257,7 @@ TRAMPLIN_ADMIN_NAME=Администратор
 - если `TRAMPLIN_ADMIN_EMAIL` или `TRAMPLIN_ADMIN_PASSWORD` не заданы, администратор автоматически не создается
 - в базе хранится не открытый пароль, а его хеш
 - входить нужно обычным паролем, который был задан при инициализации
-- `TRAMPLIN_AUTO_VERIFY_EMPLOYERS=true` оставляет демо-режим с автоматической верификацией работодателей; для ручной модерации укажи `false`
+- `TRAMPLIN_AUTO_VERIFY_EMPLOYERS=false` оставляет ручную модерацию работодателей; значение `true` стоит включать только для закрытого демо-режима
 
 При необходимости данные администратора можно переопределить через переменные окружения backend.
 

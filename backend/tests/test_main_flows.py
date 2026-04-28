@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from app import models
 from app.auth import create_access_token
+from app.routers.opportunities import EMPLOYER_FREE_OPPORTUNITY_LIMIT
 
 
 def utc_now_naive() -> datetime:
@@ -68,6 +69,93 @@ def test_employer_auto_verification_can_be_disabled(client, monkeypatch):
 
     assert response.status_code == 201
     assert response.json()["is_verified"] is False
+
+
+def test_employer_auto_verification_can_be_enabled_for_demo(client, monkeypatch):
+    """Проверяет, что демо-верификацию работодателей можно явно включить."""
+    monkeypatch.setenv("TRAMPLIN_AUTO_VERIFY_EMPLOYERS", "true")
+
+    response = register_user(
+        client,
+        email="demo-verification@example.com",
+        password="supersecret",
+        display_name="Demo Verification Employer",
+        role="employer",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["is_verified"] is True
+
+
+def test_unverified_employer_can_create_only_free_limit_before_verification(client, db_session):
+    """Проверяет лимит карточек работодателя до ручной верификации."""
+    response = register_user(
+        client,
+        email="limited-employer@example.com",
+        password="supersecret",
+        display_name="Limited Employer",
+        role="employer",
+    )
+    assert response.status_code == 201
+    assert response.json()["is_verified"] is False
+
+    token = login_user(
+        client,
+        email="limited-employer@example.com",
+        password="supersecret",
+    )
+    headers = auth_headers(token)
+
+    for index in range(EMPLOYER_FREE_OPPORTUNITY_LIMIT):
+        create_response = client.post(
+            "/opportunities/",
+            headers=headers,
+            json={
+                "title": f"Limited vacancy {index}",
+                "description": "Карточка для проверки лимита непроверенного работодателя.",
+                "type": "job",
+                "work_format": "remote",
+                "location": "Удаленно",
+                "tag_ids": [],
+            },
+        )
+        assert create_response.status_code == 201
+
+    blocked_response = client.post(
+        "/opportunities/",
+        headers=headers,
+        json={
+            "title": "Limited vacancy blocked",
+            "description": "Шестая карточка должна требовать верификацию администратора.",
+            "type": "job",
+            "work_format": "remote",
+            "location": "Удаленно",
+            "tag_ids": [],
+        },
+    )
+    assert blocked_response.status_code == 403
+
+    employer = (
+        db_session.query(models.User)
+        .filter(models.User.email == "limited-employer@example.com")
+        .first()
+    )
+    employer.is_verified = True
+    db_session.commit()
+
+    approved_response = client.post(
+        "/opportunities/",
+        headers=headers,
+        json={
+            "title": "Limited vacancy approved",
+            "description": "После ручной верификации работодатель может добавить еще карточку.",
+            "type": "job",
+            "work_format": "remote",
+            "location": "Удаленно",
+            "tag_ids": [],
+        },
+    )
+    assert approved_response.status_code == 201
 
 
 def test_public_endpoints_and_public_opportunities(client, db_session):

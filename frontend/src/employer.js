@@ -13,6 +13,8 @@ import {
 } from './utils.js';
 import { apiFetch } from './api.js';
 
+const EMPLOYER_FREE_OPPORTUNITY_LIMIT = 5;
+
 export function createEmployerController({
     state,
     renderWorkspaceHero,
@@ -55,6 +57,11 @@ export function createEmployerController({
             }
             return true;
         });
+    }
+
+    function canCreateEmployerOpportunity() {
+        if (state.currentUser?.is_verified) return true;
+        return state.employerOpportunities.length < EMPLOYER_FREE_OPPORTUNITY_LIMIT;
     }
 
     function renderEmployerResponses() {
@@ -146,17 +153,25 @@ export function createEmployerController({
 
         refreshBtn.classList.remove('d-none');
         createBtn.classList.remove('d-none');
-        createBtn.disabled = !state.currentUser.is_verified;
-        createBtn.title = state.currentUser.is_verified
+        const canCreate = canCreateEmployerOpportunity();
+        const remainingFreeOpportunities = Math.max(
+            EMPLOYER_FREE_OPPORTUNITY_LIMIT - state.employerOpportunities.length,
+            0
+        );
+        createBtn.disabled = !canCreate;
+        createBtn.title = canCreate
             ? 'Создать новую карточку возможности'
-            : 'Сначала пройди верификацию у администратора или куратора платформы';
+            : 'Лимит карточек до верификации исчерпан';
 
         if (!state.currentUser.is_verified) {
+            const moderationText = canCreate
+                ? `До ручной верификации можно создать еще ${remainingFreeOpportunities} из ${EMPLOYER_FREE_OPPORTUNITY_LIMIT} карточек. После лимита администратор или куратор должен подтвердить работодателя.`
+                : `Лимит ${EMPLOYER_FREE_OPPORTUNITY_LIMIT} карточек до верификации исчерпан. Попроси администратора или куратора подтвердить работодателя.`;
             container.appendChild(
                 createEl(
                     'div',
-                    'alert alert-warning py-2 px-3 mb-3',
-                    'Создание карточек пока недоступно. Сначала пройди верификацию у администратора или куратора платформы, после этого сможешь публиковать стажировки, вакансии и события на карте.'
+                    canCreate ? 'alert alert-info py-2 px-3 mb-3' : 'alert alert-warning py-2 px-3 mb-3',
+                    moderationText
                 )
             );
         }
@@ -275,6 +290,10 @@ export function createEmployerController({
 
     function openEmployerOpportunityModal(opportunityId = null) {
         if (!opportunityId) {
+            if (!canCreateEmployerOpportunity()) {
+                showNotice('warning', `Лимит ${EMPLOYER_FREE_OPPORTUNITY_LIMIT} карточек до верификации исчерпан.`);
+                return;
+            }
             resetEmployerOpportunityForm();
             const employerProfile = state.profile?.employer_profile;
             const defaultLocation = employerProfile?.address || employerProfile?.city || '';

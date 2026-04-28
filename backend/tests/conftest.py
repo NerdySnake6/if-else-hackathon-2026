@@ -47,6 +47,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.delenv("TRAMPLIN_ADMIN_EMAIL", raising=False)
     monkeypatch.delenv("TRAMPLIN_ADMIN_PASSWORD", raising=False)
     monkeypatch.delenv("TRAMPLIN_ADMIN_NAME", raising=False)
+    monkeypatch.delenv("TRAMPLIN_AUTO_VERIFY_EMPLOYERS", raising=False)
 
     command.upgrade(build_alembic_config(db_url), "head")
 

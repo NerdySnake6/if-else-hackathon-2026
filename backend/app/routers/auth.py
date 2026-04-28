@@ -17,7 +17,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def auto_verify_employers_enabled() -> bool:
     """Возвращает, включена ли автоматическая верификация работодателей."""
-    value = os.getenv("TRAMPLIN_AUTO_VERIFY_EMPLOYERS", "true").strip().lower()
+    value = os.getenv("TRAMPLIN_AUTO_VERIFY_EMPLOYERS", "false").strip().lower()
     return value in {"1", "true", "yes", "on"}
 
 
