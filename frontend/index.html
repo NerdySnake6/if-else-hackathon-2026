@@ -47,75 +47,32 @@
             ]
         }
     </script>
-    <!-- Preconnect: прогреваем соединения к CDN заранее -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preconnect" href="https://mc.yandex.ru">
-
-    <!-- Critical CSS: стабилизирует layout до загрузки Bootstrap, предотвращает CLS -->
-    <style>
-        *, *::before, *::after { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(180deg, #f3f7ff 0%, #edf4ff 42%, #f8f9fa 100%);
-            color: #1f2a37;
-        }
-        #app { min-height: 100vh; }
-        .navbar {
-            position: relative;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            padding: .5rem 1rem;
-        }
-        .navbar.bg-primary,
-        .navbar-dark.bg-primary { background-color: #0b5ed7 !important; }
-        .navbar-brand {
-            color: #fff;
-            font-weight: 600;
-            text-decoration: none;
-            padding: .3125rem 0;
-            margin-right: 1rem;
-            font-size: 1.25rem;
-            white-space: nowrap;
-        }
-        .container {
-            width: 100%;
-            padding-right: .75rem;
-            padding-left: .75rem;
-            margin-right: auto;
-            margin-left: auto;
-            max-width: 1320px;
-        }
-        .card {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            background-color: #fff;
-            border-radius: .375rem;
-        }
-        .card-body { flex: 1 1 auto; padding: 1rem; }
-        .shadow-sm { box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important; }
-        .border-0 { border: 0 !important; }
-        .mb-3 { margin-bottom: 1rem !important; }
-        .mt-4 { margin-top: 1.5rem !important; }
-        .skip-link { position: absolute; transform: translateY(-160%); }
-    </style>
-
-    <!-- Bootstrap CSS: non-blocking preload (не блокирует первый рендер) -->
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"></noscript>
-
-    <!-- Bootstrap Icons: non-blocking -->
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"></noscript>
-
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/src/style.css">
 
-</head>
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+        (function(m,e,t,r,i,k,a){
+            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+            m[i].l=1*new Date();
+            for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=108773704', 'ym');
 
+        ym(108773704, 'init', {
+            ssr:true, 
+            webvisor:true, 
+            clickmap:true, 
+            ecommerce:"dataLayer", 
+            referrer: document.referrer, 
+            url: location.href, 
+            accurateTrackBounce:true, 
+            trackLinks:true
+        });
+    </script>
+    <!-- /Yandex.Metrika counter -->
+</head>
 <body>
     <button class="skip-link" type="button" id="skipToMainContent">Перейти к содержимому</button>
     <noscript><div><img src="https://mc.yandex.ru/watch/108773704" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
@@ -1096,27 +1053,6 @@
                 .catch(() => {});
         }
     </script>
-    <!-- Yandex.Metrika counter: Перенос в конец body для SEO 100 -->
-    <script type="text/javascript">
-        (function(m,e,t,r,i,k,a){
-            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-            m[i].l=1*new Date();
-            for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=108773704', 'ym');
-
-        ym(108773704, 'init', {
-            ssr:true, 
-            webvisor:true, 
-            clickmap:true, 
-            ecommerce:"dataLayer", 
-            referrer: document.referrer, 
-            url: location.href, 
-            accurateTrackBounce:true, 
-            trackLinks:true
-        });
-    </script>
-    <!-- /Yandex.Metrika counter -->
     <script type="module" src="/src/main.js"></script>
 </body>
 </html>
