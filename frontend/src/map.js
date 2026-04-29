@@ -3,6 +3,7 @@ export function hasCoords(opportunity) {
 }
 
 const YANDEX_MAPS_LABEL = 'Яндекс Карты';
+const YANDEX_MAPS_API_LABEL = 'API Яндекс Карт';
 const YANDEX_MAPS_URL = 'https://yandex.ru/maps/';
 
 export function createMapController({
@@ -21,8 +22,15 @@ export function createMapController({
     let placemarks = [];
 
     function hasUnsafeHref(link) {
-        const href = link.getAttribute('href');
+        const href = link.getAttribute('href')?.trim();
         return !href || href === '#' || href.startsWith('javascript:');
+    }
+
+    function trimLinkHref(link) {
+        const href = link.getAttribute('href');
+        if (href && href.trim() !== href) {
+            link.setAttribute('href', href.trim());
+        }
     }
 
     function setYandexMapLinkHref(link) {
@@ -46,8 +54,15 @@ export function createMapController({
         });
 
         mapContainer.querySelectorAll('a').forEach((link) => {
+            trimLinkHref(link);
             const text = link.textContent.trim();
             const hasAccessibleName = text || link.getAttribute('aria-label') || link.getAttribute('title');
+
+            if (String(link.className).includes('gototech') && text === 'API') {
+                link.textContent = YANDEX_MAPS_API_LABEL;
+                link.setAttribute('aria-label', YANDEX_MAPS_API_LABEL);
+                link.setAttribute('title', YANDEX_MAPS_API_LABEL);
+            }
 
             if (!hasAccessibleName) {
                 link.setAttribute('aria-label', YANDEX_MAPS_LABEL);
@@ -74,6 +89,7 @@ export function createMapController({
             attributes: true,
             attributeFilter: ['aria-label', 'href', 'rel', 'target', 'title'],
             childList: true,
+            characterData: true,
             subtree: true,
         });
     }
