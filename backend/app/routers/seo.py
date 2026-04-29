@@ -69,10 +69,9 @@ def sitemap_url(path: str, lastmod: str, changefreq: str, priority: str) -> str:
     )
 
 
-@router.get("/robots.txt", include_in_schema=False)
-def robots_txt() -> PlainTextResponse:
-    """Возвращает robots.txt с ссылкой на актуальный sitemap."""
-    content = "\n".join(
+def build_robots_txt() -> str:
+    """Собирает содержимое robots.txt с ссылкой на актуальный sitemap."""
+    return "\n".join(
         [
             "User-agent: *",
             "Allow: /",
@@ -86,12 +85,10 @@ def robots_txt() -> PlainTextResponse:
             "",
         ]
     )
-    return PlainTextResponse(content)
 
 
-@router.get("/sitemap.xml", include_in_schema=False)
-def sitemap_xml(db: Session = Depends(get_db)) -> Response:
-    """Возвращает sitemap со страницами и активными возможностями."""
+def build_sitemap_xml(db: Session) -> str:
+    """Собирает XML-карту сайта со статическими страницами и возможностями."""
     now = utc_now_naive()
     urls = [
         sitemap_url(path, now.date().isoformat(), changefreq, priority)
@@ -116,7 +113,7 @@ def sitemap_xml(db: Session = Depends(get_db)) -> Response:
         for opportunity in opportunities
     )
 
-    content = "\n".join(
+    return "\n".join(
         [
             '<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
@@ -125,7 +122,30 @@ def sitemap_xml(db: Session = Depends(get_db)) -> Response:
             "",
         ]
     )
-    return Response(content=content, media_type="application/xml; charset=utf-8")
+
+
+@router.get("/robots.txt", include_in_schema=False)
+def robots_txt() -> PlainTextResponse:
+    """Возвращает robots.txt с ссылкой на актуальный sitemap."""
+    return PlainTextResponse(build_robots_txt())
+
+
+@router.head("/robots.txt", include_in_schema=False)
+def robots_txt_head() -> Response:
+    """Возвращает заголовки robots.txt для HEAD-запросов."""
+    return Response(media_type="text/plain; charset=utf-8")
+
+
+@router.get("/sitemap.xml", include_in_schema=False)
+def sitemap_xml(db: Session = Depends(get_db)) -> Response:
+    """Возвращает sitemap со страницами и активными возможностями."""
+    return Response(content=build_sitemap_xml(db), media_type="application/xml; charset=utf-8")
+
+
+@router.head("/sitemap.xml", include_in_schema=False)
+def sitemap_xml_head() -> Response:
+    """Возвращает заголовки sitemap.xml для HEAD-запросов."""
+    return Response(media_type="application/xml; charset=utf-8")
 
 
 @router.get("/seo/opportunities/{opp_id}", include_in_schema=False)

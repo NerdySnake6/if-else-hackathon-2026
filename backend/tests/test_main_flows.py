@@ -173,6 +173,16 @@ def test_public_endpoints_and_public_opportunities(client, db_session):
     assert "Sitemap: https://tramplin.site/sitemap.xml" in robots_response.text
     assert "Disallow: /api/docs" in robots_response.text
 
+    robots_head_response = client.head("/robots.txt")
+    assert robots_head_response.status_code == 200
+    assert robots_head_response.headers["content-type"].startswith("text/plain")
+    assert robots_head_response.text == ""
+
+    sitemap_head_response = client.head("/sitemap.xml")
+    assert sitemap_head_response.status_code == 200
+    assert sitemap_head_response.headers["content-type"].startswith("application/xml")
+    assert sitemap_head_response.text == ""
+
     employer = models.User(
         email="employer-public@example.com",
         hashed_password="hash",
