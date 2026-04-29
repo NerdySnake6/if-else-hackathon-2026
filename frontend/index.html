@@ -196,7 +196,15 @@
                         </div>
                         <div class="map-stage" id="mapStage">
                             <div class="map-placeholder" id="mapPlaceholder">
-                                <div class="map-loader" aria-hidden="true"></div>
+                                <div class="map-preview" aria-hidden="true">
+                                    <span class="map-preview-pin map-preview-pin-a"></span>
+                                    <span class="map-preview-pin map-preview-pin-b"></span>
+                                    <span class="map-preview-pin map-preview-pin-c"></span>
+                                    <span class="map-preview-pin map-preview-pin-d"></span>
+                                    <span class="map-preview-route map-preview-route-a"></span>
+                                    <span class="map-preview-route map-preview-route-b"></span>
+                                </div>
+                                <div class="map-loader d-none" id="mapLoader" aria-hidden="true"></div>
                                 <p class="map-status-text mb-0 d-none" id="mapStatusText" aria-live="polite"></p>
                                 <button type="button" class="btn btn-primary btn-sm d-none" id="loadMapBtn">Повторить загрузку карты</button>
                             </div>

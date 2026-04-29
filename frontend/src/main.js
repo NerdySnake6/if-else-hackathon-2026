@@ -58,7 +58,6 @@ window.addEventListener('error', (event) => {
 });
 
 const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
-const MAP_AUTOLOAD_DELAY_MS = 650;
 const MAP_UI_STATE = {
     idle: 'idle',
     loading: 'loading',
@@ -69,7 +68,7 @@ const MAP_UI_STATE = {
 let currentPublicRoute = resolvePublicRoute(window.location.pathname);
 let mapUiState = MAP_UI_STATE.idle;
 let mapLoadPromise = null;
-let mapAutoloadTimeoutId = null;
+let mapAutoloadBound = false;
 
 let loginModal;
 let registerModal;
@@ -160,16 +159,19 @@ function mapPreviewStatusText() {
 
 function renderMapShellState() {
     const mapStage = el('mapStage');
+    const mapLoader = el('mapLoader');
     const mapButton = el('loadMapBtn');
     const mapStatusText = el('mapStatusText');
     const mapCanvas = el('map');
 
-    if (!mapStage || !mapButton || !mapStatusText || !mapCanvas) return;
+    if (!mapStage || !mapLoader || !mapButton || !mapStatusText || !mapCanvas) return;
 
     const isReady = mapUiState === MAP_UI_STATE.ready;
+    const isLoading = mapUiState === MAP_UI_STATE.loading;
     const isError = mapUiState === MAP_UI_STATE.error;
     mapStage.classList.toggle('is-ready', isReady);
     mapCanvas.setAttribute('aria-hidden', String(!isReady));
+    mapLoader.classList.toggle('d-none', !isLoading);
     mapStatusText.textContent = mapPreviewStatusText();
     mapStatusText.classList.toggle('d-none', !isError);
 
@@ -188,33 +190,21 @@ function canAutoloadMap() {
     return !mapColumn.classList.contains('d-none') && mapStage.offsetParent !== null;
 }
 
-function scheduleMapAutoload() {
-    if (mapUiState !== MAP_UI_STATE.idle || mapLoadPromise || mapAutoloadTimeoutId) return;
-    if (!canAutoloadMap()) return;
+function setupMapAutoload() {
+    if (mapAutoloadBound) return;
+    mapAutoloadBound = true;
 
-    mapAutoloadTimeoutId = window.setTimeout(() => {
-        mapAutoloadTimeoutId = null;
-
-        if (document.visibilityState === 'hidden') {
-            scheduleMapAutoload();
+    const autoloadMap = () => {
+        if (!canAutoloadMap() || mapUiState !== MAP_UI_STATE.idle || mapLoadPromise) {
             return;
         }
-
-        if (!canAutoloadMap()) {
-            return;
-        }
-
         void ensureMapReady();
-    }, MAP_AUTOLOAD_DELAY_MS);
-}
+    };
 
-function cancelMapAutoload() {
-    if (mapAutoloadTimeoutId === null) {
-        return;
-    }
-
-    window.clearTimeout(mapAutoloadTimeoutId);
-    mapAutoloadTimeoutId = null;
+    const oneShotEvents = ['pointerdown', 'touchstart', 'wheel', 'keydown', 'scroll', 'mousemove'];
+    oneShotEvents.forEach((eventName) => {
+        window.addEventListener(eventName, autoloadMap, { once: true, passive: true });
+    });
 }
 
 async function ensureMapReady(options = {}) {
@@ -267,11 +257,6 @@ async function ensureMapReady(options = {}) {
 function renderOpportunitiesSection() {
     renderHomeOpportunitiesSection();
     renderMapShellState();
-    if (mapUiState === MAP_UI_STATE.idle) {
-        scheduleMapAutoload();
-    } else if (!canAutoloadMap()) {
-        cancelMapAutoload();
-    }
 }
 
 const profileController = createProfileController({
@@ -1582,7 +1567,7 @@ async function bootstrap() {
     renderProfileSection();
     renderFavoritesSummary();
     renderMapShellState();
-    scheduleMapAutoload();
+    setupMapAutoload();
     renderTagLibrary();
     syncEmployerOpportunityFieldHints();
     refreshFieldCounters();
