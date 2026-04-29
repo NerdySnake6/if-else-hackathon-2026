@@ -474,14 +474,21 @@ export function renderPublicSeoSection(route, state, onNavigate) {
     if (!container) return;
 
     const shouldShow = state.activeView === 'home';
-    container.innerHTML = '';
     container.classList.toggle('d-none', !shouldShow);
     if (!shouldShow) return;
+
+    if (route.key === 'home' && container.dataset.routeKey === 'home' && container.children.length) {
+        return;
+    }
+
+    container.innerHTML = '';
+    container.dataset.routeKey = route.key;
 
     const opportunity = route?.key === 'opportunity'
         ? state.opportunities.find((item) => item.id === route.opportunityId)
         : null;
     const panel = createEl('article', `public-seo-panel public-seo-${route.key}`);
+    panel.dataset.routeKey = route.key;
     const title = route.key === 'opportunity'
         ? opportunity?.title || 'Карточка возможности'
         : route.contentTitle;
