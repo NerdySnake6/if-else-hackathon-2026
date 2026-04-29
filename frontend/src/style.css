@@ -11,6 +11,60 @@ body {
     min-height: 100vh;
 }
 
+.skip-link {
+    position: absolute;
+    left: 1rem;
+    top: 0.75rem;
+    z-index: 1100;
+    transform: translateY(-160%);
+    border-radius: 0.5rem;
+    background: #fff;
+    color: #084298;
+    padding: 0.55rem 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 10px 24px rgba(31, 42, 55, 0.18);
+}
+
+.skip-link:focus {
+    transform: translateY(0);
+}
+
+#mainContent:focus {
+    outline: none;
+}
+
+.navbar.bg-primary {
+    background-color: #0b5ed7 !important;
+}
+
+.nav-button-link {
+    background: transparent;
+    border: 0;
+    padding: var(--bs-nav-link-padding-y) var(--bs-nav-link-padding-x);
+    color: #fff;
+    text-align: left;
+    font-weight: 600;
+}
+
+.nav-button-link:hover,
+.nav-button-link:focus-visible {
+    color: #fff;
+}
+
+.navbar-dark .navbar-nav .nav-link,
+.navbar-dark .navbar-brand {
+    color: #fff;
+    font-weight: 600;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link:focus-visible,
+.navbar-dark .navbar-brand:hover,
+.navbar-dark .navbar-brand:focus-visible {
+    color: #fff;
+}
+
 #workspaceContentColumn.workspace-wide {
     width: 100%;
 }
@@ -74,6 +128,24 @@ body {
     color: #5b6b7f;
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+
+.section-heading {
+    font-size: 1.18rem;
+    font-weight: 700;
+    color: #1f2a37;
+}
+
+.subsection-heading {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4b5b70;
+    font-weight: 700;
+}
+
+.modal-heading {
+    font-size: 1.25rem;
 }
 
 .workspace-actions {
@@ -190,7 +262,7 @@ body {
 
 .public-route-link,
 .opportunity-title-link {
-    color: #0d6efd;
+    color: #084298;
     text-decoration: none;
     font-weight: 700;
     overflow-wrap: anywhere;
@@ -200,9 +272,9 @@ body {
 .public-route-link {
     display: inline-flex;
     align-items: center;
-    border: 1px solid #d6e4ff;
+    border: 1px solid #9ec5fe;
     border-radius: 999px;
-    background: #f7fbff;
+    background: #ffffff;
     padding: 0.35rem 0.65rem;
     font-size: 0.9rem;
 }
@@ -211,7 +283,7 @@ body {
 .public-route-link:focus-visible,
 .opportunity-title-link:hover,
 .opportunity-title-link:focus-visible {
-    color: #084298;
+    color: #052c65;
     text-decoration: underline;
 }
 
@@ -338,7 +410,8 @@ body {
 .navbar-workspace-tabs .btn {
     border-color: rgba(255, 255, 255, 0.28);
     background: transparent;
-    color: rgba(255, 255, 255, 0.92);
+    color: #fff;
+    font-weight: 700;
 }
 
 .navbar-workspace-tabs .btn:hover,
@@ -349,9 +422,9 @@ body {
 }
 
 .navbar-workspace-tabs .btn.btn-primary {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.28);
-    color: #fff;
+    background: #fff;
+    border-color: #fff;
+    color: #084298;
     box-shadow: none;
 }
 

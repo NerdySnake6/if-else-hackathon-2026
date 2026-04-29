@@ -716,9 +716,16 @@ function renderWorkspaceNav() {
 
     Object.entries(tabs).forEach(([view, button]) => {
         if (!button) return;
+        const isActive = state.activeView === view;
         button.classList.toggle('d-none', !allowedViews.includes(view));
-        button.classList.toggle('btn-primary', state.activeView === view);
-        button.classList.toggle('btn-outline-primary', state.activeView !== view);
+        button.classList.toggle('btn-primary', isActive);
+        button.classList.toggle('btn-outline-primary', !isActive);
+        button.setAttribute('aria-pressed', String(isActive));
+        if (isActive) {
+            button.setAttribute('aria-current', 'page');
+        } else {
+            button.removeAttribute('aria-current');
+        }
     });
     renderWorkspaceHero();
 }
@@ -1295,13 +1302,19 @@ function bindEvents() {
         });
     }
 
-    el('loginBtn').addEventListener('click', (event) => {
-        event.preventDefault();
+    const brandHomeLink = el('brandHomeLink');
+    if (brandHomeLink) {
+        brandHomeLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            navigateToPublicPath('/');
+        });
+    }
+
+    el('loginBtn').addEventListener('click', () => {
         loginModal.show();
     });
 
-    el('registerBtn').addEventListener('click', (event) => {
-        event.preventDefault();
+    el('registerBtn').addEventListener('click', () => {
         registerModal.show();
     });
 

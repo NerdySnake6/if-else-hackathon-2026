@@ -74,12 +74,13 @@
     <!-- /Yandex.Metrika counter -->
 </head>
 <body>
+    <a class="skip-link" href="#mainContent">Перейти к содержимому</a>
     <noscript><div><img src="https://mc.yandex.ru/watch/108773704" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
     <div id="app">
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
-                <a class="navbar-brand" href="#">Трамплин</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <a class="navbar-brand" href="/" id="brandHomeLink">Трамплин</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Открыть навигацию">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
@@ -98,20 +99,20 @@
                             <a class="nav-link" href="/about" id="aboutNavBtn">О проекте</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="loginBtn">Вход</a>
+                            <button type="button" class="nav-link nav-button-link" id="loginBtn">Войти</button>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#" id="registerBtn">Регистрация</a>
+                            <button type="button" class="nav-link nav-button-link" id="registerBtn">Регистрация</button>
                         </li>
                         <li class="nav-item d-none" id="logoutNavItem">
-                            <a class="nav-link" href="#" id="logoutBtn">Выход</a>
+                            <button type="button" class="nav-link nav-button-link" id="logoutBtn">Выход</button>
                         </li>
                     </ul>
                 </div>
             </div>
         </nav>
 
-        <div class="container mt-4">
+        <main class="container mt-4" id="mainContent" tabindex="-1">
             <div id="app-notice" class="mb-3"></div>
             <div class="card shadow-sm border-0 mb-3 workspace-hero-card">
                 <div class="card-body py-3">
@@ -137,7 +138,7 @@
                     <div class="map-panel">
                         <div class="map-panel-header">
                             <div>
-                                <h4 class="mb-1">Карта возможностей</h4>
+                                <h2 class="section-heading mb-1">Карта возможностей</h2>
                                 <p class="text-muted mb-0">Смотри, где проходят офлайн-события и из каких городов компании предлагают удаленные форматы.</p>
                             </div>
                         </div>
@@ -149,7 +150,7 @@
                         <div class="card-body py-3">
                             <div class="d-flex justify-content-between align-items-center mb-3" id="homeListHeader">
                                 <div>
-                                    <h4 class="mb-1">Найти возможность</h4>
+                                    <h2 class="section-heading mb-1">Найти возможность</h2>
                                     <p class="text-muted small mb-0">Подбери подходящую вакансию, стажировку или событие по формату, тегам и локации.</p>
                                 </div>
                                 <span class="badge text-bg-light" id="authStatusBadge">Гость</span>
@@ -194,6 +195,7 @@
                                 <div class="home-section-title">Фильтры</div>
                             <div class="row g-2">
                                 <div class="col-md-6">
+                                    <label class="visually-hidden" for="filterType">Тип возможности</label>
                                     <select class="form-select form-select-sm" id="filterType">
                                         <option value="">Все типы</option>
                                         <option value="internship">Стажировка</option>
@@ -203,6 +205,7 @@
                                     </select>
                                 </div>
                                 <div class="col-md-6">
+                                    <label class="visually-hidden" for="filterWorkFormat">Формат работы</label>
                                     <select class="form-select form-select-sm" id="filterWorkFormat">
                                         <option value="">Любой формат</option>
                                         <option value="office">Офис</option>
@@ -211,9 +214,11 @@
                                     </select>
                                 </div>
                                 <div class="col-md-6">
+                                    <label class="visually-hidden" for="filterLocation">Город или локация</label>
                                     <input type="text" class="form-control form-control-sm" id="filterLocation" placeholder="Город или локация">
                                 </div>
                                 <div class="col-md-6">
+                                    <label class="visually-hidden" for="filterSearch">Поиск по тексту</label>
                                     <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="Поиск по тексту">
                                 </div>
                             </div>
@@ -221,6 +226,7 @@
                                 <summary>Расширенные фильтры</summary>
                                 <div class="row g-2 mt-1">
                                     <div class="col-md-6">
+                                        <label class="visually-hidden" for="filterFavorites">Фильтр избранного</label>
                                         <select class="form-select form-select-sm" id="filterFavorites">
                                             <option value="">Все возможности</option>
                                             <option value="vacancies">Избранные вакансии</option>
@@ -245,8 +251,8 @@
                     <div class="card shadow-sm border-0 mt-3 d-none" id="applicantResponsesCard">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Мои отклики</h5>
-                                <button class="btn btn-sm btn-outline-primary d-none" id="refreshResponsesBtn">Обновить</button>
+                                <h2 class="section-heading mb-0">Мои отклики</h2>
+                                <button type="button" class="btn btn-sm btn-outline-primary d-none" id="refreshResponsesBtn">Обновить</button>
                             </div>
                             <div id="responses-list" class="responses-list">
                                 <p class="text-muted mb-0">Войди как соискатель, чтобы видеть свои отклики.</p>
@@ -256,26 +262,27 @@
                     <div class="card shadow-sm border-0 mt-3 d-none" id="applicantContactsCard">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Нетворкинг и контакты</h5>
-                                <button class="btn btn-sm btn-outline-primary d-none" id="refreshContactsBtn">Обновить</button>
+                                <h2 class="section-heading mb-0">Нетворкинг и контакты</h2>
+                                <button type="button" class="btn btn-sm btn-outline-primary d-none" id="refreshContactsBtn">Обновить</button>
                             </div>
                             <div class="row g-2 mb-3">
                                 <div class="col-md-8">
+                                    <label class="visually-hidden" for="contactSearchInput">Поиск контактов</label>
                                     <input type="text" class="form-control form-control-sm" id="contactSearchInput" placeholder="Поиск по имени, вузу или навыкам">
                                 </div>
                                 <div class="col-md-4 d-flex justify-content-end">
                                     <button class="btn btn-sm btn-outline-secondary" id="contactSearchResetBtn" type="button">Очистить</button>
                                 </div>
                             </div>
-                            <h6 class="small text-uppercase text-muted mb-2">Открытые профили для контакта</h6>
+                            <h3 class="subsection-heading mb-2">Открытые профили для контакта</h3>
                             <div id="contact-suggestions-list" class="responses-list mb-3">
                                 <p class="text-muted mb-0">Здесь появятся соискатели с открытым профилем.</p>
                             </div>
-                            <h6 class="small text-uppercase text-muted mb-2">Моя сеть</h6>
+                            <h3 class="subsection-heading mb-2">Моя сеть</h3>
                             <div id="contacts-list" class="responses-list">
                                 <p class="text-muted mb-0">Контакты и заявки в сеть появятся здесь.</p>
                             </div>
-                            <h6 class="small text-uppercase text-muted mb-2 mt-3">Рекомендации возможностей</h6>
+                            <h3 class="subsection-heading mb-2 mt-3">Рекомендации возможностей</h3>
                             <div id="recommendations-list" class="responses-list">
                                 <p class="text-muted mb-0">Здесь будут входящие и исходящие рекомендации по вакансиям и мероприятиям.</p>
                             </div>
@@ -284,11 +291,12 @@
                     <div class="card shadow-sm border-0 mt-3 d-none" id="employerResponsesCard">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Кабинет работодателя</h5>
-                                <button class="btn btn-sm btn-outline-primary d-none" id="refreshEmployerResponsesBtn">Обновить</button>
+                                <h2 class="section-heading mb-0">Кабинет работодателя</h2>
+                                <button type="button" class="btn btn-sm btn-outline-primary d-none" id="refreshEmployerResponsesBtn">Обновить</button>
                             </div>
                             <div class="row g-2 mb-2">
                                 <div class="col-md-4">
+                                    <label class="visually-hidden" for="employerResponseStatusFilter">Статус отклика</label>
                                     <select class="form-select form-select-sm" id="employerResponseStatusFilter">
                                         <option value="">Все статусы</option>
                                         <option value="pending">На рассмотрении</option>
@@ -299,6 +307,7 @@
                                 </div>
                                 <div class="col-md-8">
                                     <div class="input-group input-group-sm">
+                                        <label class="visually-hidden" for="employerResponseSearch">Поиск откликов работодателя</label>
                                         <input type="text" class="form-control" id="employerResponseSearch" placeholder="Поиск по вакансии, имени, email">
                                         <button class="btn btn-outline-secondary" type="button" id="employerResponseClearBtn">Очистить</button>
                                     </div>
@@ -312,14 +321,15 @@
                     <div class="card shadow-sm border-0 mt-3 d-none" id="employerOpportunitiesCard">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Мои карточки возможностей</h5>
+                                <h2 class="section-heading mb-0">Мои карточки возможностей</h2>
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-outline-primary d-none" id="refreshEmployerOpportunitiesBtn">Обновить</button>
-                                    <button class="btn btn-sm btn-primary d-none" id="openEmployerOpportunityCreateBtn">Новая карточка</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary d-none" id="refreshEmployerOpportunitiesBtn">Обновить</button>
+                                    <button type="button" class="btn btn-sm btn-primary d-none" id="openEmployerOpportunityCreateBtn">Новая карточка</button>
                                 </div>
                             </div>
                             <div class="row g-2 mb-2">
                                 <div class="col-md-4">
+                                    <label class="visually-hidden" for="employerOpportunityStatusFilter">Статус карточки работодателя</label>
                                     <select class="form-select form-select-sm" id="employerOpportunityStatusFilter">
                                         <option value="">Все статусы</option>
                                         <option value="active">Активные</option>
@@ -327,6 +337,7 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4">
+                                    <label class="visually-hidden" for="employerOpportunityTypeFilter">Тип карточки работодателя</label>
                                     <select class="form-select form-select-sm" id="employerOpportunityTypeFilter">
                                         <option value="">Все типы</option>
                                         <option value="internship">Стажировка</option>
@@ -337,6 +348,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <div class="input-group input-group-sm">
+                                        <label class="visually-hidden" for="employerOpportunitySearch">Поиск карточек работодателя</label>
                                         <input type="text" class="form-control" id="employerOpportunitySearch" placeholder="Поиск по моим карточкам">
                                         <button class="btn btn-outline-secondary" type="button" id="employerOpportunityClearBtn">Очистить</button>
                                     </div>
@@ -346,12 +358,14 @@
                                 <p class="text-muted mb-0">Войди как работодатель, чтобы создавать и редактировать свои карточки.</p>
                             </div>
                             <hr class="my-3">
-                            <h6 class="small text-uppercase text-muted mb-2">Справочник тегов</h6>
+                            <h3 class="subsection-heading mb-2">Справочник тегов</h3>
                             <form id="tagForm" class="row g-2 mb-3">
                                 <div class="col-md-5">
+                                    <label class="visually-hidden" for="tagNameInput">Название нового тега</label>
                                     <input type="text" class="form-control form-control-sm" id="tagNameInput" placeholder="Новый тег" required>
                                 </div>
                                 <div class="col-md-4">
+                                    <label class="visually-hidden" for="tagCategoryInput">Категория нового тега</label>
                                     <select class="form-select form-select-sm" id="tagCategoryInput" required>
                                         <option value="tech">Технология</option>
                                         <option value="level">Уровень</option>
@@ -371,7 +385,7 @@
                     <div class="card shadow-sm border-0 mt-3 d-none" id="profileCard">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Профиль</h5>
+                                <h2 class="section-heading mb-0">Профиль</h2>
                                 <span class="small text-muted" id="profileStatusText">Гость</span>
                             </div>
                             <form id="profileForm" class="d-none">
@@ -462,15 +476,16 @@
                     <div class="card shadow-sm border-0 mt-3 d-none" id="curatorCard">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h5 class="card-title mb-0">Кабинет куратора</h5>
+                                <h2 class="section-heading mb-0">Кабинет куратора</h2>
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-sm btn-outline-success d-none" id="openCuratorCreateBtn">Новый куратор</button>
-                                    <button class="btn btn-sm btn-outline-primary d-none" id="refreshCuratorBtn">Обновить</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success d-none" id="openCuratorCreateBtn">Новый куратор</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary d-none" id="refreshCuratorBtn">Обновить</button>
                                 </div>
                             </div>
                             <p class="text-muted small mb-3" id="curatorAdminHint">Здесь можно модерировать пользователей, карточки и справочник тегов. Администратор дополнительно создает учетные записи кураторов.</p>
                             <div class="row g-2 mb-3">
                                 <div class="col-md-4">
+                                    <label class="visually-hidden" for="curatorUserRoleFilter">Фильтр пользователей по роли</label>
                                     <select class="form-select form-select-sm" id="curatorUserRoleFilter">
                                         <option value="">Все роли</option>
                                         <option value="employer">Работодатели</option>
@@ -480,9 +495,11 @@
                                     </select>
                                 </div>
                                 <div class="col-md-8">
+                                    <label class="visually-hidden" for="curatorSearch">Поиск пользователей</label>
                                     <input type="text" class="form-control form-control-sm" id="curatorSearch" placeholder="Поиск по имени или email">
                                 </div>
                                 <div class="col-md-4">
+                                    <label class="visually-hidden" for="curatorVerificationFilter">Фильтр пользователей по верификации</label>
                                     <select class="form-select form-select-sm" id="curatorVerificationFilter">
                                         <option value="">Все статусы</option>
                                         <option value="pending">Ждут верификации</option>
@@ -491,12 +508,13 @@
                                     </select>
                                 </div>
                             </div>
-                            <h6 class="small text-uppercase text-muted mb-2">Пользователи</h6>
+                            <h3 class="subsection-heading mb-2">Пользователи</h3>
                             <div id="curator-users-list" class="responses-list mb-3">
                                 <p class="text-muted mb-0">Войди как куратор, чтобы модерировать пользователей.</p>
                             </div>
                             <div class="row g-2 mb-3">
                                 <div class="col-md-4">
+                                    <label class="visually-hidden" for="curatorOpportunityStatusFilter">Фильтр карточек по статусу</label>
                                     <select class="form-select form-select-sm" id="curatorOpportunityStatusFilter">
                                         <option value="">Все карточки</option>
                                         <option value="active">Активные</option>
@@ -504,20 +522,23 @@
                                     </select>
                                 </div>
                                 <div class="col-md-8">
+                                    <label class="visually-hidden" for="curatorOpportunitySearch">Поиск карточек у куратора</label>
                                     <input type="text" class="form-control form-control-sm" id="curatorOpportunitySearch" placeholder="Поиск по карточкам">
                                 </div>
                             </div>
-                            <h6 class="small text-uppercase text-muted mb-2">Карточки возможностей</h6>
+                            <h3 class="subsection-heading mb-2">Карточки возможностей</h3>
                             <div id="curator-opportunities-list" class="responses-list">
                                 <p class="text-muted mb-0">Карточки для модерации появятся здесь.</p>
                             </div>
                             <hr class="my-3">
-                            <h6 class="small text-uppercase text-muted mb-2">Справочник тегов</h6>
+                            <h3 class="subsection-heading mb-2">Справочник тегов</h3>
                             <form id="curatorTagForm" class="row g-2 mb-3">
                                 <div class="col-md-5">
+                                    <label class="visually-hidden" for="curatorTagNameInput">Название нового тега куратора</label>
                                     <input type="text" class="form-control form-control-sm" id="curatorTagNameInput" placeholder="Новый тег" required>
                                 </div>
                                 <div class="col-md-4">
+                                    <label class="visually-hidden" for="curatorTagCategoryInput">Категория нового тега куратора</label>
                                     <select class="form-select form-select-sm" id="curatorTagCategoryInput" required>
                                         <option value="tech">Технология</option>
                                         <option value="level">Уровень</option>
@@ -575,14 +596,14 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="loginModalLabel">Вход</h5>
+                    <h2 class="modal-title modal-heading" id="loginModalLabel">Вход</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="loginForm">
@@ -609,7 +630,7 @@
         <div class="modal-dialog modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="registerModalLabel">Регистрация</h5>
+                    <h2 class="modal-title modal-heading" id="registerModalLabel">Регистрация</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="registerForm">
@@ -652,7 +673,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <div>
-                        <h5 class="modal-title" id="opportunityDetailsModalLabel">Карточка возможности</h5>
+                        <h2 class="modal-title modal-heading" id="opportunityDetailsModalLabel">Карточка возможности</h2>
                         <p class="text-muted small mb-0 mt-1" id="opportunityDetailsMeta"></p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -673,7 +694,7 @@
         <div class="modal-dialog modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="applyModalLabel">Откликнуться</h5>
+                    <h2 class="modal-title modal-heading" id="applyModalLabel">Откликнуться</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="applyForm">
@@ -697,7 +718,7 @@
         <div class="modal-dialog modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="recommendModalLabel">Рекомендовать возможность</h5>
+                    <h2 class="modal-title modal-heading" id="recommendModalLabel">Рекомендовать возможность</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="recommendForm">
@@ -722,7 +743,7 @@
         <div class="modal-dialog modal-lg modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="applicantProfileModalLabel">Профиль соискателя</h5>
+                    <h2 class="modal-title modal-heading" id="applicantProfileModalLabel">Профиль соискателя</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="applicantProfileDetails">
@@ -736,7 +757,7 @@
         <div class="modal-dialog modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="curatorUserModalLabel">Модерация пользователя</h5>
+                    <h2 class="modal-title modal-heading" id="curatorUserModalLabel">Модерация пользователя</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="curatorUserForm">
@@ -840,7 +861,7 @@
         <div class="modal-dialog modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="curatorCreateModalLabel">Новый куратор</h5>
+                    <h2 class="modal-title modal-heading" id="curatorCreateModalLabel">Новый куратор</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="curatorCreateForm">
@@ -872,7 +893,7 @@
         <div class="modal-dialog modal-lg modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="curatorOpportunityModalLabel">Модерация карточки</h5>
+                    <h2 class="modal-title modal-heading" id="curatorOpportunityModalLabel">Модерация карточки</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="curatorOpportunityForm">
@@ -936,7 +957,7 @@
         <div class="modal-dialog modal-lg modal-fullscreen-md-down">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="employerOpportunityModalLabel">Карточка возможности</h5>
+                    <h2 class="modal-title modal-heading" id="employerOpportunityModalLabel">Карточка возможности</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form id="employerOpportunityForm">

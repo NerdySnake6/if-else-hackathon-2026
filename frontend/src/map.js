@@ -16,6 +16,26 @@ export function createMapController({
     let ymapsReadyPromise;
     let placemarks = [];
 
+    function labelYandexMapLinks() {
+        const mapContainer = document.getElementById('map');
+        if (!mapContainer) return;
+
+        mapContainer.querySelectorAll('a').forEach((link) => {
+            const text = link.textContent.trim();
+            const hasAccessibleName = text || link.getAttribute('aria-label') || link.getAttribute('title');
+            if (hasAccessibleName) return;
+
+            link.setAttribute('aria-label', 'Яндекс Карты');
+            link.setAttribute('title', 'Яндекс Карты');
+        });
+    }
+
+    function scheduleYandexMapLabeling() {
+        [0, 250, 1000].forEach((delay) => {
+            window.setTimeout(labelYandexMapLinks, delay);
+        });
+    }
+
     function buildOpportunityPopup(opportunity) {
         const popup = createEl('div', 'opportunity-popup');
         popup.appendChild(createEl('h6', '', opportunity.title));
@@ -67,6 +87,7 @@ export function createMapController({
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             map.behaviors.disable('drag');
         }
+        scheduleYandexMapLabeling();
     }
 
     function renderMap(opportunities) {
@@ -104,6 +125,7 @@ export function createMapController({
             map.geoObjects.add(placemark);
             placemarks.push(placemark);
         });
+        scheduleYandexMapLabeling();
     }
 
     function centerOnOpportunity(opportunity) {
