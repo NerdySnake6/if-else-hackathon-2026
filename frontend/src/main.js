@@ -58,6 +58,7 @@ window.addEventListener('error', (event) => {
 });
 
 const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
+const MAP_AUTOLOAD_DELAY_MS = 650;
 const MAP_UI_STATE = {
     idle: 'idle',
     loading: 'loading',
@@ -68,7 +69,7 @@ const MAP_UI_STATE = {
 let currentPublicRoute = resolvePublicRoute(window.location.pathname);
 let mapUiState = MAP_UI_STATE.idle;
 let mapLoadPromise = null;
-let mapAutoloadObserver = null;
+let mapAutoloadTimeoutId = null;
 
 let loginModal;
 let registerModal;
@@ -179,28 +180,41 @@ function renderMapShellState() {
         : 'Повторить загрузку карты';
 }
 
-function setupMapAutoload() {
+function canAutoloadMap() {
+    const mapColumn = el('homeMapColumn');
     const mapStage = el('mapStage');
-    if (!mapStage || mapAutoloadObserver || mapUiState !== MAP_UI_STATE.idle) return;
+    if (!mapColumn || !mapStage) return false;
 
-    if (!('IntersectionObserver' in window)) {
+    return !mapColumn.classList.contains('d-none') && mapStage.offsetParent !== null;
+}
+
+function scheduleMapAutoload() {
+    if (mapUiState !== MAP_UI_STATE.idle || mapLoadPromise || mapAutoloadTimeoutId) return;
+    if (!canAutoloadMap()) return;
+
+    mapAutoloadTimeoutId = window.setTimeout(() => {
+        mapAutoloadTimeoutId = null;
+
+        if (document.visibilityState === 'hidden') {
+            scheduleMapAutoload();
+            return;
+        }
+
+        if (!canAutoloadMap()) {
+            return;
+        }
+
         void ensureMapReady();
+    }, MAP_AUTOLOAD_DELAY_MS);
+}
+
+function cancelMapAutoload() {
+    if (mapAutoloadTimeoutId === null) {
         return;
     }
 
-    mapAutoloadObserver = new IntersectionObserver((entries) => {
-        const shouldLoad = entries.some((entry) => entry.isIntersecting);
-        if (!shouldLoad) return;
-
-        mapAutoloadObserver.disconnect();
-        mapAutoloadObserver = null;
-        void ensureMapReady();
-    }, {
-        rootMargin: '180px 0px',
-        threshold: 0.15,
-    });
-
-    mapAutoloadObserver.observe(mapStage);
+    window.clearTimeout(mapAutoloadTimeoutId);
+    mapAutoloadTimeoutId = null;
 }
 
 async function ensureMapReady(options = {}) {
@@ -253,6 +267,11 @@ async function ensureMapReady(options = {}) {
 function renderOpportunitiesSection() {
     renderHomeOpportunitiesSection();
     renderMapShellState();
+    if (mapUiState === MAP_UI_STATE.idle) {
+        scheduleMapAutoload();
+    } else if (!canAutoloadMap()) {
+        cancelMapAutoload();
+    }
 }
 
 const profileController = createProfileController({
@@ -1563,7 +1582,7 @@ async function bootstrap() {
     renderProfileSection();
     renderFavoritesSummary();
     renderMapShellState();
-    setupMapAutoload();
+    scheduleMapAutoload();
     renderTagLibrary();
     syncEmployerOpportunityFieldHints();
     refreshFieldCounters();
