@@ -69,6 +69,8 @@ let currentPublicRoute = resolvePublicRoute(window.location.pathname);
 let mapUiState = MAP_UI_STATE.idle;
 let mapLoadPromise = null;
 let mapAutoloadBound = false;
+let mapAutoloadObserver = null;
+let userHasInteracted = false;
 
 let loginModal;
 let registerModal;
@@ -197,16 +199,53 @@ function setupMapAutoload() {
     if (!mapStage) return;
 
     const autoloadMap = () => {
+        userHasInteracted = true;
         if (!canAutoloadMap() || mapUiState !== MAP_UI_STATE.idle || mapLoadPromise) {
             return;
         }
         void ensureMapReady();
     };
 
+    const eagerAutoloadIfVisible = () => {
+        userHasInteracted = true;
+        if (!canAutoloadMap() || mapUiState !== MAP_UI_STATE.idle || mapLoadPromise) {
+            return;
+        }
+
+        const rect = mapStage.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        if (rect.top < viewportHeight + 120 && rect.bottom > -40) {
+            void ensureMapReady();
+        }
+    };
+
     mapStage.addEventListener('pointerenter', autoloadMap, { once: true, passive: true });
     mapStage.addEventListener('pointerdown', autoloadMap, { once: true, passive: true });
     mapStage.addEventListener('touchstart', autoloadMap, { once: true, passive: true });
     mapStage.addEventListener('focusin', autoloadMap, { once: true });
+
+    const interactionEvents = ['pointerdown', 'touchstart', 'wheel', 'keydown'];
+    interactionEvents.forEach((eventName) => {
+        window.addEventListener(eventName, eagerAutoloadIfVisible, { once: true, passive: true });
+    });
+
+    if ('IntersectionObserver' in window) {
+        mapAutoloadObserver = new IntersectionObserver((entries) => {
+            const shouldLoad = entries.some((entry) => entry.isIntersecting);
+            if (!shouldLoad || !userHasInteracted) return;
+
+            mapAutoloadObserver?.disconnect();
+            mapAutoloadObserver = null;
+            if (mapUiState === MAP_UI_STATE.idle && !mapLoadPromise && canAutoloadMap()) {
+                void ensureMapReady();
+            }
+        }, {
+            rootMargin: '120px 0px',
+            threshold: 0.12,
+        });
+
+        mapAutoloadObserver.observe(mapStage);
+    }
 }
 
 async function ensureMapReady(options = {}) {
