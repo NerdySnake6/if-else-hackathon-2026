@@ -68,6 +68,7 @@ const MAP_UI_STATE = {
 let currentPublicRoute = resolvePublicRoute(window.location.pathname);
 let mapUiState = MAP_UI_STATE.idle;
 let mapLoadPromise = null;
+let mapAutoloadObserver = null;
 
 let loginModal;
 let registerModal;
@@ -148,28 +149,12 @@ const renderTagChoices = homeController.renderTagChoices;
 const renderTagLibrary = homeController.renderTagLibrary;
 
 function mapPreviewStatusText() {
-    if (mapUiState === MAP_UI_STATE.loading) {
-        return 'Загружаем интерактивную карту и географию возможностей...';
-    }
-
     if (mapUiState === MAP_UI_STATE.error) {
         return YANDEX_API_KEY
             ? 'Не удалось загрузить карту. Попробуй еще раз.'
             : 'Не указан API-ключ Яндекс Карт. Проверь конфигурацию frontend.';
     }
-
-    const total = state.opportunities.length;
-    const opportunitiesWithCoords = state.opportunities.filter(hasCoords).length;
-
-    if (!total) {
-        return 'Карта загружается по запросу, чтобы страница открывалась быстрее и оставалась удобной для поисковых систем.';
-    }
-
-    if (!opportunitiesWithCoords) {
-        return `Сейчас показано ${total} возможностей. Карту можно загрузить, когда понадобится география предложений.`;
-    }
-
-    return `Сейчас доступно ${opportunitiesWithCoords} точек на карте из ${total} показанных возможностей.`;
+    return '';
 }
 
 function renderMapShellState() {
@@ -181,16 +166,41 @@ function renderMapShellState() {
     if (!mapStage || !mapButton || !mapStatusText || !mapCanvas) return;
 
     const isReady = mapUiState === MAP_UI_STATE.ready;
+    const isError = mapUiState === MAP_UI_STATE.error;
     mapStage.classList.toggle('is-ready', isReady);
     mapCanvas.setAttribute('aria-hidden', String(!isReady));
     mapStatusText.textContent = mapPreviewStatusText();
+    mapStatusText.classList.toggle('d-none', !isError);
 
     mapButton.disabled = mapUiState === MAP_UI_STATE.loading;
+    mapButton.classList.toggle('d-none', !isError);
     mapButton.textContent = mapUiState === MAP_UI_STATE.loading
         ? 'Загружаем...'
-        : mapUiState === MAP_UI_STATE.error
-            ? 'Повторить загрузку'
-            : 'Загрузить карту';
+        : 'Повторить загрузку карты';
+}
+
+function setupMapAutoload() {
+    const mapStage = el('mapStage');
+    if (!mapStage || mapAutoloadObserver || mapUiState !== MAP_UI_STATE.idle) return;
+
+    if (!('IntersectionObserver' in window)) {
+        void ensureMapReady();
+        return;
+    }
+
+    mapAutoloadObserver = new IntersectionObserver((entries) => {
+        const shouldLoad = entries.some((entry) => entry.isIntersecting);
+        if (!shouldLoad) return;
+
+        mapAutoloadObserver.disconnect();
+        mapAutoloadObserver = null;
+        void ensureMapReady();
+    }, {
+        rootMargin: '180px 0px',
+        threshold: 0.15,
+    });
+
+    mapAutoloadObserver.observe(mapStage);
 }
 
 async function ensureMapReady(options = {}) {
@@ -1553,6 +1563,7 @@ async function bootstrap() {
     renderProfileSection();
     renderFavoritesSummary();
     renderMapShellState();
+    setupMapAutoload();
     renderTagLibrary();
     syncEmployerOpportunityFieldHints();
     refreshFieldCounters();

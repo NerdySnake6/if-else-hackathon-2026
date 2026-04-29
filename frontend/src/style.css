@@ -472,7 +472,8 @@ body {
     z-index: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    align-items: center;
+    justify-content: center;
     padding: 1.25rem;
     gap: 1rem;
     background:
@@ -484,24 +485,26 @@ body {
     display: none;
 }
 
-.map-placeholder-copy {
-    max-width: 28rem;
+.map-loader {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    border: 3px solid rgba(13, 110, 253, 0.18);
+    border-top-color: #0d6efd;
+    animation: map-loader-spin 0.9s linear infinite;
 }
 
-.map-placeholder-title {
-    font-size: 1rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: #1f2a37;
-}
-
-.map-placeholder-text {
+.map-status-text {
+    max-width: 24rem;
     color: #4b5b70;
-    line-height: 1.55;
+    line-height: 1.5;
+    text-align: center;
 }
 
-.map-placeholder .btn {
-    align-self: flex-start;
+@keyframes map-loader-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .map-panel {

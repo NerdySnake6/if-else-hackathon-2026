@@ -196,11 +196,9 @@
                         </div>
                         <div class="map-stage" id="mapStage">
                             <div class="map-placeholder" id="mapPlaceholder">
-                                <div class="map-placeholder-copy">
-                                    <h3 class="map-placeholder-title">Интерактивная карта</h3>
-                                    <p class="map-placeholder-text mb-0" id="mapStatusText">Карта загружается по запросу, чтобы страница открывалась быстрее и оставалась удобной для поисковых систем.</p>
-                                </div>
-                                <button type="button" class="btn btn-primary btn-sm" id="loadMapBtn">Загрузить карту</button>
+                                <div class="map-loader" aria-hidden="true"></div>
+                                <p class="map-status-text mb-0 d-none" id="mapStatusText" aria-live="polite"></p>
+                                <button type="button" class="btn btn-primary btn-sm d-none" id="loadMapBtn">Повторить загрузку карты</button>
                             </div>
                             <div id="map" aria-live="polite"></div>
                         </div>
