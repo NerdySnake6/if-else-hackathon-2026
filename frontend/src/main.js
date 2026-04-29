@@ -193,6 +193,8 @@ function canAutoloadMap() {
 function setupMapAutoload() {
     if (mapAutoloadBound) return;
     mapAutoloadBound = true;
+    const mapStage = el('mapStage');
+    if (!mapStage) return;
 
     const autoloadMap = () => {
         if (!canAutoloadMap() || mapUiState !== MAP_UI_STATE.idle || mapLoadPromise) {
@@ -201,10 +203,10 @@ function setupMapAutoload() {
         void ensureMapReady();
     };
 
-    const oneShotEvents = ['pointerdown', 'touchstart', 'wheel', 'keydown', 'scroll', 'mousemove'];
-    oneShotEvents.forEach((eventName) => {
-        window.addEventListener(eventName, autoloadMap, { once: true, passive: true });
-    });
+    mapStage.addEventListener('pointerenter', autoloadMap, { once: true, passive: true });
+    mapStage.addEventListener('pointerdown', autoloadMap, { once: true, passive: true });
+    mapStage.addEventListener('touchstart', autoloadMap, { once: true, passive: true });
+    mapStage.addEventListener('focusin', autoloadMap, { once: true });
 }
 
 async function ensureMapReady(options = {}) {
