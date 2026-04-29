@@ -272,12 +272,11 @@ body {
 .public-route-link {
     display: inline-flex;
     align-items: center;
-    border: 1px solid #0b5ed7;
+    border: 1px solid #8bb9ff;
     border-radius: 999px;
-    background: #eaf3ff;
-    padding: 0.42rem 0.8rem;
-    font-size: 0.95rem;
-    box-shadow: 0 8px 18px rgba(13, 110, 253, 0.08);
+    background: #f8fbff;
+    padding: 0.38rem 0.72rem;
+    font-size: 0.92rem;
 }
 
 .public-route-link:hover,
@@ -290,10 +289,10 @@ body {
 
 .public-route-link:hover,
 .public-route-link:focus-visible {
-    background: #0b5ed7;
-    color: #fff;
+    background: #eaf3ff;
+    border-color: #0b5ed7;
+    color: #052c65;
     text-decoration: none;
-    box-shadow: 0 10px 22px rgba(13, 110, 253, 0.18);
 }
 
 .opportunity-title-link {
