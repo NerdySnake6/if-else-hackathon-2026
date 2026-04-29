@@ -4,6 +4,7 @@ export function hasCoords(opportunity) {
 
 const YANDEX_MAPS_LABEL = 'Яндекс Карты';
 const YANDEX_MAPS_API_LABEL = 'API Яндекс Карт';
+const YANDEX_MAPS_TERMS_LABEL = 'Условия использования Яндекс Карт';
 const YANDEX_MAPS_URL = 'https://yandex.ru/maps/';
 
 export function createMapController({
@@ -40,9 +41,10 @@ export function createMapController({
         if (link.getAttribute('target') !== '_blank') {
             link.setAttribute('target', '_blank');
         }
-        if (link.getAttribute('rel') !== 'noopener noreferrer') {
-            link.setAttribute('rel', 'noopener noreferrer');
+        if (link.getAttribute('rel') !== 'nofollow noopener noreferrer') {
+            link.setAttribute('rel', 'nofollow noopener noreferrer');
         }
+        link.setAttribute('role', 'link');
     }
 
     function labelYandexMapLinks() {
@@ -58,10 +60,26 @@ export function createMapController({
             const text = link.textContent.trim();
             const hasAccessibleName = text || link.getAttribute('aria-label') || link.getAttribute('title');
 
+            if (String(link.className).includes('copyright__link') && text === 'Условия использования') {
+                link.textContent = YANDEX_MAPS_TERMS_LABEL;
+                link.setAttribute('aria-label', YANDEX_MAPS_TERMS_LABEL);
+                link.setAttribute('title', YANDEX_MAPS_TERMS_LABEL);
+            }
+
             if (String(link.className).includes('gototech') && text === 'API') {
                 link.textContent = YANDEX_MAPS_API_LABEL;
                 link.setAttribute('aria-label', YANDEX_MAPS_API_LABEL);
                 link.setAttribute('title', YANDEX_MAPS_API_LABEL);
+            }
+
+            if (String(link.className).includes('ymaps')) {
+                if (link.getAttribute('target') !== '_blank') {
+                    link.setAttribute('target', '_blank');
+                }
+                if (link.getAttribute('rel') !== 'nofollow noopener noreferrer') {
+                    link.setAttribute('rel', 'nofollow noopener noreferrer');
+                }
+                link.setAttribute('role', 'link');
             }
 
             if (!hasAccessibleName) {
@@ -83,6 +101,7 @@ export function createMapController({
         if (!mapContainer || mapLinkObserver) return;
 
         mapLinkObserver = new MutationObserver(() => {
+            labelYandexMapLinks();
             window.requestAnimationFrame(labelYandexMapLinks);
         });
         mapLinkObserver.observe(mapContainer, {
@@ -152,6 +171,7 @@ export function createMapController({
             map.behaviors.disable('drag');
         }
         observeYandexMapLinks();
+        labelYandexMapLinks();
         scheduleYandexMapLabeling();
     }
 
