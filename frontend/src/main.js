@@ -58,7 +58,16 @@ window.addEventListener('error', (event) => {
 });
 
 const YANDEX_API_KEY = import.meta.env.VITE_YANDEX_MAPS_API_KEY;
+const MAP_UI_STATE = {
+    idle: 'idle',
+    loading: 'loading',
+    ready: 'ready',
+    error: 'error',
+};
+
 let currentPublicRoute = resolvePublicRoute(window.location.pathname);
+let mapUiState = MAP_UI_STATE.idle;
+let mapLoadPromise = null;
 
 let loginModal;
 let registerModal;
@@ -131,12 +140,110 @@ const homeController = createHomeController({
 });
 const getFilteredOpportunities = homeController.getFilteredOpportunities;
 const renderHomeDeck = homeController.renderHomeDeck;
-const renderOpportunitiesSection = homeController.renderOpportunitiesSection;
+const renderHomeOpportunitiesSection = homeController.renderOpportunitiesSection;
 const applyOpportunityFilters = homeController.applyOpportunityFilters;
 const resetOpportunityFilters = homeController.resetOpportunityFilters;
 const renderFavoritesSummary = homeController.renderFavoritesSummary;
 const renderTagChoices = homeController.renderTagChoices;
 const renderTagLibrary = homeController.renderTagLibrary;
+
+function mapPreviewStatusText() {
+    if (mapUiState === MAP_UI_STATE.loading) {
+        return 'Загружаем интерактивную карту и географию возможностей...';
+    }
+
+    if (mapUiState === MAP_UI_STATE.error) {
+        return YANDEX_API_KEY
+            ? 'Не удалось загрузить карту. Попробуй еще раз.'
+            : 'Не указан API-ключ Яндекс Карт. Проверь конфигурацию frontend.';
+    }
+
+    const total = state.opportunities.length;
+    const opportunitiesWithCoords = state.opportunities.filter(hasCoords).length;
+
+    if (!total) {
+        return 'Карта загружается по запросу, чтобы страница открывалась быстрее и оставалась удобной для поисковых систем.';
+    }
+
+    if (!opportunitiesWithCoords) {
+        return `Сейчас показано ${total} возможностей. Карту можно загрузить, когда понадобится география предложений.`;
+    }
+
+    return `Сейчас доступно ${opportunitiesWithCoords} точек на карте из ${total} показанных возможностей.`;
+}
+
+function renderMapShellState() {
+    const mapStage = el('mapStage');
+    const mapButton = el('loadMapBtn');
+    const mapStatusText = el('mapStatusText');
+    const mapCanvas = el('map');
+
+    if (!mapStage || !mapButton || !mapStatusText || !mapCanvas) return;
+
+    const isReady = mapUiState === MAP_UI_STATE.ready;
+    mapStage.classList.toggle('is-ready', isReady);
+    mapCanvas.setAttribute('aria-hidden', String(!isReady));
+    mapStatusText.textContent = mapPreviewStatusText();
+
+    mapButton.disabled = mapUiState === MAP_UI_STATE.loading;
+    mapButton.textContent = mapUiState === MAP_UI_STATE.loading
+        ? 'Загружаем...'
+        : mapUiState === MAP_UI_STATE.error
+            ? 'Повторить загрузку'
+            : 'Загрузить карту';
+}
+
+async function ensureMapReady(options = {}) {
+    const { scroll = false } = options;
+
+    if (scroll) {
+        el('homeMapColumn')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    if (mapUiState === MAP_UI_STATE.ready) {
+        renderMap(getFilteredOpportunities());
+        const opportunity = selectedOpportunity();
+        if (opportunity) {
+            centerOnOpportunity(opportunity);
+        }
+        return true;
+    }
+
+    if (mapLoadPromise) {
+        return mapLoadPromise;
+    }
+
+    mapUiState = MAP_UI_STATE.loading;
+    renderMapShellState();
+
+    mapLoadPromise = (async () => {
+        try {
+            await initMap();
+            mapUiState = MAP_UI_STATE.ready;
+            renderMapShellState();
+            renderMap(getFilteredOpportunities());
+            const opportunity = selectedOpportunity();
+            if (opportunity) {
+                centerOnOpportunity(opportunity);
+            }
+            return true;
+        } catch (error) {
+            console.error(error);
+            mapUiState = MAP_UI_STATE.error;
+            renderMapShellState();
+            return false;
+        } finally {
+            mapLoadPromise = null;
+        }
+    })();
+
+    return mapLoadPromise;
+}
+
+function renderOpportunitiesSection() {
+    renderHomeOpportunitiesSection();
+    renderMapShellState();
+}
 
 const profileController = createProfileController({
     state,
@@ -1331,6 +1438,10 @@ function bindEvents() {
         if (state.activeView !== 'home') {
             setActiveView('home');
         }
+        if (state.currentUser?.role === 'applicant') {
+            void ensureMapReady({ scroll: true });
+            return;
+        }
         el('homeExplorerCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     el('heroRegisterBtn').addEventListener('click', (event) => {
@@ -1342,11 +1453,14 @@ function bindEvents() {
         loginModal.show();
     });
     el('guestGuideExploreBtn').addEventListener('click', () => {
-        el('homeMapColumn')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        void ensureMapReady({ scroll: true });
     });
     el('guestGuideRegisterBtn').addEventListener('click', (event) => {
         event.preventDefault();
         registerModal.show();
+    });
+    el('loadMapBtn').addEventListener('click', () => {
+        void ensureMapReady();
     });
 
     el('logoutBtn').addEventListener('click', handleLogout);
@@ -1438,12 +1552,12 @@ async function bootstrap() {
     renderCuratorSection();
     renderProfileSection();
     renderFavoritesSummary();
+    renderMapShellState();
     renderTagLibrary();
     syncEmployerOpportunityFieldHints();
     refreshFieldCounters();
 
     try {
-        await initMap();
         await loadTags();
         await loadOpportunities();
         await loadCurrentUser();
@@ -1453,8 +1567,7 @@ async function bootstrap() {
         }
     } catch (error) {
         console.error(error);
-        renderAlert(el('opportunities-list'), 'danger', 'Не удалось загрузить проект. Проверь API и ключ Яндекс Карт.');
-        el('map').innerHTML = '<div class="alert alert-danger m-2">Карта недоступна</div>';
+        renderAlert(el('opportunities-list'), 'danger', 'Не удалось загрузить проект. Проверь API.');
     }
 }
 
