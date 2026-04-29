@@ -266,7 +266,8 @@ export function createHomeController({
 
             const desc = createEl('p', 'mb-1', shortDesc);
             const meta = createEl('small');
-            const icon = createEl('i', 'bi bi-geo-alt');
+            const icon = createEl('span', 'location-dot', '•');
+            icon.setAttribute('aria-hidden', 'true');
             meta.appendChild(icon);
             meta.append(` ${opportunity.location} | ${workFormatLabel(opportunity.work_format)}`);
             if (opportunity.salary_range) {
