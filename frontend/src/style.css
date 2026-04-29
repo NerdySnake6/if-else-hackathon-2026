@@ -457,11 +457,10 @@ body {
     width: 100%;
     min-height: 694px;
     border-radius: 18px;
+    border: 1px solid #dfe8f5;
     overflow: hidden;
     box-shadow: 0 16px 36px rgba(31, 42, 55, 0.1);
-    background:
-        radial-gradient(circle at top right, rgba(13, 110, 253, 0.1), transparent 30%),
-        linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
+    background: #fff;
 }
 
 #map {
@@ -608,18 +607,10 @@ body {
 .map-panel {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
     width: 100%;
     height: 100%;
     padding-inline: 1.35rem;
     box-sizing: border-box;
-}
-
-.map-panel-header {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: flex-start;
 }
 
 .map-panel-chip {
@@ -662,7 +653,6 @@ body {
     align-items: flex-start;
 }
 
-.home-stage-row .map-panel-header > div,
 .home-stage-row #homeListHeader > div {
     max-width: 34rem;
 }
