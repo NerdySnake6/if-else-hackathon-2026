@@ -17,6 +17,7 @@ body {
     top: 0.75rem;
     z-index: 1100;
     transform: translateY(-160%);
+    border: 0;
     border-radius: 0.5rem;
     background: #fff;
     color: #084298;

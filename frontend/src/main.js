@@ -1310,6 +1310,15 @@ function bindEvents() {
         });
     }
 
+    const skipToMainContent = el('skipToMainContent');
+    if (skipToMainContent) {
+        skipToMainContent.addEventListener('click', () => {
+            const mainContent = el('mainContent');
+            mainContent?.focus();
+            mainContent?.scrollIntoView({ block: 'start' });
+        });
+    }
+
     el('loginBtn').addEventListener('click', () => {
         loginModal.show();
     });

@@ -2,6 +2,9 @@ export function hasCoords(opportunity) {
     return Number.isFinite(opportunity.lat) && Number.isFinite(opportunity.lng);
 }
 
+const YANDEX_MAPS_LABEL = 'Яндекс Карты';
+const YANDEX_MAPS_URL = 'https://yandex.ru/maps/';
+
 export function createMapController({
     apiKey,
     state,
@@ -14,19 +17,64 @@ export function createMapController({
 }) {
     let map;
     let ymapsReadyPromise;
+    let mapLinkObserver;
     let placemarks = [];
+
+    function hasUnsafeHref(link) {
+        const href = link.getAttribute('href');
+        return !href || href === '#' || href.startsWith('javascript:');
+    }
+
+    function setYandexMapLinkHref(link) {
+        if (link.getAttribute('href') !== YANDEX_MAPS_URL) {
+            link.setAttribute('href', YANDEX_MAPS_URL);
+        }
+        if (link.getAttribute('target') !== '_blank') {
+            link.setAttribute('target', '_blank');
+        }
+        if (link.getAttribute('rel') !== 'noopener noreferrer') {
+            link.setAttribute('rel', 'noopener noreferrer');
+        }
+    }
 
     function labelYandexMapLinks() {
         const mapContainer = document.getElementById('map');
         if (!mapContainer) return;
 
+        mapContainer.querySelectorAll('a[class*="copyright__logo"]').forEach((link) => {
+            setYandexMapLinkHref(link);
+        });
+
         mapContainer.querySelectorAll('a').forEach((link) => {
             const text = link.textContent.trim();
             const hasAccessibleName = text || link.getAttribute('aria-label') || link.getAttribute('title');
-            if (hasAccessibleName) return;
 
-            link.setAttribute('aria-label', 'Яндекс Карты');
-            link.setAttribute('title', 'Яндекс Карты');
+            if (!hasAccessibleName) {
+                link.setAttribute('aria-label', YANDEX_MAPS_LABEL);
+                link.setAttribute('title', YANDEX_MAPS_LABEL);
+                if (!link.querySelector('.visually-hidden')) {
+                    link.appendChild(createEl('span', 'visually-hidden', YANDEX_MAPS_LABEL));
+                }
+            }
+
+            if (hasUnsafeHref(link)) {
+                setYandexMapLinkHref(link);
+            }
+        });
+    }
+
+    function observeYandexMapLinks() {
+        const mapContainer = document.getElementById('map');
+        if (!mapContainer || mapLinkObserver) return;
+
+        mapLinkObserver = new MutationObserver(() => {
+            window.requestAnimationFrame(labelYandexMapLinks);
+        });
+        mapLinkObserver.observe(mapContainer, {
+            attributes: true,
+            attributeFilter: ['aria-label', 'href', 'rel', 'target', 'title'],
+            childList: true,
+            subtree: true,
         });
     }
 
@@ -87,6 +135,7 @@ export function createMapController({
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             map.behaviors.disable('drag');
         }
+        observeYandexMapLinks();
         scheduleYandexMapLabeling();
     }
 
