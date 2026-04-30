@@ -71,6 +71,7 @@ let mapLoadPromise = null;
 let mapAutoloadBound = false;
 let mapAutoloadObserver = null;
 let mapResizeObserver = null;
+let mapDetailsSyncBound = false;
 let userHasInteracted = false;
 
 let loginModal;
@@ -164,6 +165,23 @@ function setupMapResizeSync() {
     });
 
     mapResizeObserver.observe(mapStage);
+}
+
+function setupAdvancedFiltersMapSync() {
+    if (mapDetailsSyncBound) return;
+    mapDetailsSyncBound = true;
+
+    document.querySelectorAll('.advanced-filters').forEach((details) => {
+        details.addEventListener('toggle', () => {
+            if (mapUiState !== MAP_UI_STATE.ready) return;
+
+            resizeMap();
+            window.setTimeout(() => {
+                if (mapUiState !== MAP_UI_STATE.ready) return;
+                resizeMap();
+            }, 180);
+        });
+    });
 }
 
 function mapPreviewStatusText() {
@@ -1627,6 +1645,7 @@ async function bootstrap() {
     renderMapShellState();
     setupMapAutoload();
     setupMapResizeSync();
+    setupAdvancedFiltersMapSync();
     renderTagLibrary();
     syncEmployerOpportunityFieldHints();
     refreshFieldCounters();
