@@ -70,6 +70,7 @@ let mapUiState = MAP_UI_STATE.idle;
 let mapLoadPromise = null;
 let mapAutoloadBound = false;
 let mapAutoloadObserver = null;
+let mapResizeObserver = null;
 let userHasInteracted = false;
 
 let loginModal;
@@ -127,6 +128,7 @@ const mapController = createMapController({
 const initMap = mapController.initMap;
 const renderMap = mapController.renderMap;
 const centerOnOpportunity = mapController.centerOnOpportunity;
+const resizeMap = mapController.resizeMap;
 
 const homeController = createHomeController({
     state,
@@ -149,6 +151,20 @@ const resetOpportunityFilters = homeController.resetOpportunityFilters;
 const renderFavoritesSummary = homeController.renderFavoritesSummary;
 const renderTagChoices = homeController.renderTagChoices;
 const renderTagLibrary = homeController.renderTagLibrary;
+
+function setupMapResizeSync() {
+    if (mapResizeObserver || !('ResizeObserver' in window)) return;
+
+    const mapStage = el('mapStage');
+    if (!mapStage) return;
+
+    mapResizeObserver = new ResizeObserver(() => {
+        if (mapUiState !== MAP_UI_STATE.ready) return;
+        resizeMap();
+    });
+
+    mapResizeObserver.observe(mapStage);
+}
 
 function mapPreviewStatusText() {
     if (mapUiState === MAP_UI_STATE.error) {
@@ -276,6 +292,7 @@ async function ensureMapReady(options = {}) {
             await initMap();
             mapUiState = MAP_UI_STATE.ready;
             renderMapShellState();
+            resizeMap();
             renderMap(getFilteredOpportunities());
             const opportunity = selectedOpportunity();
             if (opportunity) {
@@ -1609,6 +1626,7 @@ async function bootstrap() {
     renderFavoritesSummary();
     renderMapShellState();
     setupMapAutoload();
+    setupMapResizeSync();
     renderTagLibrary();
     syncEmployerOpportunityFieldHints();
     refreshFieldCounters();

@@ -21,6 +21,7 @@ export function createMapController({
     let ymapsReadyPromise;
     let mapLinkObserver;
     let placemarks = [];
+    let resizeFrameId = null;
 
     function hasUnsafeHref(link) {
         const href = link.getAttribute('href')?.trim();
@@ -219,9 +220,25 @@ export function createMapController({
         }
     }
 
+    function resizeMap() {
+        if (!map?.container?.fitToViewport) return;
+
+        if (resizeFrameId !== null) {
+            window.cancelAnimationFrame(resizeFrameId);
+        }
+
+        resizeFrameId = window.requestAnimationFrame(() => {
+            resizeFrameId = window.requestAnimationFrame(() => {
+                map.container.fitToViewport();
+                resizeFrameId = null;
+            });
+        });
+    }
+
     return {
         initMap,
         renderMap,
         centerOnOpportunity,
+        resizeMap,
     };
 }
