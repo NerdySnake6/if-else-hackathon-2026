@@ -71,7 +71,7 @@ let mapLoadPromise = null;
 let mapAutoloadBound = false;
 let mapAutoloadObserver = null;
 let mapResizeObserver = null;
-let mapDetailsSyncBound = false;
+let mapHeightObserver = null;
 let userHasInteracted = false;
 
 let loginModal;
@@ -153,6 +153,45 @@ const renderFavoritesSummary = homeController.renderFavoritesSummary;
 const renderTagChoices = homeController.renderTagChoices;
 const renderTagLibrary = homeController.renderTagLibrary;
 
+function syncMapStageHeight() {
+    const mapStage = el('mapStage');
+    const homeExplorerCard = el('homeExplorerCard');
+    if (!mapStage || !homeExplorerCard) return;
+
+    const isDesktopViewport = window.matchMedia('(min-width: 769px)').matches;
+    const isVisible = mapStage.offsetParent !== null && homeExplorerCard.offsetParent !== null;
+    if (!isDesktopViewport || !isVisible) {
+        mapStage.style.removeProperty('height');
+        return;
+    }
+
+    const targetHeight = Math.max(Math.ceil(homeExplorerCard.getBoundingClientRect().height), 760);
+    mapStage.style.height = `${targetHeight}px`;
+}
+
+function setupMapHeightSync() {
+    if (mapHeightObserver || !('ResizeObserver' in window)) return;
+
+    const homeExplorerCard = el('homeExplorerCard');
+    if (!homeExplorerCard) return;
+
+    mapHeightObserver = new ResizeObserver(() => {
+        syncMapStageHeight();
+        if (mapUiState === MAP_UI_STATE.ready) {
+            resizeMap();
+        }
+    });
+
+    mapHeightObserver.observe(homeExplorerCard);
+    window.addEventListener('resize', () => {
+        syncMapStageHeight();
+        if (mapUiState === MAP_UI_STATE.ready) {
+            resizeMap();
+        }
+    }, { passive: true });
+    syncMapStageHeight();
+}
+
 function setupMapResizeSync() {
     if (mapResizeObserver || !('ResizeObserver' in window)) return;
 
@@ -165,23 +204,6 @@ function setupMapResizeSync() {
     });
 
     mapResizeObserver.observe(mapStage);
-}
-
-function setupAdvancedFiltersMapSync() {
-    if (mapDetailsSyncBound) return;
-    mapDetailsSyncBound = true;
-
-    document.querySelectorAll('.advanced-filters').forEach((details) => {
-        details.addEventListener('toggle', () => {
-            if (mapUiState !== MAP_UI_STATE.ready) return;
-
-            resizeMap();
-            window.setTimeout(() => {
-                if (mapUiState !== MAP_UI_STATE.ready) return;
-                resizeMap();
-            }, 180);
-        });
-    });
 }
 
 function mapPreviewStatusText() {
@@ -978,6 +1000,7 @@ function renderWorkspaceView() {
     }
 
     renderWorkspaceHero();
+    syncMapStageHeight();
 }
 
 async function loadProfile() {
@@ -1644,8 +1667,8 @@ async function bootstrap() {
     renderFavoritesSummary();
     renderMapShellState();
     setupMapAutoload();
+    setupMapHeightSync();
     setupMapResizeSync();
-    setupAdvancedFiltersMapSync();
     renderTagLibrary();
     syncEmployerOpportunityFieldHints();
     refreshFieldCounters();

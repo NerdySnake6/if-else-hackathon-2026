@@ -222,8 +222,6 @@ export function createMapController({
 
     function resizeMap() {
         if (!map?.container?.fitToViewport) return;
-        const center = typeof map.getCenter === 'function' ? map.getCenter() : null;
-        const zoom = typeof map.getZoom === 'function' ? map.getZoom() : null;
 
         if (resizeFrameId !== null) {
             window.cancelAnimationFrame(resizeFrameId);
@@ -232,9 +230,6 @@ export function createMapController({
         resizeFrameId = window.requestAnimationFrame(() => {
             resizeFrameId = window.requestAnimationFrame(() => {
                 map.container.fitToViewport();
-                if (center && Number.isFinite(zoom)) {
-                    map.setCenter(center, zoom, { duration: 0 });
-                }
                 resizeFrameId = null;
             });
         });
